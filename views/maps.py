@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import io
+import re
 from typing import TYPE_CHECKING
 
 import discord
@@ -168,6 +169,11 @@ class PlaytestVoting(discord.ui.View):
                     """,
                     votes,
                 )
+
+                avg = await itx.client.database.get_row(
+                    "SELECT AVG(difficulty) avg FROM map_ratings WHERE map_code=$1;",
+                    self.map_code,
+                ).avg
                 # Post new maps channel
                 new_map_embed = (
                     await itx.guild.get_thread(votes[0].thread_id).fetch_message(
@@ -175,6 +181,13 @@ class PlaytestVoting(discord.ui.View):
                     )
                 ).embeds[0]
                 new_map_embed.title = "New Map!"
+
+                new_map_embed.description = re.sub(
+                    r"┣ `Difficulty` (.+)\n┣",
+                    f"┣ `Difficulty` {utils.convert_num_to_difficulty(avg)}\n┣",
+                    new_map_embed.description,
+                )
+
 
                 new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
                     embed=new_map_embed

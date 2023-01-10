@@ -49,14 +49,17 @@ class VerificationView(discord.ui.View):
         rejection: str | None = None,
     ):
         """Verify a record."""
-        self.stop()
+
         search = await itx.client.database.get_row(
             "SELECT * FROM records_queue rq "
             "LEFT JOIN maps m on rq.map_code = m.map_code "
             "WHERE hidden_id=$1",
             itx.message.id,
         )
+        if search.user_id == itx.user.id:
+            raise utils.CannotVerifyOwnRecords
 
+        self.stop()
         original_message = await self.find_original_message(
             itx, search.channel_id, search.message_id
         )

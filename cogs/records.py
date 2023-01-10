@@ -154,8 +154,11 @@ class Records(commands.Cog):
         if not view.value:
             return
         new_screenshot2 = await screenshot.to_file(filename="image.png")
+
         verification_msg = await itx.client.get_channel(utils.VERIFICATION_QUEUE).send(
-            embed=embed, file=new_screenshot2
+            content="**ALERT:** VIDEO SUBMISSION" if video else None,
+            embed=embed,
+            file=new_screenshot2,
         )
 
         v_view = views.VerificationView()

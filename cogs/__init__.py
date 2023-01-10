@@ -167,8 +167,17 @@ async def submit_map_(
     restrictions = view.restrictions.values
     difficulty = view.difficulty.values[0]
     guide_txt = ""
+    medals_txt = ""
     if guide_url:
         guide_txt = f"┣ `Guide` [Link]({guide_url})\n"
+    if medals[0] is not None:
+        gold, silver, bronze = medals
+        medals_txt = (
+            f"┣ `Medals` "
+            f"{utils.FULLY_VERIFIED_GOLD} {gold} | "
+            f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
+            f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n"
+        )
     embed = utils.GenjiEmbed(
         title="Map Submission",
         description=(
@@ -179,6 +188,7 @@ async def submit_map_(
             f"┣ `Mechanics` {', '.join(mechanics)}\n"
             f"┣ `Restrictions` {', '.join(restrictions)}\n"
             f"{guide_txt}"
+            f"{medals_txt}"
             f"┗ `Desc` {description}\n"
         ),
     )
