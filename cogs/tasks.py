@@ -54,7 +54,7 @@ class Tasks(commands.Cog):
         self.bot.map_types_options = [
             discord.SelectOption(label=x.name, value=x.name)
             async for x in self.bot.database.get(
-                "SELECT * FROM all_map_types ORDER BY 1;",
+                "SELECT * FROM all_map_types ORDER BY order_num;",
             )
         ]
         self.bot.map_types = [x.value for x in self.bot.map_types_options]
