@@ -57,7 +57,8 @@ class VerificationView(discord.ui.View):
             itx.message.id,
         )
         if search.user_id == itx.user.id:
-            raise utils.CannotVerifyOwnRecords
+            await itx.followup.send(content="You cannot verify your own submissions.", ephemeral=True)
+            return
 
         self.stop()
         original_message = await self.find_original_message(
