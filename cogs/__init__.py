@@ -170,7 +170,7 @@ async def submit_map_(
     medals_txt = ""
     if guide_url:
         guide_txt = f"┣ `Guide` [Link]({guide_url})\n"
-    if medals[0] is not None:
+    if medals and medals[0] is not None:
         gold, silver, bronze = medals
         medals_txt = (
             f"┣ `Medals` "
