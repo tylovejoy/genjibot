@@ -184,6 +184,7 @@ async def submit_map_(
             f"┣ `Code` {map_code}\n"
             f"┣ `Map` {map_name}\n"
             f"┣ `Type` {', '.join(map_types)}\n"
+            f"┣ `Checkpoints` {checkpoint_count}\n"
             f"┣ `Difficulty` {difficulty}\n"
             f"┣ `Mechanics` {', '.join(mechanics)}\n"
             f"┣ `Restrictions` {', '.join(restrictions)}\n"

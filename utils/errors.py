@@ -89,7 +89,7 @@ class CreatorDoesntExist(BaseParkourException):
     """Creator is not associated with this map."""
 
 
-class MapExistsError(BaseParkourException):
+class MapExistsError(BaseParkourException, app_commands.errors.AppCommandError):
     """This map code already exists!"""
 
 
