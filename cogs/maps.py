@@ -198,7 +198,7 @@ class Maps(commands.Cog):
             mechanics,
             low_range,
             high_range,
-            int(minimum_rating.value),
+            int(getattr(minimum_rating, "value", 0)),
             creator,
         ):
             maps.append(_map)
