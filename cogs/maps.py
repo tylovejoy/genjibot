@@ -213,7 +213,7 @@ class Maps(commands.Cog):
     @staticmethod
     def create_map_embeds(
         maps: list[database.DotRecord],
-    ) -> list[utils.Embed | utils.GenjiEmbed]:
+    ) -> list[discord.Embed | utils.GenjiEmbed]:
         embed_list = []
         embed = utils.GenjiEmbed(title="Map Search")
         for i, _map in enumerate(maps):

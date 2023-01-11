@@ -107,7 +107,7 @@ class Records(commands.Cog):
         if map_code not in itx.client.map_cache.keys():
             raise utils.InvalidMapCodeError
 
-        if itx.client.map_cache[map_code]["archived"] is False:
+        if itx.client.map_cache[map_code]["archived"] is True:
             raise utils.ArchivedMap
 
         search = [

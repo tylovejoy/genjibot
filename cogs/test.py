@@ -100,6 +100,15 @@ class Test(commands.Cog):
         ctx.bot.logger.setLevel(level.upper())
         await ctx.message.delete()
 
+    @commands.command()
+    @commands.is_owner()
+    async def refresh_cache(
+        self,
+        ctx: commands.Context[core.Genji],
+    ):
+        #TODO: Reload cache
+        await ctx.message.delete()
+
     # @app_commands.command(name="test")
     # @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     # async def testing_slash(self, itx: core.Interaction[core.Genji]) -> None:
