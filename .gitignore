@@ -3,3 +3,6 @@ venv
 /venv
 /venv/
 .idea
+.env
+.vscode
+.vscode/settings.json
