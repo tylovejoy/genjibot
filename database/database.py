@@ -1,4 +1,5 @@
 import logging
+import textwrap
 import typing
 
 import asyncpg
@@ -53,7 +54,7 @@ class Database:
         """
         if self.pool is None:
             raise utils.DatabaseConnectionError()
-
+        query = textwrap.dedent(query)
         self.logger.debug(query)
         self.logger.debug(args)
 
