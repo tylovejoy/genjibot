@@ -259,51 +259,38 @@ def pr_records_embed(
 ) -> list[Embed | GenjiEmbed]:
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
-    description = ""
-    cur_code = f"{records[0].map_name} by {records[0].creators} ({records[0].map_code})"
     for i, record in enumerate(records):
+        cur_code = f"{record.map_name} by {record.creators} ({record.map_code})"
+        description = ""
+        print(record.map_code)
         if record.gold:
             medals = (record.gold, record.silver, record.bronze)
             medals = tuple(map(float, medals))
         else:
             medals = (0, 0, 0)
-        if cur_code != f"{record.map_name} by {record.creators} ({record.map_code})":
-            embed.add_field(
-                name=f"{cur_code}",
-                value="┗".join(description[:-3].rsplit("┣", 1)),
-                inline=False,
-            )
-            description = ""
-            cur_code = f"{record.map_name} by {record.creators} ({record.map_code})"
         if not record.video:
             description += (
-                # f"┣ `Level` ***{record.level_name}***\n"
                 f"┣ `Record` [{record.record}]"
-                # f"┣ `Record` [{pretty_record(record.record)}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n┃\n"
             )
         else:
             description += (
-                # f"┣ `Level` ***{record.level_name}***\n"
-                # f"┣ `Record` [{pretty_record(record.record)}]"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot})"
                 f"{icon_generator(record, medals)}\n "
                 f"┣ `Video` [Link]({record.video})\n┃\n"
             )
+        embed.add_field(
+            name=f"{cur_code}",
+            value="┗".join(description[:-3].rsplit("┣", 1)),
+            inline=False,
+        )
         if (
             (i != 0 and i % 10 == 0)
             or (i == 0 and len(records) == 1)
             or i == len(records) - 1
         ):
-            embed.add_field(
-                name=f"{cur_code}",
-                value="┗".join(description[:-3].rsplit("┣", 1)),
-                inline=False,
-            )
-            description = ""
-            cur_code = f"{record.map_name} by {record.creators} ({record.map_code})"
             embed_list.append(embed)
             embed = utils.GenjiEmbed(title=title)
     return embed_list
