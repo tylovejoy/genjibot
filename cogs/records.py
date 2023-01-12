@@ -305,15 +305,31 @@ class Records(commands.Cog):
                         LEFT JOIN users u
                               on r.user_id = u.user_id
                         LEFT JOIN map on map.map_code = r.map_code)
-        SELECT *
+        SELECT 
+            nickname,
+            user_id,
+            record,
+            screenshot,
+            video,
+            verified,
+            ranks.map_code,
+            channel_id,
+            message_id,
+            map_name,
+            creators,
+            rank_num,
+            gold,
+            silver,
+            bronze
         FROM ranks
                  LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE user_id = $1 
         AND ($2 IS FALSE OR rank_num = 1)
         ORDER BY ranks.map_code;     
         """
-        # print(query, user, wr_only, sep="\n\n\n\n")
         records = [x async for x in itx.client.database.get(query, user, wr_only)]
+
+
         if not records:
             raise utils.NoRecordsFoundError
         embeds = utils.pr_records_embed(
