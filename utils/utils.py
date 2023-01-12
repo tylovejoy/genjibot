@@ -174,7 +174,7 @@ async def get_completions_data(client: core.Genji, user: int) -> dict[str, tuple
                                    LEFT JOIN maps m         ON r.map_code = m.map_code
                                    LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
                                    LEFT JOIN map_medals mm  ON r.map_code = mm.map_code
-                          WHERE r.user_id = $1 AND m.official = TRUE AND m.archived = TRUE
+                          WHERE r.user_id = $1 AND m.official = TRUE AND m.archived = FALSE
                           GROUP BY m.map_code, record, gold, silver, bronze)
         SELECT COUNT(name)                        AS completions,
                name                               AS difficulty,
