@@ -2,20 +2,18 @@ FROM python:3.10.4
 
 WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y wget git
+RUN apt-get update && apt-get upgrade -y && apt-get install -y wget
 # For safety reason, create an user with lower privileges than root and run from there
 RUN useradd -m -d /home/genji -s /bin/bash genji && \
     mkdir /usr/src/genji && \
     chown -R genji /usr/src/genji
 
-
-
-RUN git clone https://github.com/tylovejoy/genjibot.git .
 USER genji
-# COPY requirements.txt ./
+
+
+COPY requirements.txt ./
 RUN pip3 install --no-warn-script-location --no-cache-dir -r requirements.txt
 
-#COPY . .
-# RUN git clone https://github.com/tylovejoy/genjibot.git .
+COPY . .
 
 CMD [ "python3", "main.py" ]
