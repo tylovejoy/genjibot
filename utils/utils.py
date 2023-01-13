@@ -93,13 +93,13 @@ async def auto_role(client: core.Genji, user: discord.Member):
     rank_roles = list(
         map(
             lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.ranks(),
+            utils.Roles.ranks()[1:],
         )
     )
     rank_plus_roles = list(
         map(
             lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.ranks_plus(),
+            utils.Roles.ranks_plus()[1:],
         )
     )
 
