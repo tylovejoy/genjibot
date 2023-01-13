@@ -279,7 +279,7 @@ class ModCommands(commands.Cog):
 
         view = views.Confirm(itx, ephemeral=True)
         await itx.edit_original_response(
-            content=f"Create fake user {fake_user.nickname}?",
+            content=f"Create fake user {fake_user}?",
             view=view,
         )
         await view.wait()
