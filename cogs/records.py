@@ -123,7 +123,21 @@ class Records(commands.Cog):
 
         if search:
             search = search[0]
-            if search.record < record and not (not search.video and video):
+
+            if search.video:
+                if record >= search.record:
+                    raise utils.RecordNotFasterError
+                if record < search.record and not video:
+                    overwrite_view = views.RecordVideoConfirmCompletion(itx)
+                    await itx.edit_original_response(
+                        content=f"{itx.user.mention}, your last submission was fully verified, are you sure you want to overwrite your last record with one that can only be partially verified?",
+                        view=overwrite_view,
+                    )
+                    await overwrite_view.wait()
+                    if not overwrite_view.value:
+                        return
+            
+            if not search.video and (record >= search.record) and not video:
                 raise utils.RecordNotFasterError
 
         user = itx.client.all_users[itx.user.id]

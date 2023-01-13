@@ -147,3 +147,20 @@ class ConfirmCompletion(discord.ui.View):
         for o in self.quality.options:
             o.default = o.value in self.quality.values
         await self.original_itx.edit_original_response(view=self)
+
+
+class RecordVideoConfirmCompletion(discord.ui.View):
+    def __init__(
+        self,
+        original_itx: core.Interaction[core.Genji],
+        confirm_msg="Confirmed.",
+    ):
+        super().__init__()
+        self.original_itx = original_itx
+        self.confirm_msg = confirm_msg
+        self.value = None
+
+        self.confirm = ConfirmButton()
+        self.reject = RejectButton()
+        self.add_item(self.confirm)
+        self.add_item(self.reject)
