@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 
 import typing
 
@@ -425,6 +426,300 @@ class ModCommands(commands.Cog):
             content=f"Updated {map_code} rating to {value}."
         )
 
+
+    @map.command(name="map-type")
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    async def map_type(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+    ):
+        """Change the type of a map.
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+
+        """
+        await itx.response.defer(ephemeral=True)
+
+        select = {
+            "map_type": views.MapTypeSelect(
+                copy.deepcopy(itx.client.map_types_options)
+            )
+        }
+        view = views.Confirm(
+            itx,
+            ephemeral=True,
+            preceeding_items=select
+        )
+        await itx.edit_original_response(
+            content=f"Select the new map type(s).",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        map_types = select.values
+        await itx.client.database.set(
+            "UPDATE maps SET map_type=$1 WHERE map_code=$2",
+            map_types,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} types to {', '.join(map_types)}."
+        )
+
+    @map.command()
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    async def mechanics(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+    ):
+        """Change the mechanics of a map.
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+
+        """
+        await itx.response.defer(ephemeral=True)
+
+        select = {
+            "mechanics": views.MechanicsSelect(
+                copy.deepcopy(itx.client.map_techs_options)
+            )
+        }
+        view = views.Confirm(
+            itx,
+            ephemeral=True,
+            preceeding_items=select
+        )
+        await itx.edit_original_response(
+            content=f"Select the new map mechanic(s).",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        mechanics = select.values
+        await itx.client.database.set(
+            "UPDATE maps SET mechanics=$1 WHERE map_code=$2",
+            mechanics,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} mechanics to {', '.join(mechanics)}."
+        )
+
+
+    @map.command()
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    async def restrictions(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+    ):
+        """Change the restrictions of a map.
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+
+        """
+        await itx.response.defer(ephemeral=True)
+
+        select = {
+            "restrictions": views.RestrictionsSelect(
+                copy.deepcopy(itx.client.map_restrictions_options)
+            )
+        }
+        view = views.Confirm(
+            itx,
+            ephemeral=True,
+            preceeding_items=select
+        )
+        await itx.edit_original_response(
+            content=f"Select the new map restrictions(s).",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        restrictions = select.values
+        await itx.client.database.set(
+            "UPDATE maps SET restrictions=$1 WHERE map_code=$2",
+            restrictions,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} restrictions to {', '.join(restrictions)}."
+        )
+
+    @map.command()
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    async def checkpoints(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        checkpoint_count: app_commands.Range[int, 1, 500],
+    ):
+        """Change the checkpoint count of a map
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+            checkpoint_count: Number of checkpoints in the map
+
+        """
+        await itx.response.defer(ephemeral=True)
+
+        view = views.Confirm(
+            itx,
+            f"Updated {map_code} checkpoint count to {checkpoint_count}.",
+            ephemeral=True,
+        )
+        await itx.edit_original_response(
+            content=f"{map_code} checkpoint count to {checkpoint_count}. Is this correct?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        await itx.client.database.set(
+            "UPDATE maps SET checkpoints=$1 WHERE map_code=$2",
+            checkpoint_count,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} checkpoint count to {checkpoint_count}."
+        )
+
+    @map.command(name="map-code")
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    async def map_code(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        new_map_code: app_commands.Transform[str, utils.MapCodeTransformer]
+    ):
+        """Change the map code of a map
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+            new_map_code: Overwatch share code
+
+        """
+        await itx.response.defer(ephemeral=True)
+        if new_map_code in itx.client.map_cache:
+            raise utils.MapExistsError
+
+        view = views.Confirm(
+            itx,
+            f"Updated {map_code} map code to {new_map_code}.",
+            ephemeral=True,
+        )
+        await itx.edit_original_response(
+            content=f"{map_code} map code to {new_map_code}. Is this correct?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        await itx.client.database.set(
+            "UPDATE maps SET map_code=$1 WHERE map_code=$2",
+            new_map_code,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} map code to {new_map_code}."
+        )
+
+    @map.command()
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    async def description(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        description: str,
+    ):
+        """Change the description of a map
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+            description: Other optional information for the map
+
+        """
+        await itx.response.defer(ephemeral=True)
+
+        view = views.Confirm(
+            itx,
+            f"Updated {map_code} description to {description}.",
+            ephemeral=True,
+        )
+        await itx.edit_original_response(
+            content=f"{map_code} description to \n\n{description}\n\n Is this correct?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        await itx.client.database.set(
+            "UPDATE maps SET desc=$1 WHERE map_code=$2",
+            description,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} description to {description}."
+        )
+
+    @map.command(name="map-name")
+    @app_commands.autocomplete(
+        map_code=cogs.map_codes_autocomplete,
+        map_name=cogs.map_name_autocomplete,
+    )
+    async def description(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_name: app_commands.Transform[str, utils.MapNameTransformer],
+    ):
+        """Change the description of a map
+
+        Args:
+            itx: Discord itx
+            map_code: Overwatch share code
+            map_name: Overwatch map
+
+        """
+        await itx.response.defer(ephemeral=True)
+
+        view = views.Confirm(
+            itx,
+            f"Updated {map_code} map name to {map_name}.",
+            ephemeral=True,
+        )
+        await itx.edit_original_response(
+            content=f"{map_code} map name to {map_name}. Is this correct?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        await itx.client.database.set(
+            "UPDATE maps SET map_name=$1 WHERE map_code=$2",
+            map_name,
+            map_code,
+        )
+        await itx.edit_original_response(
+            content=f"Updated {map_code} map name to {map_name}."
+        )
+
+
+    
     # TODO: Delete map ?
 
 
