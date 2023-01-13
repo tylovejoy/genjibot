@@ -235,6 +235,7 @@ class ModCommands(commands.Cog):
             member.id,
             map_code,
         )
+        await member.send(f"Your record for {map_code} has been deleted by staff.")
 
     @mod.command(name="change-name")
     @app_commands.autocomplete(member=cogs.users_autocomplete)
