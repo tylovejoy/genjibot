@@ -24,6 +24,23 @@ class Tasks(commands.Cog):
         self.cache_map_techs.start()
         self.cache_map_restrictions.start()
 
+    @commands.command()
+    @commands.is_owner()
+    async def refresh_cache(
+        self,
+        ctx: commands.Context[core.Genji],
+    ):
+        #TODO: Reload cache
+        self.cache_all_users.restart()
+        self.cache_map_code_choices.restart()
+        self.cache_map_names.restart()
+        self.cache_map_types.restart()
+        self.cache_map_data.restart()
+        self.cache_tags.restart()
+        self.cache_map_techs.restart()
+        self.cache_map_restrictions.restart()
+        await ctx.message.delete()
+
     @tasks.loop(hours=24, count=1)
     async def cache_map_code_choices(self):
         self.bot.logger.debug("Caching map codes...")
