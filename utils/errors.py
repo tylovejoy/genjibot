@@ -141,15 +141,23 @@ async def on_app_command_error(
     exception = getattr(error, "original", error)
     if isinstance(exception, utils.BaseParkourException):
         embed = utils.ErrorEmbed(description=str(exception))
+        content = (
+            "This message will delete in "
+            f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
+        )
         if itx.response.is_done():
             await itx.edit_original_response(
+                content=content,
                 embed=embed,
             )
         else:
             await itx.response.send_message(
+                content=content,
                 embed=embed,
                 ephemeral=True,
             )
+        await utils.delete_interaction(itx, minutes=1)
+
     elif isinstance(exception, app_commands.CommandOnCooldown):
         now = discord.utils.utcnow()
         seconds = float(re.search(r"(\d+\.\d{2})s", str(exception)).group(1))
