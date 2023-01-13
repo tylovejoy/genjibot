@@ -270,6 +270,26 @@ class BotEvents(commands.Cog):
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
+    commands.Cog.listener()
+
+    @commands.Cog.listener()
+    async def on_newsfeed_map_edit(
+            self,
+            itx: core.Interaction[core.Genji],
+            map_code: str,
+            values: dict[str, str],
+    ):
+        description = ">>> "
+        for k, v in values:
+            description += f"`{k}` {v}\n"
+
+        embed = utils.GenjiEmbed(
+            title=f"{map_code} has been changed:",
+            description=description,
+            color=discord.Color.yellow(),
+        )
+        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+
 
 async def setup(bot: Genji) -> None:
     await bot.add_cog(BotEvents(bot))
