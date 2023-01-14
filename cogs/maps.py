@@ -245,7 +245,7 @@ class Maps(commands.Cog):
                 ),
             )
             if (
-                (i != 0 and i % 10 == 0)
+                (i != 0 and i % 5 == 0)
                 or (i == 0 and len(maps) == 1)
                 or i == len(maps) - 1
             ):
