@@ -166,11 +166,12 @@ class BotEvents(commands.Cog):
     ):
         if not record.video:
             return
+        icon = utils.icon_generator(record, medals)
         embed = utils.GenjiEmbed(
             url=record.screenshot,
             description=(
                 f"**{record.map_name} by {record.creators} ({record.map_code})**\n"
-                f"┣ `Record` {record.record} {utils.icon_generator(record, medals)}\n"
+                f"┣ `Record` {record.record} {icon}\n"
                 f"┗ `Video` [Link]({record.video})"
                 if record.video
                 else ""
@@ -192,7 +193,7 @@ class BotEvents(commands.Cog):
         embed = utils.GenjiEmbed(
             title=f"{nickname} got promoted!",
             description="\n".join([f"{x.mention}" for x in roles]),
-            color=discord.Color.yellow(),
+            color=discord.Color.green(),
         )
         await client.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
             embed=embed
@@ -210,7 +211,7 @@ class BotEvents(commands.Cog):
         embed = utils.GenjiEmbed(
             title=f"{nickname} has posted a guide for {map_code}",
             url=url,
-            color=discord.Color.yellow(),
+            color=discord.Color.orange(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
         await itx.guild.get_channel(utils.NEWSFEED).send(url)
@@ -228,7 +229,7 @@ class BotEvents(commands.Cog):
             title=f"{nickname} has submitted a new map!",
             description=f"[Check out {map_code} here!]({url})",
             url=url,
-            color=discord.Color.yellow(),
+            color=discord.Color.blue(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
@@ -246,7 +247,7 @@ class BotEvents(commands.Cog):
             description=f"`Gold` {gold}\n"
             f"`Silver` {silver}\n"
             f"`Bronze` {bronze}\n",
-            color=discord.Color.yellow(),
+            color=discord.Color.red(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
@@ -266,7 +267,7 @@ class BotEvents(commands.Cog):
         embed = utils.GenjiEmbed(
             title=f"{map_code} has been {value}d.",
             description=description,
-            color=discord.Color.yellow(),
+            color=discord.Color.red(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
@@ -286,7 +287,7 @@ class BotEvents(commands.Cog):
         embed = utils.GenjiEmbed(
             title=f"{map_code} has been changed:",
             description=description,
-            color=discord.Color.yellow(),
+            color=discord.Color.red(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
