@@ -116,6 +116,8 @@ class Maps(commands.Cog):
         map_name=cogs.map_name_autocomplete,
         map_type=cogs.map_type_autocomplete,
         creator=cogs.creator_autocomplete,
+        mechanics=cogs.map_mechanics_autocomplete,
+        map_code=cogs.map_codes_autocomplete,
     )
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def map_search(
@@ -160,8 +162,10 @@ class Maps(commands.Cog):
                     official,
                     archived,
                     array_agg(DISTINCT url)               AS guide,
-                    array_to_string((mechanics), ', ')    AS mechanics,
-                    array_to_string((restrictions), ', ') AS restrictions,
+                    array_to_string(array_agg(DISTINCT mech.name), ', ') AS mechanics,
+                    array_to_string(array_agg(DISTINCT rest.name), ', ') AS restrictions,
+                    --array_to_string(SELECT name FROM map_techs LEFT JOIN unnest(mechanics), ', ')    AS mechanics,
+                    --array_to_string((restrictions), ', ') AS restrictions,
                     checkpoints,
                     string_agg(DISTINCT (nickname), ', ') AS creators,
                     COALESCE(AVG(difficulty), 0)          AS difficulty,
@@ -171,6 +175,8 @@ class Maps(commands.Cog):
                     silver,
                     bronze
                     FROM maps m
+                    LEFT JOIN map_techs mech on mech.order_num = any(m.mechanics)
+                    LEFT JOIN map_restrictions rest on rest.order_num = any(m.restrictions)
                     LEFT JOIN map_creators mc on m.map_code = mc.map_code
                     LEFT JOIN users u on mc.user_id = u.user_id
                     LEFT JOIN map_ratings mr on mc.user_id = mr.user_id
@@ -240,6 +246,7 @@ class Maps(commands.Cog):
                     f"┣ `Restrictions` {_map.restrictions}\n"
                     f"{guide_txt}"
                     f"┣ `Type` {_map.map_type}\n"
+                    f"┣ `Checkpoints` {_map.checkpoints}\n"
                     f"{medals_txt}"
                     f"┗ `Desc` {_map.desc}"
                 ),
