@@ -279,6 +279,7 @@ class BotEvents(commands.Cog):
             itx: core.Interaction[core.Genji],
             map_code: str,
             values: dict[str, str],
+            thread_id: int | None = None,
     ):
         description = ">>> "
         for k, v in values:
@@ -289,7 +290,10 @@ class BotEvents(commands.Cog):
             description=description,
             color=discord.Color.red(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        if thread_id:
+            await itx.guild.get_thread(thread_id).send(embed=embed)
+        else:
+            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
 
 async def setup(bot: Genji) -> None:

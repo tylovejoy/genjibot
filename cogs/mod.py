@@ -433,6 +433,7 @@ class ModCommands(commands.Cog):
 
 
 
+
     @map.command(name="map-type")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def map_type(
@@ -475,7 +476,13 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} types to {', '.join(map_types)}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Type(s)": ', '.join(map_types)})
+        itx.client.dispatch("newsfeed_map_edit", itx, map_code, )
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Type(s)": ', '.join(map_types)},
+                                playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Type(s)": ', '.join(map_types)})
 
 
     @map.command()
@@ -520,7 +527,12 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} mechanics to {', '.join(mechanics)}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Mechanics": ', '.join(mechanics)})
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Mechanics": ', '.join(mechanics)},
+                                playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Mechanics": ', '.join(mechanics)})
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -564,7 +576,12 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} restrictions to {', '.join(restrictions)}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Restrictions": ', '.join(restrictions)})
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Restrictions": ', '.join(restrictions)},
+                                playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Restrictions": ', '.join(restrictions)})
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -604,7 +621,11 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} checkpoint count to {checkpoint_count}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count})
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count}, playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count})
 
     @map.command(name="map-code")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -646,7 +667,11 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} map code to {new_map_code}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Code": new_map_code})
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Code": new_map_code}, playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Code": new_map_code})
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -686,7 +711,11 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} description to {description}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Description": description})
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Description": description}, playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Description": description})
 
     @map.command(name="map-name")
     @app_commands.autocomplete(
@@ -729,7 +758,11 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"Updated {map_code} map name to {map_name}."
         )
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Name": map_name})
+        # If playtesting
+        if playtest := await itx.client.database.get_row("SELECT thread_id FROM playtest WHERE map_code=$1", map_code):
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Name": map_name}, playtest.thread_id)
+        else:
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map Name": map_name})
 
     # TODO: Delete map ?
 
