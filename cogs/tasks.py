@@ -92,7 +92,7 @@ class Tasks(commands.Cog):
         ]
         self.bot.map_techs = [x.value for x in self.bot.map_techs_options]
         self.bot.map_techs_choices = [
-            app_commands.Choice(name=x, value=x) for x in self.bot.map_techs_options
+            app_commands.Choice(name=x.value, value=x.value) for x in self.bot.map_techs_options
         ]
         self.bot.logger.debug("Map techs cached.")
 
