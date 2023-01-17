@@ -93,7 +93,7 @@ class BotEvents(commands.Cog):
                 )
 
             self.bot.logger.debug(f"Added persistent views.")
-            self.persistent_views_added = True
+            self.bot.persistent_views_added = True
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):

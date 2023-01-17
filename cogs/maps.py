@@ -148,7 +148,7 @@ class Maps(commands.Cog):
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
-        maps = []
+        maps: list[database.DotRecord | None] = []
 
         ranges = utils.DIFFICULTIES_RANGES.get(difficulty, None)
         low_range = None if ranges is None else ranges[0]

@@ -42,7 +42,7 @@ class Test(commands.Cog):
                 await ctx.bot.tree.sync(guild=ctx.guild)
                 synced = []
             elif spec == "$":
-                ctx.bot.tree.clear_commands()
+                ctx.bot.tree.clear_commands(guild=ctx.guild)
                 await ctx.bot.tree.sync()
                 synced = []
             else:

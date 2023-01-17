@@ -165,7 +165,9 @@ async def on_app_command_error(
         end = now + datetime.timedelta(seconds=seconds)
         embed = utils.ErrorEmbed(
             description=(
-                f"Command is on cooldown. Cooldown ends {discord.utils.format_dt(end, style='R')}.\nThis message will be deleted at the same time."
+                f"Command is on cooldown. "
+                f"Cooldown ends {discord.utils.format_dt(end, style='R')}.\n"
+                f"This message will be deleted at the same time."
             )
         )
         if itx.response.is_done():
