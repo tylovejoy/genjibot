@@ -323,9 +323,7 @@ class BotEvents(commands.Cog):
             await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
     @staticmethod
-    def edit_embed(
-        embed: discord.Embed, field: str, value: str
-    ) -> discord.Embed:
+    def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
         embed.description = re.sub(
             f"┣ `{field}" + r"` (.+)\n┣",
             f"┣ `{field}` {value}\n┣",
@@ -334,9 +332,7 @@ class BotEvents(commands.Cog):
         return embed
 
     @staticmethod
-    def edit_description(
-            embed: discord.Embed, value: str
-    ) -> discord.Embed:
+    def edit_description(embed: discord.Embed, value: str) -> discord.Embed:
         embed.description = re.sub(
             f"┗ `Desc` (.+)",
             f"┗ `Desc` {value}",

@@ -124,7 +124,7 @@ class ModCommands(commands.Cog):
             f"`Bronze` {bronze}\n"
         )
         if playtest := await itx.client.database.get_row(
-                "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
+            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
         ):
             itx.client.dispatch(
                 "newsfeed_medals",
@@ -543,7 +543,9 @@ class ModCommands(commands.Cog):
             return
         mechanics = view.mechanics.values
         mechanics_args = [(map_code, x) for x in mechanics]
-        await itx.client.database.set("DELETE FROM map_mechanics WHERE map_code=$1", map_code)
+        await itx.client.database.set(
+            "DELETE FROM map_mechanics WHERE map_code=$1", map_code
+        )
         await itx.client.database.set_many(
             "INSERT INTO map_mechanics (map_code, mechanic) VALUES ($1, $2)",
             mechanics_args,
@@ -603,7 +605,9 @@ class ModCommands(commands.Cog):
 
         restrictions = view.restrictions.values
         restrictions_args = [(map_code, x) for x in restrictions]
-        await itx.client.database.set("DELETE FROM map_restrictions WHERE map_code=$1", map_code)
+        await itx.client.database.set(
+            "DELETE FROM map_restrictions WHERE map_code=$1", map_code
+        )
         await itx.client.database.set_many(
             "INSERT INTO map_restrictions (map_code, restriction) VALUES ($1, $2)",
             restrictions_args,
@@ -743,7 +747,7 @@ class ModCommands(commands.Cog):
                 map_code,
                 {"Code": new_map_code},
                 playtest.thread_id,
-                playtest.original_msg
+                playtest.original_msg,
             )
         else:
             itx.client.dispatch(
@@ -781,7 +785,7 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
         await itx.client.database.set(
-            "UPDATE maps SET \"desc\"=$1 WHERE map_code=$2",
+            'UPDATE maps SET "desc"=$1 WHERE map_code=$2',
             description,
             map_code,
         )
@@ -859,9 +863,7 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            itx.client.dispatch(
-                "newsfeed_map_edit", itx, map_code, {"Map": map_name}
-            )
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map": map_name})
 
     # TODO: Delete map ?
 

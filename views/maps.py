@@ -136,8 +136,12 @@ class PlaytestVoting(discord.ui.View):
                 self.map_code,
                 self.author_id,
             )
-            await itx.client.get_channel(utils.PLAYTEST).get_thread(record.thread_id).edit(archived=True, locked=True)
-            await itx.client.get_channel(utils.PLAYTEST).get_partial_message(record.original_msg).delete()
+            await itx.client.get_channel(utils.PLAYTEST).get_thread(
+                record.thread_id
+            ).edit(archived=True, locked=True)
+            await itx.client.get_channel(utils.PLAYTEST).get_partial_message(
+                record.original_msg
+            ).delete()
 
             votes = [
                 x
@@ -191,8 +195,8 @@ class PlaytestVoting(discord.ui.View):
                 new_map_embed.title = "New Map!"
                 new_map_embed.set_footer(
                     text="For notification of newly added maps only. "
-                         "Data may be out of date. "
-                         "Use `/map-search` for the latest info."
+                    "Data may be out of date. "
+                    "Use `/map-search` for the latest info."
                 )
                 new_map_embed.description = re.sub(
                     r"┣ `Difficulty` (.+)\n┣",
