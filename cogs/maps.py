@@ -162,8 +162,8 @@ class Maps(commands.Cog):
                     official,
                     archived,
                     array_agg(DISTINCT url)               AS guide,
-                    array_to_string(array_agg(DISTINCT mech.name), ', ') AS mechanics,
-                    array_to_string(array_agg(DISTINCT rest.name), ', ') AS restrictions,
+                    array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
+                    array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
                     --array_to_string(SELECT name FROM map_techs LEFT JOIN unnest(mechanics), ', ')    AS mechanics,
                     --array_to_string((restrictions), ', ') AS restrictions,
                     checkpoints,
@@ -175,8 +175,8 @@ class Maps(commands.Cog):
                     silver,
                     bronze
                     FROM maps m
-                    LEFT JOIN map_techs mech on mech.order_num = any(m.mechanics)
-                    LEFT JOIN map_restrictions rest on rest.order_num = any(m.restrictions)
+                    LEFT JOIN map_mechanics mech on mech.map_code = m.map_code
+                    LEFT JOIN map_restrictions rest on rest.map_code = m.map_code
                     LEFT JOIN map_creators mc on m.map_code = mc.map_code
                     LEFT JOIN users u on mc.user_id = u.user_id
                     LEFT JOIN map_ratings mr on mc.user_id = mr.user_id

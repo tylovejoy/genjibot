@@ -21,8 +21,12 @@ class Tasks(commands.Cog):
         self.cache_map_types.start()
         self.cache_map_data.start()
         self.cache_tags.start()
-        self.cache_map_techs.start()
+        self.cache_map_mechanics.start()
         self.cache_map_restrictions.start()
+
+    @commands.Cog.listener()
+    async def on_code_cache_refresh(self):
+        self.cache_map_code_choices.restart()
 
     @commands.command()
     @commands.is_owner()
@@ -30,14 +34,14 @@ class Tasks(commands.Cog):
         self,
         ctx: commands.Context[core.Genji],
     ):
-        #TODO: Reload cache
+        # TODO: Reload cache
         self.cache_all_users.restart()
         self.cache_map_code_choices.restart()
         self.cache_map_names.restart()
         self.cache_map_types.restart()
         self.cache_map_data.restart()
         self.cache_tags.restart()
-        self.cache_map_techs.restart()
+        self.cache_map_mechanics.restart()
         self.cache_map_restrictions.restart()
         await ctx.message.delete()
 
@@ -82,30 +86,38 @@ class Tasks(commands.Cog):
         self.bot.logger.debug("Map types cached.")
 
     @tasks.loop(hours=24, count=1)
-    async def cache_map_techs(self):
-        self.bot.logger.debug("Caching map techs...")
-        self.bot.map_techs_options = [
-            discord.SelectOption(label=x.name, value=x.name)
-            async for x in self.bot.database.get(
-                "SELECT * FROM map_techs ORDER BY 1;",
+    async def cache_map_mechanics(self):
+        self.bot.logger.debug("Caching map mechanics...")
+
+        self.bot.map_mechanics = []
+        self.bot.map_mechanics_options = []
+        self.bot.map_mechanics_choices = []
+
+        async for x in self.bot.database.get(
+            "SELECT * FROM all_map_mechanics ORDER BY order_num;",
+        ):
+            self.bot.map_mechanics.append(x.name)
+            self.bot.map_mechanics_options.append(
+                discord.SelectOption(label=x.name, value=x.name)
             )
-        ]
-        self.bot.map_techs = [x.value for x in self.bot.map_techs_options]
-        self.bot.map_techs_choices = [
-            app_commands.Choice(name=x.value, value=x.value) for x in self.bot.map_techs_options
-        ]
-        self.bot.logger.debug("Map techs cached.")
+            self.bot.map_mechanics_choices.append(
+                app_commands.Choice(name=x.name, value=x.name)
+            )
+        self.bot.logger.debug("Map mechanics cached.")
 
     @tasks.loop(hours=24, count=1)
     async def cache_map_restrictions(self):
         self.bot.logger.debug("Caching map restrictions...")
-        self.bot.map_restrictions_options = [
-            discord.SelectOption(label=x.name, value=x.name)
-            async for x in self.bot.database.get(
-                "SELECT * FROM map_restrictions ORDER BY 1;",
+
+        self.bot.map_restrictions_options = []
+        self.bot.map_restrictions = []
+        async for x in self.bot.database.get(
+            "SELECT * FROM all_map_restrictions ORDER BY order_num;",
+        ):
+            self.bot.map_restrictions.append(x.name)
+            self.bot.map_restrictions_options.append(
+                discord.SelectOption(label=x.name, value=x.name)
             )
-        ]
-        self.bot.map_restrictions = [x.value for x in self.bot.map_restrictions_options]
         self.bot.logger.debug("Map restrictions cached.")
 
     @tasks.loop(hours=24, count=1)
