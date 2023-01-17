@@ -61,7 +61,8 @@ def _generate_all_stars() -> list[str]:
 
 ALL_STARS = _generate_all_stars()
 ALL_STARS_CHOICES = [
-    discord.app_commands.Choice(name=x, value=i) for i, x in enumerate(ALL_STARS, start=1)
+    discord.app_commands.Choice(name=x, value=i)
+    for i, x in enumerate(ALL_STARS, start=1)
 ]
 
 # TODO: Hardcoded LIVE

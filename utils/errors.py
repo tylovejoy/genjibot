@@ -135,6 +135,7 @@ class ArchivedMap(BaseParkourException):
 class CannotVerifyOwnRecords(BaseParkourException):
     """You cannot verify your own records/submissions."""
 
+
 async def on_app_command_error(
     itx: Interaction[Genji], error: app_commands.errors.CommandInvokeError | Exception
 ):

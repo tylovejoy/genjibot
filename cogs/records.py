@@ -136,7 +136,7 @@ class Records(commands.Cog):
                     await overwrite_view.wait()
                     if not overwrite_view.value:
                         return
-            
+
             if not search.video and (record >= search.record) and not video:
                 raise utils.RecordNotFasterError
 
@@ -342,7 +342,6 @@ class Records(commands.Cog):
         ORDER BY ranks.map_code;     
         """
         records = [x async for x in itx.client.database.get(query, user, wr_only)]
-
 
         if not records:
             raise utils.NoRecordsFoundError

@@ -60,7 +60,10 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
     @app_commands.command()
     async def create(self, itx: core.Interaction[core.Genji]):
         """Create a tag"""
-        if itx.guild.get_role(utils.TAG_MAKER) not in itx.user.roles and itx.guild.get_role(utils.STAFF) not in itx.user.roles:
+        if (
+            itx.guild.get_role(utils.TAG_MAKER) not in itx.user.roles
+            and itx.guild.get_role(utils.STAFF) not in itx.user.roles
+        ):
             raise utils.NoPermissionsError
         modal = views.TagCreate()
         await itx.response.send_modal(modal)

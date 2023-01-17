@@ -183,7 +183,9 @@ def pretty_record(record: decimal.Decimal | float) -> str:
     return negative + dt.strftime("%H:%M:%S.%f")[hour_remove:seconds_remove]
 
 
-def icon_generator(record: database.DotRecord, medals: tuple[float, float, float]):
+def icon_generator(
+    record: database.DotRecord, medals: tuple[float, float, float]
+) -> str:
     if record.video:
         if record.record < medals[0] != 0:
             icon = utils.FULLY_VERIFIED_GOLD
