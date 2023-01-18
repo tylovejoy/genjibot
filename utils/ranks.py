@@ -62,13 +62,13 @@ DIFFICULTIES_CHOICES = [app_commands.Choice(name=x, value=x) for x in DIFFICULTI
 
 def allowed_difficulties(rank_number: int) -> list[str | None]:
     ranks = []
-    if rank_number >= 3:
-        ranks += DIFFICULTIES_EXT[0:10]
     if rank_number >= 4:
-        ranks += DIFFICULTIES_EXT[10:13]
+        ranks += DIFFICULTIES_EXT[0:10]
     if rank_number >= 5:
-        ranks += DIFFICULTIES_EXT[13:16]
+        ranks += DIFFICULTIES_EXT[10:13]
     if rank_number >= 6:
+        ranks += DIFFICULTIES_EXT[13:16]
+    if rank_number >= 7:
         ranks += DIFFICULTIES_EXT[16:19]
     return ranks
 
