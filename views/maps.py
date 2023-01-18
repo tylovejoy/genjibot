@@ -131,6 +131,17 @@ class PlaytestVoting(discord.ui.View):
             )
         ):
             self.stop()
+            record = await itx.client.database.get_row(
+                "SELECT * FROM playtest WHERE map_code=$1 AND user_id=$2;",
+                self.map_code,
+                self.author_id,
+            )
+            await itx.client.get_channel(utils.PLAYTEST).get_thread(
+                record.thread_id
+            ).edit(archived=True, locked=True)
+            await itx.client.get_channel(utils.PLAYTEST).get_partial_message(
+                record.original_msg
+            ).delete()
 
             votes = [
                 x
@@ -175,19 +186,23 @@ class PlaytestVoting(discord.ui.View):
                     self.map_code,
                 ).avg
                 # Post new maps channel
+                # TODO: FIX EMBED
                 new_map_embed = (
                     await itx.guild.get_thread(votes[0].thread_id).fetch_message(
                         votes[0].message_id
                     )
                 ).embeds[0]
                 new_map_embed.title = "New Map!"
-
+                new_map_embed.set_footer(
+                    text="For notification of newly added maps only. "
+                    "Data may be out of date. "
+                    "Use `/map-search` for the latest info."
+                )
                 new_map_embed.description = re.sub(
                     r"┣ `Difficulty` (.+)\n┣",
                     f"┣ `Difficulty` {utils.convert_num_to_difficulty(avg)}\n┣",
                     new_map_embed.description,
                 )
-
 
                 new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
                     embed=new_map_embed

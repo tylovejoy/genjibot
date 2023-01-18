@@ -49,6 +49,7 @@ class MapCacheData(typing.TypedDict):
     user_ids: list[int]
     archived: bool
 
+
 class UserCacheData(typing.TypedDict):
     nickname: str
     alertable: bool
@@ -75,7 +76,8 @@ async def update_affected_users(
     map_code: str,
 ):
     users = [
-        x.user_id async for x in itx.client.database.get(
+        x.user_id
+        async for x in itx.client.database.get(
             """
             SELECT DISTINCT user_id FROM records WHERE map_code=$1;
             """,
@@ -93,18 +95,18 @@ async def auto_role(client: core.Genji, user: discord.Member):
     rank_roles = list(
         map(
             lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.ranks(),
+            utils.Roles.ranks()[1:],
         )
     )
     rank_plus_roles = list(
         map(
             lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.ranks_plus(),
+            utils.Roles.ranks_plus()[1:],
         )
     )
 
-    added = list(filter(lambda x: x not in user.roles, rank_roles[: rank])) + list(
-        filter(lambda x: x not in user.roles, rank_plus_roles[: rank_plus])
+    added = list(filter(lambda x: x not in user.roles, rank_roles[:rank])) + list(
+        filter(lambda x: x not in user.roles, rank_plus_roles[:rank_plus])
     )
     removed = list(filter(lambda x: x in user.roles, rank_roles[rank + 1 :])) + list(
         filter(lambda x: x in user.roles, rank_plus_roles[rank_plus + 1 :])
@@ -158,7 +160,9 @@ async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, in
     return rank, rank_plus
 
 
-async def get_completions_data(client: core.Genji, user: int) -> dict[str, tuple[int, int, int, int]]:
+async def get_completions_data(
+    client: core.Genji, user: int
+) -> dict[str, tuple[int, int, int, int]]:
     query = """
         WITH ranges ("range", "name") AS (VALUES ('[0.59,2.35)'::numrange, 'Easy'),
                                          ('[2.35,4.12)'::numrange, 'Medium'),

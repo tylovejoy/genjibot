@@ -57,7 +57,9 @@ class VerificationView(discord.ui.View):
             itx.message.id,
         )
         if search.user_id == itx.user.id:
-            await itx.followup.send(content="You cannot verify your own submissions.", ephemeral=True)
+            await itx.followup.send(
+                content="You cannot verify your own submissions.", ephemeral=True
+            )
             return
 
         self.stop()
@@ -230,7 +232,7 @@ class VerificationView(discord.ui.View):
         record = f"**Record:** {search.record}\n"
 
         return {
-            "edit": (f"{utils.UNVERIFIED} " f"Rejected by {itx.user.mention}!"),
+            "edit": f"{utils.UNVERIFIED} " f"Rejected by {itx.user.mention}!",
             "direct_message": (
                 f"**Map Code:** {search.map_code}\n"
                 + record

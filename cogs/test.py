@@ -42,7 +42,7 @@ class Test(commands.Cog):
                 await ctx.bot.tree.sync(guild=ctx.guild)
                 synced = []
             elif spec == "$":
-                ctx.bot.tree.clear_commands()
+                ctx.bot.tree.clear_commands(guild=ctx.guild)
                 await ctx.bot.tree.sync()
                 synced = []
             else:
@@ -99,8 +99,6 @@ class Test(commands.Cog):
     ):
         ctx.bot.logger.setLevel(level.upper())
         await ctx.message.delete()
-
-    
 
     # @app_commands.command(name="test")
     # @app_commands.guilds(discord.Object(id=utils.GUILD_ID))

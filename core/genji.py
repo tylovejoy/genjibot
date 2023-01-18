@@ -39,19 +39,22 @@ class Genji(commands.Bot):
         # Caches
         self.map_names: list[str] | None = None
         self.map_types: list[str] | None = None
-        self.map_techs: list[str] | None = None
+        self.map_mechanics: list[str] | None = None
         self.map_restrictions: list[str] | None = None
         self.map_cache: dict[str, MapCacheData] | None = {}
         self.all_users: dict[int, UserCacheData] | None = {}
         self.creators: dict[int, UserCacheData] | None = {}
         self.fake_users: dict[int, UserCacheData] | None = {}
 
-        self.map_techs_options: list[discord.SelectOption] = []
+        self.map_mechanics_options: list[discord.SelectOption] = []
         self.map_restrictions_options: list[discord.SelectOption] = []
         self.map_types_options: list[discord.SelectOption] = []
 
+        self.map_restrictions_convert: dict[int, str] = {}
+        self.map_mechanics_convert: dict[int, str] = {}
+
         self.map_types_choices: list[app_commands.Choice] = []
-        self.map_techs_choices: list[app_commands.Choice] = []
+        self.map_mechanics_choices: list[app_commands.Choice] = []
         self.map_names_choices: list[app_commands.Choice] = []
         self.map_codes_choices: list[app_commands.Choice] = []
         self.users_choices: list[app_commands.Choice] = []

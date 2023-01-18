@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 
 import utils
+import views
 
 if TYPE_CHECKING:
     import core
@@ -69,6 +70,11 @@ class RejectButton(discord.ui.Button):
 
 
 class Confirm(discord.ui.View):
+    difficulty: views.MapTypeSelect | None
+    restrictions: views.RestrictionsSelect | None
+    map_type: views.MapTypeSelect | None
+    mechanics: views.MechanicsSelect | None
+
     def __init__(
         self,
         original_itx: core.Interaction[core.Genji],
@@ -77,6 +83,7 @@ class Confirm(discord.ui.View):
         ephemeral=False,
     ):
         super().__init__()
+
         self.original_itx = original_itx
         self.confirm_msg = confirm_msg
         self.value = None
@@ -93,7 +100,10 @@ class Confirm(discord.ui.View):
         self.add_item(self.reject)
 
     async def map_submit_enable(self):
-        values = [getattr(self, x, None).values for x in ["map_type"]]
+        values = [
+            getattr(getattr(self, x, None), "values", True)
+            for x in ["map_type", "difficulty"]
+        ]
         if all(values):
             self.confirm.disabled = False
             await self.original_itx.edit_original_response(view=self)

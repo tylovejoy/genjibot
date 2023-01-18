@@ -78,7 +78,7 @@ async def map_type_autocomplete(
 async def map_mechanics_autocomplete(
     itx: core.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.map_techs_choices)
+    return await _autocomplete(current, itx.client.map_mechanics_choices)
 
 
 async def tags_autocomplete(
@@ -140,7 +140,7 @@ async def submit_map_(
                 copy.deepcopy(itx.client.map_types_options)
             ),
             "mechanics": views.MechanicsSelect(
-                copy.deepcopy(itx.client.map_techs_options)
+                copy.deepcopy(itx.client.map_mechanics_options)
             ),
             "restrictions": views.RestrictionsSelect(
                 copy.deepcopy(itx.client.map_restrictions_options)
@@ -242,17 +242,29 @@ async def submit_map_(
     await itx.client.database.set(
         """
         INSERT INTO 
-        maps (map_name, map_type, map_code, "desc", official, mechanics, restrictions, checkpoints) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+        maps (map_name, map_type, map_code, "desc", official, checkpoints) 
+        VALUES ($1, $2, $3, $4, $5, $6);
         """,
         map_name,
         map_types,
         map_code,
         description,
         mod,
-        mechanics,
-        restrictions,
         checkpoint_count,
+    )
+    mechanics = [(map_code, x) for x in mechanics]
+    await itx.client.database.set_many(
+        """
+        INSERT INTO map_mechanics (map_code, mechanic) VALUES ($1, $2);
+        """,
+        mechanics,
+    )
+    restrictions = [(map_code, x) for x in restrictions]
+    await itx.client.database.set_many(
+        """
+        INSERT INTO map_restrictions (map_code, restriction) VALUES ($1, $2);
+        """,
+        restrictions,
     )
     await itx.client.database.set(
         """

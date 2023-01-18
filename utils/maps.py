@@ -26,8 +26,8 @@ class MapTypeTransformer(app_commands.Transformer):
 
 class MapMechanicsTransformer(app_commands.Transformer):
     async def transform(self, itx: core.Interaction[core.Genji], value: str) -> str:
-        if value not in itx.client.map_techs:
-            value = utils.fuzz_(value, itx.client.map_techs)
+        if value not in itx.client.map_mechanics:
+            value = utils.fuzz_(value, itx.client.map_mechanics)
         return value
 
 

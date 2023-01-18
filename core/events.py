@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import typing
 
 import discord
@@ -92,7 +93,7 @@ class BotEvents(commands.Cog):
                 )
 
             self.bot.logger.debug(f"Added persistent views.")
-            self.persistent_views_added = True
+            self.bot.persistent_views_added = True
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -166,11 +167,12 @@ class BotEvents(commands.Cog):
     ):
         if not record.video:
             return
+        icon = utils.icon_generator(record, medals)
         embed = utils.GenjiEmbed(
             url=record.screenshot,
             description=(
                 f"**{record.map_name} by {record.creators} ({record.map_code})**\n"
-                f"┣ `Record` {record.record} {utils.icon_generator(record, medals)}\n"
+                f"┣ `Record` {record.record} {icon}\n"
                 f"┗ `Video` [Link]({record.video})"
                 if record.video
                 else ""
@@ -192,7 +194,7 @@ class BotEvents(commands.Cog):
         embed = utils.GenjiEmbed(
             title=f"{nickname} got promoted!",
             description="\n".join([f"{x.mention}" for x in roles]),
-            color=discord.Color.yellow(),
+            color=discord.Color.green(),
         )
         await client.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
             embed=embed
@@ -210,7 +212,7 @@ class BotEvents(commands.Cog):
         embed = utils.GenjiEmbed(
             title=f"{nickname} has posted a guide for {map_code}",
             url=url,
-            color=discord.Color.yellow(),
+            color=discord.Color.orange(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
         await itx.guild.get_channel(utils.NEWSFEED).send(url)
@@ -228,7 +230,7 @@ class BotEvents(commands.Cog):
             title=f"{nickname} has submitted a new map!",
             description=f"[Check out {map_code} here!]({url})",
             url=url,
-            color=discord.Color.yellow(),
+            color=discord.Color.blue(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
@@ -240,15 +242,26 @@ class BotEvents(commands.Cog):
         gold: float,
         silver: float,
         bronze: float,
+        thread_id: int | None = None,
+        message_id: int | None = None,
     ):
         embed = utils.GenjiEmbed(
             title=f"Medals have been added/changed for code {map_code}",
             description=f"`Gold` {gold}\n"
             f"`Silver` {silver}\n"
             f"`Bronze` {bronze}\n",
-            color=discord.Color.yellow(),
+            color=discord.Color.red(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+
+        if thread_id:
+            await itx.guild.get_thread(thread_id).send(embed=embed)
+            original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
+                message_id
+            )
+            embed = self.edit_medals(original.embeds[0], gold, silver, bronze)
+            await original.edit(embed=embed)
+        else:
+            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
     @commands.Cog.listener()
     async def on_newsfeed_archive(
@@ -258,17 +271,96 @@ class BotEvents(commands.Cog):
         value: str,
     ):
         if value == "archive":
-            description = "This map will not appear in the map search command.\n" \
-                          "You cannot submit records for archived maps."
+            description = (
+                "This map will not appear in the map search command.\n"
+                "You cannot submit records for archived maps."
+            )
         else:
-            description = "This map will now appear in the map search command " \
-                          "and be eligible for record submissions."
+            description = (
+                "This map will now appear in the map search command "
+                "and be eligible for record submissions."
+            )
         embed = utils.GenjiEmbed(
             title=f"{map_code} has been {value}d.",
             description=description,
-            color=discord.Color.yellow(),
+            color=discord.Color.red(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+
+    commands.Cog.listener()
+
+    @commands.Cog.listener()
+    async def on_newsfeed_map_edit(
+        self,
+        itx: core.Interaction[core.Genji],
+        map_code: str,
+        values: dict[str, str],
+        thread_id: int | None = None,
+        message_id: int | None = None,
+    ):
+        description = ">>> "
+        for k, v in values.items():
+            description += f"`{k}` {v}\n"
+
+        embed = utils.GenjiEmbed(
+            title=f"{map_code} has been changed:",
+            description=description,
+            color=discord.Color.red(),
+        )
+        if thread_id:
+            await itx.guild.get_thread(thread_id).send(embed=embed)
+            original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
+                message_id
+            )
+            embed = None
+            for k, v in values.items():
+                if k == "Desc":
+                    embed = self.edit_description(original.embeds[0], v)
+                else:
+                    embed = self.edit_embed(original.embeds[0], k, v)
+            await original.edit(embed=embed)
+        else:
+            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+
+    @staticmethod
+    def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
+        embed.description = re.sub(
+            f"┣ `{field}" + r"` (.+)\n┣",
+            f"┣ `{field}` {value}\n┣",
+            embed.description,
+        )
+        return embed
+
+    @staticmethod
+    def edit_description(embed: discord.Embed, value: str) -> discord.Embed:
+        embed.description = re.sub(
+            f"┗ `Desc` (.+)",
+            f"┗ `Desc` {value}",
+            embed.description,
+        )
+        return embed
+
+    @staticmethod
+    def edit_medals(embed: discord.Embed, gold, silver, bronze) -> discord.Embed:
+        medals_txt = (
+            f"┣ `Medals` "
+            f"{utils.FULLY_VERIFIED_GOLD} {gold} | "
+            f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
+            f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n┗"
+        )
+        if bool(re.search("`Medals`", embed.description)):
+            embed.description = re.sub(
+                r"┣ `Medals` (.+)\n┗",
+                medals_txt,
+                embed.description,
+            )
+        else:
+            embed.description = re.sub(
+                r"┗",
+                medals_txt,
+                embed.description,
+            )
+        return embed
 
 
 async def setup(bot: Genji) -> None:

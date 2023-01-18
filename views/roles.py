@@ -14,6 +14,7 @@ async def add_remove_roles(itx: core.Interaction[core.Genji], role):
     else:
         await itx.user.add_roles(role)
 
+
 # TODO: Change these roles
 class RegionRoles(discord.ui.View):
     def __init__(self):
@@ -74,7 +75,9 @@ class ConsoleRoles(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         custom_id="console_role",
     )
-    async def console_role(self, itx: core.Interaction[core.Genji], button: discord.Button):
+    async def console_role(
+        self, itx: core.Interaction[core.Genji], button: discord.Button
+    ):
         await itx.response.defer(ephemeral=True)
         role = itx.guild.get_role(1060611275916324874)
         await add_remove_roles(itx, role)

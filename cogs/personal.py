@@ -16,7 +16,9 @@ class Personal(commands.Cog):
     @app_commands.command(name="name")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def nickname_change(
-        self, itx: core.Interaction[core.Genji], nickname: app_commands.Range[str, 1, 25]
+        self,
+        itx: core.Interaction[core.Genji],
+        nickname: app_commands.Range[str, 1, 25],
     ) -> None:
         """
         Change your display name in bot commands.

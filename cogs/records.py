@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
+import database
 import utils
 import views
 
@@ -130,13 +131,17 @@ class Records(commands.Cog):
                 if record < search.record and not video:
                     overwrite_view = views.RecordVideoConfirmCompletion(itx)
                     await itx.edit_original_response(
-                        content=f"{itx.user.mention}, your last submission was fully verified, are you sure you want to overwrite your last record with one that can only be partially verified?",
+                        content=(
+                            f"{itx.user.mention}, your last submission was fully verified, "
+                            f"are you sure you want to overwrite your last record "
+                            f"with one that can only be partially verified?"
+                        ),
                         view=overwrite_view,
                     )
                     await overwrite_view.wait()
                     if not overwrite_view.value:
                         return
-            
+
             if not search.video and (record >= search.record) and not video:
                 raise utils.RecordNotFasterError
 
@@ -239,7 +244,9 @@ class Records(commands.Cog):
         ORDER BY record;
         """
 
-        records = [x async for x in itx.client.database.get(query, map_code, verified)]
+        records: list[database.DotRecord | None] = [
+            x async for x in itx.client.database.get(query, map_code, verified)
+        ]
         if not records:
             raise utils.NoRecordsFoundError
 
@@ -341,8 +348,9 @@ class Records(commands.Cog):
         AND ($2 IS FALSE OR rank_num = 1)
         ORDER BY ranks.map_code;     
         """
-        records = [x async for x in itx.client.database.get(query, user, wr_only)]
-
+        records: list[database.DotRecord | None] = [
+            x async for x in itx.client.database.get(query, user, wr_only)
+        ]
 
         if not records:
             raise utils.NoRecordsFoundError
