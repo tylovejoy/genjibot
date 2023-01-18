@@ -279,6 +279,52 @@ class ModCommands(commands.Cog):
             f"Changing {old} ({member}) nickname to {nickname}"
         )
 
+    @mod.command(name="create-fake-member")
+    async def create_fake_member(
+        self, itx: core.Interaction[core.Genji], 
+        fake_user: str,
+    ):
+        """
+        Create a fake user. MAKE SURE THIS USER DOESN'T ALREADY EXIST!
+
+        Args:
+            itx: Discord itx
+            fake_user: The fake user
+        """
+        await itx.response.defer(ephemeral=True)
+
+        view = views.Confirm(itx, ephemeral=True)
+        await itx.edit_original_response(
+            content=f"Create fake user {fake_user}?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        value = (
+            await itx.client.database.get_row(
+                "SELECT MAX(user_id) + 1 user_id_ FROM users "
+                "WHERE user_id < 100000 LIMIT 1;"
+            )
+        ).user_id_
+        await itx.client.database.set(
+            "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, $3);",
+            value,
+            fake_user,
+            False,
+        )
+        itx.client.all_users[value] = utils.UserCacheData(
+            nickname=fake_user,
+            alertable=False,
+        )
+        itx.client.users_choices.append(
+            app_commands.Choice(
+                name=fake_user,
+                value=str(value),
+            )
+        )
+
+
     @mod.command(name="link-member")
     @app_commands.autocomplete(fake_user=cogs.users_autocomplete)
     async def link_member(

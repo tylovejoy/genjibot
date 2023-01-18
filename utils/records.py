@@ -75,40 +75,11 @@ class AllUserTranformer(app_commands.Transformer):
     async def transform(
         self, itx: core.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:
-        if not value.isnumeric() or int(value) < 100000:
-            return await self.fake_user(itx, value)
+        value = int(value)
+        if value < 100000:
+            return utils.FakeUser(value, itx.client.all_users[value])
 
-        return itx.guild.get_member(int(value))
-
-    @staticmethod
-    async def fake_user(
-        itx: core.Interaction[core.Genji], value: str
-    ) -> utils.FakeUser:
-        if value not in map(str, itx.client.all_users.keys()):
-            nickname = value
-            value = (
-                await itx.client.database.get_row(
-                    "SELECT MAX(user_id) + 1 user_id_ FROM users "
-                    "WHERE user_id < 100000 LIMIT 1;"
-                )
-            ).user_id_
-            await itx.client.database.set(
-                "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, $3);",
-                value,
-                nickname,
-                False,
-            )
-            itx.client.all_users[value] = utils.UserCacheData(
-                nickname=nickname,
-                alertable=False,
-            )
-            itx.client.users_choices.append(
-                app_commands.Choice(
-                    name=nickname,
-                    value=str(value),
-                )
-            )
-        return utils.FakeUser(int(value), itx.client.all_users[int(value)])
+        return itx.guild.get_member(value)
 
 
 class RecordTransformer(app_commands.Transformer):
