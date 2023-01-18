@@ -182,8 +182,8 @@ class Maps(commands.Cog):
                     LEFT JOIN map_ratings mr on mc.user_id = mr.user_id
                     LEFT JOIN guides g on m.map_code = g.map_code
                     LEFT JOIN map_medals mm on m.map_code = mm.map_code
-                    GROUP BY checkpoints, restrictions, map_name,
-                    m.map_code, "desc", official, mechanics, map_type, gold, silver, bronze, archived)
+                    GROUP BY checkpoints, map_name,
+                    m.map_code, "desc", official, map_type, gold, silver, bronze, archived)
                 SELECT *
                 FROM all_maps
                 WHERE
