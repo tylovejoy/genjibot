@@ -121,7 +121,8 @@ class QualitySelect(discord.ui.Select):
                     value=str(x),
                 )
                 for x in range(1, 7)
-            ]
+            ],
+            placeholder="Rate the quality of the map!"
         )
 
     async def callback(self, interaction: core.Interaction[core.Genji]):
