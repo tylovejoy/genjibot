@@ -96,10 +96,14 @@ class URLTransformer(app_commands.Transformer):
         value = value.strip()
         if not value.startswith("https://") and not value.startswith("http://"):
             value = "https://" + value
-        async with itx.client.session.get(value) as resp:
-            if resp.status != 200:
-                raise utils.IncorrectURLFormatError
-            return str(resp.url)
+        try:
+            async with itx.client.session.get(value) as resp:
+                if resp.status != 200:
+                    raise utils.IncorrectURLFormatError
+                return str(resp.url)
+        except Exception as e:
+            print(e)
+            raise utils.IncorrectURLFormatError
 
 
 def time_convert(string: str) -> float:
