@@ -150,7 +150,7 @@ class Maps(commands.Cog):
         embed.set_thumbnail(url=None)
         maps: list[database.DotRecord | None] = []
 
-        ranges = utils.TOP_DIFFICULTIES_RANGES.get(difficulty.value, None)
+        ranges = utils.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
         async for _map in itx.client.database.get(
@@ -197,7 +197,7 @@ class Maps(commands.Cog):
                 ($6::numeric(10, 2) IS NULL OR difficulty < $6)) AND
                 ($7::int IS NULL OR quality >= $7) AND
                 ($8::bigint IS NULL OR $8 = ANY(creator_ids))
-                ORDER BY difficulty, quality;
+                ORDER BY difficulty, quality DESC;
             """,
             map_code,
             map_type,
