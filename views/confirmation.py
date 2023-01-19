@@ -113,10 +113,11 @@ class QualitySelect(discord.ui.Select):
     view: ConfirmCompletion
 
     def __init__(self):
+
         super().__init__(
             options=[
                 discord.SelectOption(
-                    label=utils.ALL_STARS[x],
+                    label=utils.ALL_STARS[x - 1],
                     value=str(x),
                 )
                 for x in range(1, 7)
