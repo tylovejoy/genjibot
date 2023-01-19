@@ -143,11 +143,11 @@ class ConfirmCompletion(discord.ui.View):
         self.value = None
         self.ephemeral = ephemeral
 
-        if self.rank >= 5:
+        if self.rank > 5:
             self.quality = QualitySelect()
             self.add_item(self.quality)
 
-        self.confirm = ConfirmButton(disabled=self.rank >= 5)
+        self.confirm = ConfirmButton(disabled=self.rank > 5)
         self.reject = RejectButton()
         self.add_item(self.confirm)
         self.add_item(self.reject)

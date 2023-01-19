@@ -147,7 +147,7 @@ class Records(commands.Cog):
 
         user = itx.client.all_users[itx.user.id]
         view = views.ConfirmCompletion(
-            await utils.Roles.find_highest_rank(itx.user) + 1,
+            await utils.Roles.find_highest_rank(itx.user),
             itx,
             f"{utils.TIME} Waiting for verification...\n",
         )
