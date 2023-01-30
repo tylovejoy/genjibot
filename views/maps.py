@@ -122,12 +122,12 @@ class PlaytestVoting(discord.ui.View):
             or (
                 self.base_diff in utils.DIFFICULTIES[4:6]
                 and votes == 3
-                and len(records) == 5
+                and len(records) == 3
             )
             or (
                 self.base_diff in utils.DIFFICULTIES[6:]
                 and votes == 2
-                and len(records) == 5
+                and len(records) == 2
             )
         ):
             self.stop()
