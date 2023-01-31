@@ -75,13 +75,14 @@ class PlaytestVoting(discord.ui.View):
         author_id: int,
         client: core.Genji,
         original_msg: int,
+        author_rank: int,
     ):
         super().__init__(timeout=None)
         self.map_code = map_code
         self.base_diff = base_diff
         self.author_id = author_id
         self.client = client
-        self.author_rank = None
+        self.author_rank = author_rank
         self.message_id = original_msg
 
     async def interaction_check(self, itx: core.Interaction[core.Genji]) -> bool:
@@ -94,7 +95,11 @@ class PlaytestVoting(discord.ui.View):
             res = True
             if self.base_diff == "Hell" and author.rank < 6:  # TODO: Test
                 res = False
-                self.author_rank = author.rank
+        if not res:
+            await itx.followup.send(
+                "You cannot vote here. You cannot vote for your own map or your rank is too low.",
+                ephemeral=True,
+            )
         return res
 
     async def check_status(self, itx: core.Interaction[core.Genji], votes: int):
@@ -105,7 +110,7 @@ class PlaytestVoting(discord.ui.View):
 
         records = [
             x
-            async for x in await itx.client.database.get(
+            async for x in itx.client.database.get(
                 query,
                 self.map_code,
                 5 if self.base_diff != "Hell" else 6,
@@ -116,18 +121,18 @@ class PlaytestVoting(discord.ui.View):
         if (
             (
                 self.base_diff in utils.DIFFICULTIES[0:4]
-                and votes == 5
-                and len(records) == 5
+                and votes >= 5
+                and len(records) >= 5
             )
             or (
                 self.base_diff in utils.DIFFICULTIES[4:6]
-                and votes == 3
-                and len(records) == 3
+                and votes >= 3
+                and len(records) >= 3
             )
             or (
                 self.base_diff in utils.DIFFICULTIES[6:]
-                and votes == 2
-                and len(records) == 2
+                and votes >= 2
+                and len(records) >= 2
             )
         ):
             self.stop()
@@ -139,9 +144,6 @@ class PlaytestVoting(discord.ui.View):
             await itx.client.get_channel(utils.PLAYTEST).get_thread(
                 record.thread_id
             ).edit(archived=True, locked=True)
-            await itx.client.get_channel(utils.PLAYTEST).get_partial_message(
-                record.original_msg
-            ).delete()
 
             votes = [
                 x
@@ -163,8 +165,8 @@ class PlaytestVoting(discord.ui.View):
                     self.map_code,
                 )
 
-                votes = [
-                    (self.map_code, x.user_id, utils.DIFFICULTIES_RANGES[x.value][0])
+                votes_args = [
+                    (self.map_code, x.user_id, x.value)
                     for x in votes
                     if x.user_id != self.author_id
                 ]
@@ -178,20 +180,22 @@ class PlaytestVoting(discord.ui.View):
                         -- WHERE map_ratings.user_id = EXCLUDED.user_id 
                         -- AND map_ratings.map_code = EXCLUDED.map_code; 
                     """,
-                    votes,
+                    votes_args,
                 )
 
-                avg = await itx.client.database.get_row(
-                    "SELECT AVG(difficulty) avg FROM map_ratings WHERE map_code=$1;",
-                    self.map_code,
-                ).avg
-                # Post new maps channel
-                # TODO: FIX EMBED
-                new_map_embed = (
-                    await itx.guild.get_thread(votes[0].thread_id).fetch_message(
-                        votes[0].message_id
+                avg = (
+                    await itx.client.database.get_row(
+                        "SELECT AVG(difficulty) avg FROM map_ratings WHERE map_code=$1;",
+                        self.map_code,
                     )
-                ).embeds[0]
+                ).avg
+
+                # Post new maps channel
+                thread = itx.guild.get_channel(utils.PLAYTEST)
+                new_map_embed = (await thread.fetch_message(votes[0].thread_id)).embeds[
+                    0
+                ]
+
                 new_map_embed.title = "New Map!"
                 new_map_embed.set_footer(
                     text="For notification of newly added maps only. "
@@ -209,9 +213,24 @@ class PlaytestVoting(discord.ui.View):
                 )
 
                 itx.client.dispatch(
-                    "newsfeed_new_map", author, new_map_message.jump_url, self.map_code
+                    "newsfeed_new_map",
+                    itx,
+                    author,
+                    new_map_message.jump_url,
+                    self.map_code,
                 )
-                await utils.update_affected_users(itx, self.map_code)
+                try:
+                    await utils.update_affected_users(itx, self.map_code)
+                except Exception as e:
+                    print("This needs to be excepted:  1----->", e)
+
+                try:
+                    await itx.client.get_channel(utils.PLAYTEST).get_partial_message(
+                        record.original_msg
+                    ).delete()
+                except Exception as e:
+                    print("This needs to be excepted:  2----->", e)
+                    ...
 
             else:
                 # Delete map
@@ -319,16 +338,17 @@ class PlaytestVoting(discord.ui.View):
             vote_value,
         )
 
-        avg = (
-            await itx.client.database.get_row(
-                """
-                SELECT AVG(value) as value
+        row = await itx.client.database.get_row(
+            """
+                SELECT AVG(value) as value, SUM(CASE WHEN user_id != 141372217677053952 THEN 1 ELSE 0 END) as count
                 FROM playtest 
                 WHERE message_id = $1;
                 """,
-                itx.message.id,
-            )
-        ).value
+            itx.message.id,
+        )
+
+        avg = row.value
+        count = row.count
 
         func = functools.partial(self.plot, avg)
         image = await itx.client.loop.run_in_executor(None, func)
@@ -337,3 +357,4 @@ class PlaytestVoting(discord.ui.View):
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
         )
+        await self.check_status(itx, count)

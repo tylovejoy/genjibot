@@ -220,7 +220,12 @@ async def submit_map_(
         thread_msg = await thread.send(
             f"{itx.guild.get_role(utils.PLAYTESTER).mention}",
             view=views.PlaytestVoting(
-                map_code, difficulty, itx.user.id, itx.client, new_map.id
+                map_code,
+                difficulty,
+                itx.user.id,
+                itx.client,
+                new_map.id,
+                await utils.Roles.find_highest_rank(itx.user),
             ),
             embed=embed,
         )

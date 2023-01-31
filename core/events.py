@@ -88,6 +88,9 @@ class BotEvents(commands.Cog):
                         x.user_id,
                         self.bot,
                         x.message_id,
+                        await utils.Roles.find_highest_rank(
+                            self.bot.get_guild(utils.GUILD_ID).get_member(x.user_id)
+                        ),
                     ),
                     message_id=x.message_id,
                 )

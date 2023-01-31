@@ -143,7 +143,11 @@ async def auto_role(client: core.Genji, user: discord.Member):
         )
 
     if added or removed:
-        await user.send(response)
+        try:
+            await user.send(response)
+        except discord.errors.HTTPException:
+            # Can't DM everybody :'(
+            ...
 
 
 async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, int]:
