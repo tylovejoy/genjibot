@@ -62,7 +62,14 @@ class VerificationView(discord.ui.View):
             )
             return
         self.clear_items()
-        self.add_item(discord.ui.Button(style=discord.ButtonStyle.grey, label="Please wait...", disabled=True, emoji=utils.TIME))
+        self.add_item(
+            discord.ui.Button(
+                style=discord.ButtonStyle.grey,
+                label="Please wait...",
+                disabled=True,
+                emoji=utils.TIME,
+            )
+        )
         await itx.edit_original_response(view=self)
         self.stop()
         original_message = await self.find_original_message(

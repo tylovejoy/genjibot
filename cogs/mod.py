@@ -281,7 +281,8 @@ class ModCommands(commands.Cog):
 
     @mod.command(name="create-fake-member")
     async def create_fake_member(
-        self, itx: core.Interaction[core.Genji], 
+        self,
+        itx: core.Interaction[core.Genji],
         fake_user: str,
     ):
         """
@@ -323,7 +324,6 @@ class ModCommands(commands.Cog):
                 value=str(value),
             )
         )
-
 
     @mod.command(name="link-member")
     @app_commands.autocomplete(fake_user=cogs.users_autocomplete)

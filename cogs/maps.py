@@ -150,7 +150,9 @@ class Maps(commands.Cog):
         embed.set_thumbnail(url=None)
         maps: list[database.DotRecord | None] = []
 
-        ranges = utils.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
+        ranges = utils.TOP_DIFFICULTIES_RANGES.get(
+            getattr(difficulty, "value", None), None
+        )
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
         async for _map in itx.client.database.get(
