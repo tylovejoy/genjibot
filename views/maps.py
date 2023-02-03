@@ -338,6 +338,11 @@ class PlaytestVoting(discord.ui.View):
             vote_value,
         )
 
+        await itx.followup.send(
+            f"You voted: {select.values[0]}",
+            ephemeral=True,
+        )
+
         row = await itx.client.database.get_row(
             """
                 SELECT AVG(value) as value, SUM(CASE WHEN user_id != 141372217677053952 THEN 1 ELSE 0 END) as count
@@ -357,4 +362,5 @@ class PlaytestVoting(discord.ui.View):
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
         )
+
         await self.check_status(itx, count)
