@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import operator
 import re
 import typing
@@ -25,10 +26,8 @@ async def delete_interaction(
     if minutes < 0:
         raise ValueError("Time cannot be negative.")
     await asyncio.sleep(60 * minutes)
-    try:
+    with contextlib.suppress(discord.HTTPException, discord.NotFound, discord.Forbidden):
         await itx.delete_original_response()
-    except (discord.HTTPException, discord.NotFound, discord.Forbidden):
-        ...
 
 
 def fuzz_(string: str, iterable: typing.Iterable[str]) -> str:
@@ -143,11 +142,8 @@ async def auto_role(client: core.Genji, user: discord.Member):
         )
 
     if added or removed:
-        try:
+        with contextlib.suppress(discord.errors.HTTPException):
             await user.send(response)
-        except discord.errors.HTTPException:
-            # Can't DM everybody :'(
-            ...
 
 
 async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, int]:
