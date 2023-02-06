@@ -211,6 +211,8 @@ class VerificationView(discord.ui.View):
         medals: tuple[float, float, float],
     ) -> dict[str, str]:
         """Data for verified records."""
+        if float(search.record) == utils.COMPLETION_PLACEHOLDER:
+            search.record = "Completion"
         icon = utils.icon_generator(search, medals)
         record = f"**Record:** {search.record} " f"{icon}"
         if search.video:
@@ -237,6 +239,8 @@ class VerificationView(discord.ui.View):
         rejection: str,
     ) -> dict[str, str]:
         """Data for rejected records."""
+        if float(search.record) == utils.COMPLETION_PLACEHOLDER:
+            search.record = "Completion"
 
         record = f"**Record:** {search.record}\n"
 

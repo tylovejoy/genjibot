@@ -14,6 +14,8 @@ import views
 if typing.TYPE_CHECKING:
     import core
 
+PR_TYPES = typing.Literal["All", "World Records", "Completions", "Records"]
+
 
 class Records(commands.Cog):
     """Records"""
@@ -31,6 +33,13 @@ class Records(commands.Cog):
             app_commands.ContextMenu(
                 name="world-records",
                 callback=self.wr_context_callback,
+                guild_ids=[utils.GUILD_ID],
+            )
+        )
+        self.bot.tree.add_command(
+            app_commands.ContextMenu(
+                name="completions",
+                callback=self.completion_context_callback,
                 guild_ids=[utils.GUILD_ID],
             )
         )
@@ -81,7 +90,7 @@ class Records(commands.Cog):
         )
         await itx.edit_original_response(embed=embed)
 
-    @app_commands.command(name="submit-record")
+    @app_commands.command(name="submit-completion")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
@@ -90,8 +99,8 @@ class Records(commands.Cog):
         self,
         itx: core.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
-        record: app_commands.Transform[float, utils.RecordTransformer],
         screenshot: discord.Attachment,
+        record: app_commands.Transform[float, utils.RecordTransformer] | None,
         video: app_commands.Transform[str, utils.URLTransformer] | None,
     ) -> None:
         """
@@ -110,6 +119,12 @@ class Records(commands.Cog):
 
         if itx.client.map_cache[map_code]["archived"] is True:
             raise utils.ArchivedMap
+
+        if video and not record:
+            raise utils.IncorrectRecordFormatError
+
+        if not record:
+            record = utils.COMPLETION_PLACEHOLDER
 
         search = [
             x
@@ -209,7 +224,7 @@ class Records(commands.Cog):
         self,
         itx: core.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
-        verified: bool | None = True,
+        filters: typing.Literal["Fully Verified", "Verified", "Completions", "All"] | None = "Fully Verified",
     ) -> None:
         """
         View leaderboard of any map in the database.
@@ -217,7 +232,7 @@ class Records(commands.Cog):
         Args:
             itx: Interaction
             map_code: Overwatch share code
-            verified: Only show fully verified video submissions.
+            filters: Type of submissions to show
         """
         await itx.response.defer(ephemeral=True)
         if map_code not in itx.client.map_cache.keys():
@@ -239,13 +254,15 @@ class Records(commands.Cog):
             LEFT JOIN maps m on m.map_code = r.map_code
         ) as ranks
         LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
-        WHERE ranks.map_code=$1 
-        AND ($2 IS FALSE OR verified=$2)
+        WHERE ranks.map_code = $1 
+        AND ($2::text != 'Fully Verified' OR (verified = TRUE AND record < 99999999))
+        AND ($2::text != 'Verified' OR record < 99999999)
+        AND ($2::text != 'Completions' OR record > 99999999)
         ORDER BY record;
         """
 
         records: list[database.DotRecord | None] = [
-            x async for x in itx.client.database.get(query, map_code, verified)
+            x async for x in itx.client.database.get(query, map_code, filters)
         ]
         if not records:
             raise utils.NoRecordsFoundError
@@ -262,7 +279,7 @@ class Records(commands.Cog):
         self,
         itx: core.Interaction[core.Genji],
         user: str | None = None,
-        wr_only: bool | None = None,
+        type: typing.Literal["All", "World Record", "Completions", "Records"] | None = "All",
     ):
         """
         Show all records a specific user has (fully AND partially verified)
@@ -272,23 +289,28 @@ class Records(commands.Cog):
             user: User
             wr_only: Only show world records
         """
-        await self._personal_records(itx, user, wr_only)
+        await self._personal_records(itx, user, type)
 
     async def pr_context_callback(
         self, itx: core.Interaction[core.Genji], user: discord.Member
     ):
-        await self._personal_records(itx, user, False)
+        await self._personal_records(itx, user, "Records")
 
     async def wr_context_callback(
         self, itx: core.Interaction[core.Genji], user: discord.Member
     ):
-        await self._personal_records(itx, user, True)
+        await self._personal_records(itx, user, "World Records")
+
+    async def completion_context_callback(
+        self, itx: core.Interaction[core.Genji], user: discord.Member
+    ):
+        await self._personal_records(itx, user, "Completions")
 
     @staticmethod
     async def _personal_records(
         itx: core.Interaction[core.Genji],
         user: discord.Member | str,
-        wr_only: bool,
+        type: PR_TYPES,
     ):
         await itx.response.defer(ephemeral=True)
         if not user:
@@ -345,18 +367,20 @@ class Records(commands.Cog):
         FROM ranks
                  LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE user_id = $1 
-        AND ($2 IS FALSE OR rank_num = 1)
+        AND ($2::text != 'World Records' OR rank_num = 1 AND record < 99999999)
+        AND ($2::text != 'Records' OR record < 99999999)
+        AND ($2::text != 'Completions' OR record > 99999999)
         ORDER BY ranks.map_code;     
         """
         records: list[database.DotRecord | None] = [
-            x async for x in itx.client.database.get(query, user, wr_only)
+            x async for x in itx.client.database.get(query, user, type)
         ]
 
         if not records:
             raise utils.NoRecordsFoundError
         embeds = utils.pr_records_embed(
             records,
-            f"Personal {'World ' if wr_only else ''}Records | {itx.client.all_users[user]['nickname']}",
+            f"Personal {type} | {itx.client.all_users[user]['nickname']}",
         )
         view = views.Paginator(embeds, itx.user)
         await view.start(itx)

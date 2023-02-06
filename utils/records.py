@@ -161,6 +161,7 @@ def pretty_record(record: decimal.Decimal | float) -> str:
 def icon_generator(
     record: database.DotRecord, medals: tuple[float, float, float]
 ) -> str:
+    icon = ""
     if record.video:
         if record.record < medals[0] != 0:
             icon = utils.FULLY_VERIFIED_GOLD
@@ -170,15 +171,7 @@ def icon_generator(
             icon = utils.FULLY_VERIFIED_BRONZE
         else:
             icon = utils.FULLY_VERIFIED
-    else:
-        # if record.record < medals[0] != 0:
-        #     icon = utils.PARTIAL_VERIFIED_GOLD
-        # elif record.record < medals[1] != 0:
-        #     icon = utils.PARTIAL_VERIFIED_SILVER
-        # elif record.record < medals[2] != 0:
-        #     icon = utils.PARTIAL_VERIFIED_BRONZE
-        # else:
-        #     icon = utils.PARTIAL_VERIFIED
+    elif record.record != "Completion":
         icon = utils.PARTIAL_VERIFIED
     return icon
 
@@ -190,6 +183,8 @@ def all_levels_records_embed(
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
+        if float(record.record) == utils.COMPLETION_PLACEHOLDER:
+            record.record = "Completion"
         if record.gold:
             medals = (record.gold, record.silver, record.bronze)
             medals = tuple(map(float, medals))
@@ -237,6 +232,8 @@ def pr_records_embed(
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
+        if float(record.record) == utils.COMPLETION_PLACEHOLDER:
+            record.record = "Completion"
         cur_code = f"{record.map_name} by {record.creators} ({record.map_code})"
         description = ""
         print(record.map_code)
