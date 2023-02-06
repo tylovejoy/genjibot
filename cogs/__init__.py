@@ -60,6 +60,7 @@ async def creator_autocomplete(
 async def map_codes_autocomplete(
     itx: core.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
+    current = current.replace("O", "0").replace("o", "0")
     return await _autocomplete(current, itx.client.map_codes_choices)
 
 
