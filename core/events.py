@@ -24,10 +24,6 @@ class BotEvents(commands.Cog):
         bot.tree.on_error = utils.on_app_command_error
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        ...
-
-    @commands.Cog.listener()
     async def on_ready(self) -> None:
         """
         The on_ready function is called when the bot
