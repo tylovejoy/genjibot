@@ -100,6 +100,19 @@ class PlaytestVoting(discord.ui.View):
                 "You cannot vote here. You cannot vote for your own map or your rank is too low.",
                 ephemeral=True,
             )
+        else:
+            res = bool(
+                await self.client.database.get_row(
+                    "SELECT 1 FROM records WHERE user_id = $1 AND map_code = $2",
+                    itx.user.id,
+                    self.map_code,
+                )
+            )
+            if not res:
+                await itx.followup.send(
+                    "You cannot vote before submitting a completion.",
+                    ephemeral=True,
+                )
         return res
 
     async def check_status(self, itx: core.Interaction[core.Genji], votes: int):
