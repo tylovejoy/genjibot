@@ -304,7 +304,7 @@ class ModCommands(commands.Cog):
             return
         value = (
             await itx.client.database.get_row(
-                "SELECT MAX(user_id) + 1 user_id_ FROM users "
+                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users "
                 "WHERE user_id < 100000 LIMIT 1;"
             )
         ).user_id_
