@@ -911,8 +911,6 @@ class ModCommands(commands.Cog):
         else:
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map": map_name})
 
-    # TODO: Delete map ?
-
 
 async def setup(bot: core.Genji):
     await bot.add_cog(ModCommands(bot))

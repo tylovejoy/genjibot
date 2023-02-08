@@ -93,7 +93,7 @@ class PlaytestVoting(discord.ui.View):
         )
         if itx.user.id != self.author_id:
             res = True
-            if self.base_diff == "Hell" and author.rank < 6:  # TODO: Test
+            if self.base_diff == "Hell" and author.rank < 6:
                 res = False
         if not res:
             await itx.followup.send(

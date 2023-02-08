@@ -34,7 +34,6 @@ class Tasks(commands.Cog):
         self,
         ctx: commands.Context[core.Genji],
     ):
-        # TODO: Reload cache
         self.cache_all_users.restart()
         self.cache_map_code_choices.restart()
         self.cache_map_names.restart()
@@ -160,7 +159,7 @@ class Tasks(commands.Cog):
             if x.is_creator:
                 self.bot.creators[
                     x.user_id
-                ] = user_data  # TODO: add creator when add role submit_map
+                ] = user_data
                 self.bot.creators_choices.append(choice)
             # if x.user_id < 1000000:
             #     self.bot.fake_users[x.user_id] = user_data
