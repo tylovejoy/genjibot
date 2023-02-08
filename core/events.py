@@ -50,20 +50,19 @@ class BotEvents(commands.Cog):
             for x in queue:
                 self.bot.add_view(views.VerificationView(), message_id=x)
 
-            # TODO: Hardcoded LIVE
             view = views.RegionRoles()
-            self.bot.add_view(view, message_id=1054834412409339904)
-            await self.bot.get_channel(1054834201444220948).get_partial_message(
-                1054834412409339904
+            self.bot.add_view(view, message_id=1072934573811450046)
+            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
+                1072934573811450046
             ).edit(
                 content="Press the button to add or remove your preferred region.",
                 view=view,
             )
 
             view = views.ConsoleRoles()
-            self.bot.add_view(view, message_id=1060610579007553536)
-            await self.bot.get_channel(1054834201444220948).get_partial_message(
-                1060610579007553536
+            self.bot.add_view(view, message_id=1072934586197221396)
+            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
+                1072934586197221396
             ).edit(
                 content="Choose how you play.",
                 view=view,
@@ -127,13 +126,13 @@ class BotEvents(commands.Cog):
             )
         ]
         if res and (
-            map_maker := member.guild.get_role(utils.Roles.MAP_MAKER)
-            not in member.roles
+            (map_maker := member.guild.get_role(utils.Roles.MAP_MAKER)) is not None
+            and map_maker not in member.roles
         ):
             await member.add_roles(
                 map_maker, reason="User rejoined. Re-granting map maker."
             )
-        if ninja := member.guild.get_role(utils.Roles.NINJA) not in member.roles:
+        if (ninja := member.guild.get_role(utils.Roles.NINJA)) is not None and ninja not in member.roles:
             await member.add_roles(ninja, reason="User joined. Granting Ninja.")
 
         await utils.auto_role(self.bot, member)
