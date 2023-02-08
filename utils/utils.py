@@ -67,7 +67,7 @@ NUMBER_EMOJI = {
     10: "🔟",
 }
 
-_RANK_THRESHOLD = (10, 10, 10, 10, 5, 2)
+_RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
 
 
 async def update_affected_users(
