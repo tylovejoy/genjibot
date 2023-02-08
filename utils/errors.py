@@ -210,15 +210,19 @@ async def on_app_command_error(
         formatted_tb = "".join(
             traceback.format_exception(None, exception, exception.__traceback__)
         )
+        content = (
+            "This message will delete in "
+            f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
+        )
         if len(formatted_tb) < 1850:
             await channel.send(
-                f"{command_name}{args_name}{channel_name}{user_name}\n```py\n"
+                f"{content}\n{command_name}{args_name}{channel_name}{user_name}\n```py\n"
                 + formatted_tb
                 + "\n```"
             )
         else:
             await channel.send(
-                f"{command_name} {args_name} {channel_name} {user_name}",
+                f"{content}\n{command_name} {args_name} {channel_name} {user_name}",
                 file=discord.File(
                     fp=io.BytesIO(
                         bytearray(
@@ -229,4 +233,4 @@ async def on_app_command_error(
                     filename="error.log",
                 ),
             )
-    await utils.delete_interaction(itx, minutes=15)
+    await utils.delete_interaction(itx, minutes=1)
