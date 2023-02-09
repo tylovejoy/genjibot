@@ -76,11 +76,12 @@ class AllUserTranformer(app_commands.Transformer):
         self, itx: core.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:
         value = int(value)
-        if value < 100000:
-            return utils.FakeUser(value, itx.client.all_users[value])
-
-        return itx.guild.get_member(value)
-
+        # if value < 100000:
+        #     return utils.FakeUser(value, itx.client.all_users[value])
+        member = itx.guild.get_member(value)
+        if member:
+            return member
+        return utils.FakeUser(value, itx.client.all_users[value])
 
 class RecordTransformer(app_commands.Transformer):
     async def transform(self, itx: core.Interaction[core.Genji], value: str) -> float:
