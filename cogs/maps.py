@@ -166,8 +166,6 @@ class Maps(commands.Cog):
                     array_agg(DISTINCT url)               AS guide,
                     array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
                     array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
-                    --array_to_string(SELECT name FROM map_techs LEFT JOIN unnest(mechanics), ', ')    AS mechanics,
-                    --array_to_string((restrictions), ', ') AS restrictions,
                     checkpoints,
                     string_agg(DISTINCT (nickname), ', ') AS creators,
                     COALESCE(AVG(difficulty), 0)          AS difficulty,
@@ -181,7 +179,7 @@ class Maps(commands.Cog):
                     LEFT JOIN map_restrictions rest on rest.map_code = m.map_code
                     LEFT JOIN map_creators mc on m.map_code = mc.map_code
                     LEFT JOIN users u on mc.user_id = u.user_id
-                    LEFT JOIN map_ratings mr on mc.user_id = mr.user_id
+                    LEFT JOIN map_ratings mr on m.map_code = mr.map_code
                     LEFT JOIN guides g on m.map_code = g.map_code
                     LEFT JOIN map_medals mm on m.map_code = mm.map_code
                     GROUP BY checkpoints, map_name,
