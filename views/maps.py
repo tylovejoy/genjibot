@@ -212,7 +212,7 @@ class PlaytestVoting(discord.ui.View):
                 new_map_embed.title = "New Map!"
                 new_map_embed.set_footer(
                     text="For notification of newly added maps only. "
-                    "Data may be out of date. "
+                    "Data may be wrong or out of date. "
                     "Use the /map-search command for the latest info."
                 )
                 new_map_embed.description = re.sub(
