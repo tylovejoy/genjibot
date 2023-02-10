@@ -108,7 +108,7 @@ class VerificationView(discord.ui.View):
                 """,
                 search.map_code,
                 search.user_id,
-                search.record,
+                search.record if search.record != "Completion" else utils.COMPLETION_PLACEHOLDER,
                 search.screenshot,
                 search.video,
                 bool(search.video),
