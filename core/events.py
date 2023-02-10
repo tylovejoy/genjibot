@@ -50,21 +50,30 @@ class BotEvents(commands.Cog):
             for x in queue:
                 self.bot.add_view(views.VerificationView(), message_id=x)
 
-            view = views.RegionRoles()
-            self.bot.add_view(view, message_id=1072934573811450046)
+            view = views.AnnouncementRoles()
+            self.bot.add_view(view, message_id=1073294355613360129)
             await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
-                1072934573811450046
+                1073294355613360129
             ).edit(
-                content="Press the button to add or remove your preferred region.",
+                content="**Announcement Pings**",
+                view=view,
+            )
+
+            view = views.RegionRoles()
+            self.bot.add_view(view, message_id=1073294377050460253)
+            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
+                1073294377050460253
+            ).edit(
+                content="**Regions**",
                 view=view,
             )
 
             view = views.ConsoleRoles()
-            self.bot.add_view(view, message_id=1072934586197221396)
+            self.bot.add_view(view, message_id=1073294381311873114)
             await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
-                1072934586197221396
+                1073294381311873114
             ).edit(
-                content="Choose how you play.",
+                content="**Platform**",
                 view=view,
             )
 
