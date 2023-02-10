@@ -219,7 +219,7 @@ async def submit_map_(
         thread = await new_map.create_thread(name=f"Discuss/rate {map_code} here.")
 
         thread_msg = await thread.send(
-            f"{itx.guild.get_role(utils.PLAYTESTER).mention}",
+            f"Discuss, play, rate, etc.",
             view=views.PlaytestVoting(
                 map_code,
                 difficulty,
@@ -321,7 +321,7 @@ async def submit_map_(
         embed.title = "New Map!"
         embed.set_footer(
             text="For notification of newly added maps only. "
-                 "Data may be out of date. "
+                 "Data may be wrong or out of date. "
                  "Use the /map-search command for the latest info."
         )
         new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
