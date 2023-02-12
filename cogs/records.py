@@ -109,11 +109,16 @@ class Records(commands.Cog):
         Args:
             itx: Interaction
             map_code: Overwatch share code
-            record: Record in HH:MM:SS.ss format
+            record: Record in seconds/milliseconds
             screenshot: Screenshot of completion
             video: Video of play through. REQUIRED FOR FULL VERIFICATION!
         """
         await itx.response.defer(ephemeral=False)
+
+        if itx.channel_id != utils.RECORDS:
+            #await itx.followup.send(f"You can only submit in <#{utils.RECORDS}>", ephemeral=True)
+            return
+
         if map_code not in itx.client.map_cache.keys():
             raise utils.InvalidMapCodeError
 
@@ -121,7 +126,7 @@ class Records(commands.Cog):
             raise utils.ArchivedMap
 
         if video and not record:
-            raise utils.IncorrectRecordFormatError
+            raise utils.VideoNoRecord
 
         if not record:
             record = utils.COMPLETION_PLACEHOLDER

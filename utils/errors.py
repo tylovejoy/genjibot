@@ -27,7 +27,7 @@ class DatabaseConnectionError(Exception):
 class IncorrectRecordFormatError(
     BaseParkourException, app_commands.errors.AppCommandError
 ):
-    """Record must be in HH:MM:SS.ss format."""
+    """Record must be in XXXX.xx format e.g. 1569.33, 567.01, 10.50, etc."""
 
 
 class IncorrectCodeFormatError(
@@ -115,6 +115,10 @@ class UserNotFoundError(BaseParkourException):
 
 class RankTooLowError(BaseParkourException):
     """Your rank is too low to do this action."""
+
+
+class VideoNoRecord(BaseParkourException):
+    """If you add a video, you must submit a time record as well. Please submit again with the `record` argument."""
 
 
 class InvalidFakeUser(BaseParkourException):
