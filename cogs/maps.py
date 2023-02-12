@@ -193,8 +193,7 @@ class Maps(commands.Cog):
                 ($2::text IS NULL OR map_type LIKE $2) AND
                 ($3::text IS NULL OR map_name = $3) AND
                 ($4::text IS NULL OR mechanics LIKE $4) AND
-                (($5::numeric(10, 2) IS NULL OR difficulty >= $5) AND
-                ($6::numeric(10, 2) IS NULL OR difficulty < $6)) AND
+                ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2) AND difficulty < $6::numeric(10, 2))) AND
                 ($7::int IS NULL OR quality >= $7) AND
                 ($8::bigint IS NULL OR $8 = ANY(creator_ids))
                 ORDER BY difficulty, quality DESC;
