@@ -130,6 +130,7 @@ class Maps(commands.Cog):
         mechanics: app_commands.Transform[str, utils.MapMechanicsTransformer]
         | None = None,
         minimum_rating: app_commands.Choice[int] = None,
+        completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
     ) -> None:
         """
@@ -144,6 +145,7 @@ class Maps(commands.Cog):
             difficulty: Difficulty filter
             mechanics: Mechanics filter
             minimum_rating: Show maps above a specific quality rating
+            completed: Show completed maps, non completed maps or all
         """
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
@@ -155,6 +157,13 @@ class Maps(commands.Cog):
         )
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
+
+        view_filter = {
+            "All": None,
+            "Not Completed": False,
+            "Completed": True,
+        }
+
         async for _map in itx.client.database.get(
             """
                 WITH all_maps AS (SELECT map_name,
@@ -183,19 +192,25 @@ class Maps(commands.Cog):
                     LEFT JOIN guides g on m.map_code = g.map_code
                     LEFT JOIN map_medals mm on m.map_code = mm.map_code
                     GROUP BY checkpoints, map_name,
-                    m.map_code, "desc", official, map_type, gold, silver, bronze, archived)
-                SELECT *
-                FROM all_maps
+                    m.map_code, "desc", official, map_type, gold, silver, bronze, archived),
+                completions as (SELECT map_code FROM records WHERE user_id = $10)
+                SELECT am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, am.bronze, c.map_code IS NOT NULL as completed
+                FROM all_maps am
+                LEFT JOIN completions c on am.map_code = c.map_code
                 WHERE
                 (official = TRUE) AND
                 (archived = FALSE) AND
-                ($1::text IS NULL OR map_code = $1) AND
+                ($1::text IS NULL OR am.map_code = $1) AND
                 ($2::text IS NULL OR map_type LIKE $2) AND
                 ($3::text IS NULL OR map_name = $3) AND
                 ($4::text IS NULL OR mechanics LIKE $4) AND
                 ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2) AND difficulty < $6::numeric(10, 2))) AND
                 ($7::int IS NULL OR quality >= $7) AND
                 ($8::bigint IS NULL OR $8 = ANY(creator_ids))
+                GROUP BY am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, am.bronze, c.map_code IS NOT NULL
+                
+                HAVING ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
+                
                 ORDER BY difficulty, quality DESC;
             """,
             map_code,
@@ -206,6 +221,8 @@ class Maps(commands.Cog):
             high_range,
             int(getattr(minimum_rating, "value", 0)),
             creator,
+            view_filter[completed],
+            itx.user.id,
         ):
             maps.append(_map)
         if not maps:
@@ -225,6 +242,7 @@ class Maps(commands.Cog):
         for i, _map in enumerate(maps):
             guide_txt = ""
             medals_txt = ""
+            completed = ""
             if None not in _map.guide:
                 guides = [f"[{j}]({guide})" for j, guide in enumerate(_map.guide, 1)]
                 guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
@@ -235,8 +253,10 @@ class Maps(commands.Cog):
                     f"{utils.FULLY_VERIFIED_SILVER} {_map.silver} | "
                     f"{utils.FULLY_VERIFIED_BRONZE} {_map.bronze}\n"
                 )
+            if _map.completed:
+                completed = "🗸 Completed"
             embed.add_description_field(
-                name=f"{_map.map_code}",
+                name=f"{_map.map_code} {completed}",
                 value=(
                     f"┣ `Rating` {utils.create_stars(_map.quality)}\n"
                     f"┣ `Creator` {discord.utils.escape_markdown(_map.creators)}\n"
