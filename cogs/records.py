@@ -116,7 +116,7 @@ class Records(commands.Cog):
         await itx.response.defer(ephemeral=False)
 
         if itx.channel_id != utils.RECORDS:
-            #await itx.followup.send(f"You can only submit in <#{utils.RECORDS}>", ephemeral=True)
+            # await itx.followup.send(f"You can only submit in <#{utils.RECORDS}>", ephemeral=True)
             return
 
         if map_code not in itx.client.map_cache.keys():
@@ -160,6 +160,7 @@ class Records(commands.Cog):
                     )
                     await overwrite_view.wait()
                     if not overwrite_view.value:
+                        print("Overwrite view returning (records.py)")
                         return
 
             if not search.video and (record >= search.record) and not video:
@@ -191,6 +192,7 @@ class Records(commands.Cog):
         )
         await view.wait()
         if not view.value:
+            print("ConfirmCompletion view returning (records.py)")
             return
         new_screenshot2 = await screenshot.to_file(filename="image.png")
 
@@ -229,7 +231,8 @@ class Records(commands.Cog):
         self,
         itx: core.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
-        filters: typing.Literal["Fully Verified", "Verified", "Completions", "All"] | None = "Fully Verified",
+        filters: typing.Literal["Fully Verified", "Verified", "Completions", "All"]
+        | None = "Fully Verified",
     ) -> None:
         """
         View leaderboard of any map in the database.
@@ -284,7 +287,8 @@ class Records(commands.Cog):
         self,
         itx: core.Interaction[core.Genji],
         user: str | None = None,
-        type: typing.Literal["All", "World Record", "Completions", "Records"] | None = "All",
+        type: typing.Literal["All", "World Record", "Completions", "Records"]
+        | None = "All",
     ):
         """
         Show all records a specific user has (fully AND partially verified)
