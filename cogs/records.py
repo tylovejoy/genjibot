@@ -113,11 +113,10 @@ class Records(commands.Cog):
             screenshot: Screenshot of completion
             video: Video of play through. REQUIRED FOR FULL VERIFICATION!
         """
-        await itx.response.defer(ephemeral=False)
+        await itx.response.defer(ephemeral=True)
 
         if itx.channel_id != utils.RECORDS:
-            # await itx.followup.send(f"You can only submit in <#{utils.RECORDS}>", ephemeral=True)
-            return
+            raise utils.WrongCompletionChannel
 
         if map_code not in itx.client.map_cache.keys():
             raise utils.InvalidMapCodeError
@@ -170,10 +169,10 @@ class Records(commands.Cog):
         view = views.ConfirmCompletion(
             await utils.Roles.find_highest_rank(itx.user),
             itx,
-            f"{utils.TIME} Waiting for verification...\n",
+            f"{utils.TIME}\n",
         )
 
-        new_screenshot = await screenshot.to_file(filename="image.png")
+        user_facing_screenshot = await screenshot.to_file(filename="image.png")
 
         embed = utils.record_embed(
             {
@@ -184,22 +183,28 @@ class Records(commands.Cog):
                 "user_url": itx.user.display_avatar.url,
             }
         )
-        channel_msg = await itx.edit_original_response(
+        user_msg = await itx.edit_original_response(
             content=f"{itx.user.mention}, is this correct?",
             embed=embed,
             view=view,
-            attachments=[new_screenshot],
+            attachments=[user_facing_screenshot],
         )
         await view.wait()
         if not view.value:
-            print("ConfirmCompletion view returning (records.py)")
             return
-        new_screenshot2 = await screenshot.to_file(filename="image.png")
 
+        channel_screenshot = await screenshot.to_file(filename="image.png")
+        channel_msg = await itx.followup.send(
+            content=f"{utils.TIME} Waiting for verification...\n",
+            embed=embed,
+            file=channel_screenshot,
+        )
+
+        verification_screenshot = await screenshot.to_file(filename="image.png")
         verification_msg = await itx.client.get_channel(utils.VERIFICATION_QUEUE).send(
             content="**ALERT:** VIDEO SUBMISSION" if video else None,
             embed=embed,
-            file=new_screenshot2,
+            file=verification_screenshot,
         )
 
         v_view = views.VerificationView()
