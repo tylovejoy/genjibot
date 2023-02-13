@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import discord
 
+import views
+
 if TYPE_CHECKING:
     import core
 
@@ -76,10 +78,9 @@ class VerificationView(discord.ui.View):
             itx, search.channel_id, search.message_id
         )
         if not original_message:
+            print("No original found (verification.py)")
             return
-
         await itx.edit_original_response(view=self)
-
         user = itx.guild.get_member(search.user_id)
 
         if verified:
@@ -108,7 +109,9 @@ class VerificationView(discord.ui.View):
                 """,
                 search.map_code,
                 search.user_id,
-                search.record,
+                search.record
+                if search.record != "Completion"
+                else utils.COMPLETION_PLACEHOLDER,
                 search.screenshot,
                 search.video,
                 bool(search.video),
@@ -135,12 +138,8 @@ class VerificationView(discord.ui.View):
         else:
             data = self.rejected(itx, search, rejection)
         await original_message.edit(content=data["edit"])
-        if (
-            await itx.client.database.get_row(
-                "SELECT alertable FROM users WHERE user_id=$1",
-                search.user_id,
-            )
-        ).alertable:
+
+        if views.Settings.VERIFICATION in views.Settings(itx.client.all_users[user.id]["flags"]):
             try:
                 await user.send(
                     "`- - - - - - - - - - - - - -`\n"
@@ -211,6 +210,8 @@ class VerificationView(discord.ui.View):
         medals: tuple[float, float, float],
     ) -> dict[str, str]:
         """Data for verified records."""
+        if float(search.record) == utils.COMPLETION_PLACEHOLDER:
+            search.record = "Completion"
         icon = utils.icon_generator(search, medals)
         record = f"**Record:** {search.record} " f"{icon}"
         if search.video:
@@ -237,6 +238,8 @@ class VerificationView(discord.ui.View):
         rejection: str,
     ) -> dict[str, str]:
         """Data for rejected records."""
+        if float(search.record) == utils.COMPLETION_PLACEHOLDER:
+            search.record = "Completion"
 
         record = f"**Record:** {search.record}\n"
 

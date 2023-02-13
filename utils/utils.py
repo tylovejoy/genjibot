@@ -10,6 +10,7 @@ import discord
 from thefuzz import fuzz
 
 import utils
+import views
 
 if typing.TYPE_CHECKING:
     import core
@@ -26,7 +27,9 @@ async def delete_interaction(
     if minutes < 0:
         raise ValueError("Time cannot be negative.")
     await asyncio.sleep(60 * minutes)
-    with contextlib.suppress(discord.HTTPException, discord.NotFound, discord.Forbidden):
+    with contextlib.suppress(
+        discord.HTTPException, discord.NotFound, discord.Forbidden
+    ):
         await itx.delete_original_response()
 
 
@@ -52,22 +55,12 @@ class MapCacheData(typing.TypedDict):
 class UserCacheData(typing.TypedDict):
     nickname: str
     alertable: bool
+    flags: int
 
 
-NUMBER_EMOJI = {
-    1: "1️⃣",
-    2: "2️⃣",
-    3: "3️⃣",
-    4: "4️⃣",
-    5: "5️⃣",
-    6: "6️⃣",
-    7: "7️⃣",
-    8: "8️⃣",
-    9: "9️⃣",
-    10: "🔟",
-}
 
-_RANK_THRESHOLD = (10, 10, 10, 10, 5, 2)
+
+_RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
 
 
 async def update_affected_users(
@@ -143,7 +136,9 @@ async def auto_role(client: core.Genji, user: discord.Member):
 
     if added or removed:
         with contextlib.suppress(discord.errors.HTTPException):
-            await user.send(response)
+            flags = client.all_users[user.id]["flags"]
+            if views.Settings.PROMOTION in views.Settings(flags):
+                await user.send(response)
 
 
 async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, int]:

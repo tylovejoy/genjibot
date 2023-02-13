@@ -4,6 +4,7 @@ import re
 import typing
 
 import discord
+from .constants import COMPLETION_PLACEHOLDER
 
 
 class GenjiEmbed(discord.Embed):
@@ -84,6 +85,9 @@ def set_embed_thumbnail_maps(
 
 
 def record_embed(data: dict[str, typing.Any]):
+    if data.get("record", None) and data["record"] == COMPLETION_PLACEHOLDER:
+        data["record"] = "Completion"
+
     if not data.get("video", None):
         description = (
             f"┣ `   Code ` {data['map_code']}\n"
@@ -99,7 +103,7 @@ def record_embed(data: dict[str, typing.Any]):
         )
 
     embed = GenjiEmbed(
-        title="New Personal Record!",
+        title="New Submission!",
         description=description,
     )
     embed.set_author(name=data["user_name"], icon_url=data["user_url"])

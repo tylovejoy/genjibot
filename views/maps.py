@@ -93,13 +93,26 @@ class PlaytestVoting(discord.ui.View):
         )
         if itx.user.id != self.author_id:
             res = True
-            if self.base_diff == "Hell" and author.rank < 6:  # TODO: Test
+            if self.base_diff == "Hell" and author.rank < 6:
                 res = False
         if not res:
             await itx.followup.send(
                 "You cannot vote here. You cannot vote for your own map or your rank is too low.",
                 ephemeral=True,
             )
+        else:
+            res = bool(
+                await self.client.database.get_row(
+                    "SELECT 1 FROM records WHERE user_id = $1 AND map_code = $2",
+                    itx.user.id,
+                    self.map_code,
+                )
+            )
+            if not res:
+                await itx.followup.send(
+                    "You cannot vote before submitting a completion.",
+                    ephemeral=True,
+                )
         return res
 
     async def check_status(self, itx: core.Interaction[core.Genji], votes: int):
@@ -199,8 +212,8 @@ class PlaytestVoting(discord.ui.View):
                 new_map_embed.title = "New Map!"
                 new_map_embed.set_footer(
                     text="For notification of newly added maps only. "
-                    "Data may be out of date. "
-                    "Use `/map-search` for the latest info."
+                    "Data may be wrong or out of date. "
+                    "Use the /map-search command for the latest info."
                 )
                 new_map_embed.description = re.sub(
                     r"┣ `Difficulty` (.+)\n┣",

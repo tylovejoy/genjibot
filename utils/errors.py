@@ -27,7 +27,7 @@ class DatabaseConnectionError(Exception):
 class IncorrectRecordFormatError(
     BaseParkourException, app_commands.errors.AppCommandError
 ):
-    """Record must be in HH:MM:SS.ss format."""
+    """Record must be in XXXX.xx format e.g. 1569.33, 567.01, 10.50, etc."""
 
 
 class IncorrectCodeFormatError(
@@ -117,6 +117,10 @@ class RankTooLowError(BaseParkourException):
     """Your rank is too low to do this action."""
 
 
+class VideoNoRecord(BaseParkourException):
+    """If you add a video, you must submit a time record as well. Please submit again with the `record` argument."""
+
+
 class InvalidFakeUser(BaseParkourException):
     """This fake user does not exist."""
 
@@ -181,6 +185,10 @@ async def on_app_command_error(
             )
         await utils.delete_interaction(itx, minutes=seconds / 60)
     else:
+        content = (
+            "This message will delete in "
+            f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
+        )
         edit = (
             itx.edit_original_response
             if itx.response.is_done()
@@ -188,6 +196,7 @@ async def on_app_command_error(
         )
         embed = utils.ErrorEmbed(
             description=(
+                f"{content}\n"
                 "Unknown.\n"
                 "It has been logged and sent to <@141372217677053952>.\n"
                 "Please try again later."
@@ -210,6 +219,7 @@ async def on_app_command_error(
         formatted_tb = "".join(
             traceback.format_exception(None, exception, exception.__traceback__)
         )
+
         if len(formatted_tb) < 1850:
             await channel.send(
                 f"{command_name}{args_name}{channel_name}{user_name}\n```py\n"
@@ -229,4 +239,4 @@ async def on_app_command_error(
                     filename="error.log",
                 ),
             )
-    await utils.delete_interaction(itx, minutes=15)
+    await utils.delete_interaction(itx, minutes=1)

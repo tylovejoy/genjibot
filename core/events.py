@@ -24,10 +24,6 @@ class BotEvents(commands.Cog):
         bot.tree.on_error = utils.on_app_command_error
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        ...
-
-    @commands.Cog.listener()
     async def on_ready(self) -> None:
         """
         The on_ready function is called when the bot
@@ -54,22 +50,30 @@ class BotEvents(commands.Cog):
             for x in queue:
                 self.bot.add_view(views.VerificationView(), message_id=x)
 
-            # TODO: Hardcoded LIVE
-            view = views.RegionRoles()
-            self.bot.add_view(view, message_id=1054834412409339904)
-            await self.bot.get_channel(1054834201444220948).get_partial_message(
-                1054834412409339904
+            view = views.AnnouncementRoles()
+            self.bot.add_view(view, message_id=1073294355613360129)
+            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
+                1073294355613360129
             ).edit(
-                content="Press the button to add or remove your preferred region.",
+                content="**Announcement Pings**",
+                view=view,
+            )
+
+            view = views.RegionRoles()
+            self.bot.add_view(view, message_id=1073294377050460253)
+            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
+                1073294377050460253
+            ).edit(
+                content="**Regions**",
                 view=view,
             )
 
             view = views.ConsoleRoles()
-            self.bot.add_view(view, message_id=1060610579007553536)
-            await self.bot.get_channel(1054834201444220948).get_partial_message(
-                1060610579007553536
+            self.bot.add_view(view, message_id=1073294381311873114)
+            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
+                1073294381311873114
             ).edit(
-                content="Choose how you play.",
+                content="**Platform**",
                 view=view,
             )
 
@@ -113,7 +117,9 @@ class BotEvents(commands.Cog):
 
         # Add user to cache
         self.bot.all_users[member.id] = utils.UserCacheData(
-            nickname=member.nick, alertable=True
+            nickname=member.nick,
+            alertable=True,
+            flags=3,
         )
         self.bot.users_choices.append(
             app_commands.Choice(name=member.nick, value=str(member.id))
@@ -131,13 +137,15 @@ class BotEvents(commands.Cog):
             )
         ]
         if res and (
-            map_maker := member.guild.get_role(utils.Roles.MAP_MAKER)
-            not in member.roles
+            (map_maker := member.guild.get_role(utils.Roles.MAP_MAKER)) is not None
+            and map_maker not in member.roles
         ):
             await member.add_roles(
                 map_maker, reason="User rejoined. Re-granting map maker."
             )
-        if ninja := member.guild.get_role(utils.Roles.NINJA) not in member.roles:
+        if (
+            ninja := member.guild.get_role(utils.Roles.NINJA)
+        ) is not None and ninja not in member.roles:
             await member.add_roles(ninja, reason="User joined. Granting Ninja.")
 
         await utils.auto_role(self.bot, member)

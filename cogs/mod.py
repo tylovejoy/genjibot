@@ -304,19 +304,19 @@ class ModCommands(commands.Cog):
             return
         value = (
             await itx.client.database.get_row(
-                "SELECT MAX(user_id) + 1 user_id_ FROM users "
+                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users "
                 "WHERE user_id < 100000 LIMIT 1;"
             )
         ).user_id_
         await itx.client.database.set(
-            "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, $3);",
+            "INSERT INTO users (user_id, nickname) VALUES ($1, $2);",
             value,
             fake_user,
-            False,
         )
         itx.client.all_users[value] = utils.UserCacheData(
             nickname=fake_user,
             alertable=False,
+            flags=views.Settings.NONE.value,
         )
         itx.client.users_choices.append(
             app_commands.Choice(
@@ -910,8 +910,6 @@ class ModCommands(commands.Cog):
             )
         else:
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map": map_name})
-
-    # TODO: Delete map ?
 
 
 async def setup(bot: core.Genji):

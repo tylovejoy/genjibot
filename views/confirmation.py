@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class ConfirmButton(discord.ui.Button):
     def __init__(self, disabled=False):
         super().__init__(
-            label="Yes, the information entered is correct.",
+            label="Yes, the information I have entered is correct.",
             emoji=utils.CONFIRM_EMOJI,
             style=discord.ButtonStyle.green,
             disabled=disabled,
@@ -24,23 +24,24 @@ class ConfirmButton(discord.ui.Button):
     async def callback(self, itx: core.Interaction[core.Genji]):
         """Confirmation button callback."""
         if self.view.original_itx.user != itx.user:
-            await itx.response.send_message(
-                "You are not allowed to confirm this submission.",
-                ephemeral=True,
-            )
+            # await itx.response.send_message(
+            #     "You are not allowed to confirm this submission.",
+            #     ephemeral=True,
+            # )
             return
         self.view.value = True
         self.view.clear_items()
-        self.view.stop()
+        # self.view.stop()
         await self.view.original_itx.edit_original_response(
             content=self.view.confirm_msg, view=self.view
         )
+        self.view.stop()
 
 
 class RejectButton(discord.ui.Button):
     def __init__(self):
         super().__init__(
-            label="No, the information entered is not correct.",
+            label="No, the information I have entered is not correct.",
             emoji=utils.UNVERIFIED_EMOJI,
             style=discord.ButtonStyle.red,
         )
@@ -49,10 +50,10 @@ class RejectButton(discord.ui.Button):
         """Rejection button callback."""
         await itx.response.defer(ephemeral=True)
         if self.view.original_itx.user != itx.user:
-            await itx.response.send_message(
-                "You are not allowed to reject this submission.",
-                ephemeral=True,
-            )
+            # await itx.response.send_message(
+            #     "You are not allowed to reject this submission.",
+            #     ephemeral=True,
+            # )
             return
         self.view.value = False
         self.view.clear_items()
@@ -138,7 +139,7 @@ class ConfirmCompletion(discord.ui.View):
         confirm_msg="Confirmed.",
         ephemeral=False,
     ):
-        super().__init__()
+        super().__init__(timeout=None)
         self.rank = rank
         self.original_itx = original_itx
         self.confirm_msg = confirm_msg
@@ -167,7 +168,7 @@ class RecordVideoConfirmCompletion(discord.ui.View):
         original_itx: core.Interaction[core.Genji],
         confirm_msg="Confirmed.",
     ):
-        super().__init__()
+        super().__init__(timeout=None)
         self.original_itx = original_itx
         self.confirm_msg = confirm_msg
         self.value = None
