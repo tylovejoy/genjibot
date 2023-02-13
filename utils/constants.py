@@ -120,7 +120,7 @@ class Roles:
 
     @classmethod
     def roles_per_rank(cls, rank_num: int) -> list[int]:
-        return cls.ranks[0: rank_num + 1]
+        return cls.ranks[0 : rank_num + 1]
 
     @classmethod
     def ranks(cls) -> list[int]:

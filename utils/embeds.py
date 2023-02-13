@@ -6,6 +6,7 @@ import typing
 import discord
 from .constants import COMPLETION_PLACEHOLDER
 
+
 class GenjiEmbed(discord.Embed):
     def __init__(
         self,

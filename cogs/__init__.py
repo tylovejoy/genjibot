@@ -320,9 +320,11 @@ async def submit_map_(
     else:
         embed.title = "New Map!"
         embed.set_footer(
-            text="For notification of newly added maps only. "
-                 "Data may be wrong or out of date. "
-                 "Use the /map-search command for the latest info."
+            text=(
+                "For notification of newly added maps only. "
+                "Data may be wrong or out of date. "
+                "Use the /map-search command for the latest info."
+            )
         )
         new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
         itx.client.dispatch(

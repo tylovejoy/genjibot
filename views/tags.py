@@ -6,11 +6,23 @@ import discord.ui
 from discord import app_commands
 
 import views
-from utils import NUMBER_EMOJI
 
 if typing.TYPE_CHECKING:
     import core
 
+
+NUMBER_EMOJI = {
+    1: "1️⃣",
+    2: "2️⃣",
+    3: "3️⃣",
+    4: "4️⃣",
+    5: "5️⃣",
+    6: "6️⃣",
+    7: "7️⃣",
+    8: "8️⃣",
+    9: "9️⃣",
+    10: "🔟",
+}
 
 class TagFuzzView(discord.ui.View):
     def __init__(self, itx: core.Interaction[core.Genji], options: list[str]):

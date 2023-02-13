@@ -83,6 +83,7 @@ class AllUserTranformer(app_commands.Transformer):
             return member
         return utils.FakeUser(value, itx.client.all_users[value])
 
+
 class RecordTransformer(app_commands.Transformer):
     async def transform(self, itx: core.Interaction[core.Genji], value: str) -> float:
         try:
