@@ -222,7 +222,7 @@ class Records(commands.Cog):
             None if not getattr(view, "quality", None) else int(view.quality.values[0]),
         )
 
-    @app_commands.command(name="leaderboard")
+    @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
@@ -235,7 +235,8 @@ class Records(commands.Cog):
         | None = "Fully Verified",
     ) -> None:
         """
-        View leaderboard of any map in the database.
+        View leaderboard/completions for any map in the database.
+        You are able to filter by Fully Verified, Verified, Completions or All.
 
         Args:
             itx: Interaction
@@ -296,7 +297,7 @@ class Records(commands.Cog):
         Args:
             itx: Interaction
             user: User
-            wr_only: Only show world records
+            type: Filter submissions by All, World Records, Completions, or Records
         """
         await self._personal_records(itx, user, type)
 
