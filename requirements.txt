@@ -1,6 +1,6 @@
 aiohttp
 asyncpg
-discord.py
+git+https://github.com/rapptz/discord.py
 jishaku
 thefuzz
 python-Levenshtein
