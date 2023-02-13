@@ -85,6 +85,16 @@ class PlaytestVoting(discord.ui.View):
         self.author_rank = author_rank
         self.message_id = original_msg
 
+    @functools.cached_property
+    def required_votes(self) -> int:
+        if self.base_diff in utils.DIFFICULTIES[4:6]:
+            requirement = 3
+        elif self.base_diff in utils.DIFFICULTIES[6:]:
+            requirement = 2
+        else:
+            requirement = 5
+        return requirement
+
     async def interaction_check(self, itx: core.Interaction[core.Genji]) -> bool:
         res = False
         author = await self.client.database.get_row(
@@ -131,23 +141,7 @@ class PlaytestVoting(discord.ui.View):
             )
         ]
 
-        if (
-            (
-                self.base_diff in utils.DIFFICULTIES[0:4]
-                and votes >= 5
-                and len(records) >= 5
-            )
-            or (
-                self.base_diff in utils.DIFFICULTIES[4:6]
-                and votes >= 3
-                and len(records) >= 3
-            )
-            or (
-                self.base_diff in utils.DIFFICULTIES[6:]
-                and votes >= 2
-                and len(records) >= 2
-            )
-        ):
+        if votes >= self.required_votes and len(records) >= self.required_votes:
             self.stop()
             record = await itx.client.database.get_row(
                 "SELECT * FROM playtest WHERE map_code=$1 AND user_id=$2;",
