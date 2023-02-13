@@ -140,6 +140,10 @@ class CannotVerifyOwnRecords(BaseParkourException):
     """You cannot verify your own records/submissions."""
 
 
+class WrongCompletionChannel(BaseParkourException):
+    """You can only submit in <#1072898844339224627>"""
+
+
 async def on_app_command_error(
     itx: Interaction[Genji], error: app_commands.errors.CommandInvokeError | Exception
 ):
