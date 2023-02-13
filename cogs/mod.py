@@ -309,14 +309,14 @@ class ModCommands(commands.Cog):
             )
         ).user_id_
         await itx.client.database.set(
-            "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, $3);",
+            "INSERT INTO users (user_id, nickname) VALUES ($1, $2);",
             value,
             fake_user,
-            False,
         )
         itx.client.all_users[value] = utils.UserCacheData(
             nickname=fake_user,
             alertable=False,
+            flags=views.Settings.NONE.value,
         )
         itx.client.users_choices.append(
             app_commands.Choice(

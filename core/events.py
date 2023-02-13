@@ -117,7 +117,9 @@ class BotEvents(commands.Cog):
 
         # Add user to cache
         self.bot.all_users[member.id] = utils.UserCacheData(
-            nickname=member.nick, alertable=True
+            nickname=member.nick,
+            alertable=True,
+            flags=3,
         )
         self.bot.users_choices.append(
             app_commands.Choice(name=member.nick, value=str(member.id))
@@ -141,7 +143,9 @@ class BotEvents(commands.Cog):
             await member.add_roles(
                 map_maker, reason="User rejoined. Re-granting map maker."
             )
-        if (ninja := member.guild.get_role(utils.Roles.NINJA)) is not None and ninja not in member.roles:
+        if (
+            ninja := member.guild.get_role(utils.Roles.NINJA)
+        ) is not None and ninja not in member.roles:
             await member.add_roles(ninja, reason="User joined. Granting Ninja.")
 
         await utils.auto_role(self.bot, member)

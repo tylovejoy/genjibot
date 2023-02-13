@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import utils.utils
+import views
 
 if typing.TYPE_CHECKING:
     import core
@@ -142,24 +143,23 @@ class Tasks(commands.Cog):
         self.bot.users_choices = []
         async for x in self.bot.database.get(
             """
-                SELECT u.user_id, u.nickname, u.alertable, map_code IS NOT NULL is_creator
+                SELECT u.user_id, u.nickname, u.alertable, u.flags, map_code IS NOT NULL is_creator
                 FROM users u
                          LEFT JOIN map_creators mc on u.user_id = mc.user_id
-                GROUP BY u.user_id, nickname, alertable, is_creator;
+                GROUP BY u.user_id, nickname, alertable, flags, is_creator;
                 """
         ):
             user_data = utils.UserCacheData(
                 nickname=x.nickname,
                 alertable=x.alertable if x.user_id >= 1000000 else False,
+                flags=x.flags if x.user_id >= 1000000 else views.Settings.NONE.value,
             )
             choice = app_commands.Choice(name=x.nickname, value=str(x.user_id))
             self.bot.all_users[x.user_id] = user_data
             self.bot.users_choices.append(choice)
 
             if x.is_creator:
-                self.bot.creators[
-                    x.user_id
-                ] = user_data
+                self.bot.creators[x.user_id] = user_data
                 self.bot.creators_choices.append(choice)
             # if x.user_id < 1000000:
             #     self.bot.fake_users[x.user_id] = user_data
