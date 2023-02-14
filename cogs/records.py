@@ -50,7 +50,7 @@ class Records(commands.Cog):
     async def summary(
         self,
         itx: core.Interaction[core.Genji],
-        user: app_commands.Transform[utils.AllUserTranformer] | None = None,
+        user: app_commands.Transform[int | discord.Member | utils.FakeUser, utils.AllUserTranformer] | None = None,
     ):
         """Display a summary of your records and associated difficulties/medals
 
@@ -282,7 +282,7 @@ class Records(commands.Cog):
         if not records:
             raise utils.NoRecordsFoundError
 
-        embeds = utils.all_levels_records_embed(records, f"Leaderboard - {map_code}")
+        embeds = utils.all_levels_records_embed(records, f"{filters} Leaderboard - {map_code}")
 
         view = views.Paginator(embeds, itx.user)
         await view.start(itx)
@@ -293,8 +293,8 @@ class Records(commands.Cog):
     async def personal_records_slash(
         self,
         itx: core.Interaction[core.Genji],
-        user: app_commands.Transform[utils.AllUserTranformer] | None = None,
-        type: typing.Literal["All", "World Record", "Completions", "Records"]
+        user: app_commands.Transform[int | discord.Member | utils.FakeUser, utils.AllUserTranformer] | None = None,
+        filters: typing.Literal["All", "World Record", "Completions", "Records"]
         | None = "All",
     ):
         """
@@ -303,9 +303,9 @@ class Records(commands.Cog):
         Args:
             itx: Interaction
             user: User
-            type: Filter submissions by All, World Records, Completions, or Records
+            filters: Filter submissions by All, World Records, Completions, or Records
         """
-        await self._personal_records(itx, user, type)
+        await self._personal_records(itx, user, filters)
 
     async def pr_context_callback(
         self, itx: core.Interaction[core.Genji], user: discord.Member
@@ -326,13 +326,13 @@ class Records(commands.Cog):
     async def _personal_records(
         itx: core.Interaction[core.Genji],
         user: discord.Member | str,
-        type: PR_TYPES,
+        filters: PR_TYPES,
     ):
         await itx.response.defer(ephemeral=True)
         if not user:
             user = itx.user
 
-        if isinstance(user, discord.Member):
+        if isinstance(user, discord.Member) or isinstance(user, utils.FakeUser):
             user = user.id
         else:
             user = int(user)
@@ -389,14 +389,14 @@ class Records(commands.Cog):
         ORDER BY ranks.map_code;     
         """
         records: list[database.DotRecord | None] = [
-            x async for x in itx.client.database.get(query, user, type)
+            x async for x in itx.client.database.get(query, user, filters)
         ]
 
         if not records:
             raise utils.NoRecordsFoundError
         embeds = utils.pr_records_embed(
             records,
-            f"Personal {type} | {itx.client.all_users[user]['nickname']}",
+            f"Personal {filters} | {itx.client.all_users[user]['nickname']}",
         )
         view = views.Paginator(embeds, itx.user)
         await view.start(itx)

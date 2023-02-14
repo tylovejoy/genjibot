@@ -8,6 +8,7 @@ import typing
 import discord
 from discord import Embed, app_commands
 
+import cogs
 import database
 import utils
 from utils import GenjiEmbed
@@ -75,13 +76,19 @@ class AllUserTranformer(app_commands.Transformer):
     async def transform(
         self, itx: core.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:
-        value = int(value)
-        # if value < 100000:
-        #     return utils.FakeUser(value, itx.client.all_users[value])
-        member = itx.guild.get_member(value)
-        if member:
-            return member
-        return utils.FakeUser(value, itx.client.all_users[value])
+        try:
+            value = int(value)
+            member = itx.guild.get_member(value)
+            if member:
+                return member
+            return utils.FakeUser(value, itx.client.all_users[value])
+        except ValueError:
+            member = discord.utils.find(lambda u: cogs.case_ignore_compare(u.name, value), itx.guild.members)
+            if member:
+                return member
+            for user_id, user_data in itx.client.all_users.items():
+                if cogs.case_ignore_compare(value, user_data["nickname"]):
+                    return utils.FakeUser(user_id, itx.client.all_users[user_id])
 
 
 class RecordTransformer(app_commands.Transformer):
