@@ -193,6 +193,8 @@ class BotEvents(commands.Cog):
 
         if record.rank_num == 1:
             embed.title = f"{record.nickname} set a new World Record!"
+        elif icon == utils.PARTIAL_VERIFIED:
+            return
         else:
             embed.title = f"{record.nickname} got a medal!"
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
