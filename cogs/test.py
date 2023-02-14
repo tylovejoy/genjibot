@@ -111,6 +111,25 @@ class Test(commands.Cog):
     #
     #     await itx.response.send_message(embed=embed)
 
+    @commands.command()
+    @commands.is_owner()
+    async def close(
+        self,
+        ctx: commands.Context[core.Genji],
+    ):
+        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
+        await ctx.channel.send("Bot will be down for a few minutes!")
+        await ctx.message.delete()
+
+    @commands.command()
+    @commands.is_owner()
+    async def open(
+        self,
+        ctx: commands.Context[core.Genji],
+    ):
+        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
+        await ctx.channel.send("Back online!")
+        await ctx.message.delete()
 
 async def setup(bot: core.Genji):
     await bot.add_cog(Test(bot))
