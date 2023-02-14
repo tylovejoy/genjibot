@@ -50,7 +50,7 @@ class Records(commands.Cog):
     async def summary(
         self,
         itx: core.Interaction[core.Genji],
-        user: str | None = None,
+        user: app_commands.Transform[utils.AllUserTranformer] | None = None,
     ):
         """Display a summary of your records and associated difficulties/medals
 
@@ -226,6 +226,7 @@ class Records(commands.Cog):
             verification_msg.id,
             None if not getattr(view, "quality", None) else int(view.quality.values[0]),
         )
+        await user_msg.delete()
 
     @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
@@ -237,7 +238,7 @@ class Records(commands.Cog):
         itx: core.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
         filters: typing.Literal["Fully Verified", "Verified", "Completions", "All"]
-        | None = "Fully Verified",
+        | None = "All",
     ) -> None:
         """
         View leaderboard/completions for any map in the database.
@@ -292,7 +293,7 @@ class Records(commands.Cog):
     async def personal_records_slash(
         self,
         itx: core.Interaction[core.Genji],
-        user: str | None = None,
+        user: app_commands.Transform[utils.AllUserTranformer] | None = None,
         type: typing.Literal["All", "World Record", "Completions", "Records"]
         | None = "All",
     ):
