@@ -67,28 +67,39 @@ class UserTransformer(app_commands.Transformer):
 
 class CreatorTransformer(app_commands.Transformer):
     async def transform(self, itx: core.Interaction[core.Genji], value: str) -> int:
-        if value not in map(str, itx.client.creators.keys()):
+        user = await transform_user(itx.client, value)
+        if user.id not in itx.client.creators.keys():
             raise utils.UserNotFoundError
-        return int(value)
+        else:
+            return user.id
 
 
 class AllUserTranformer(app_commands.Transformer):
     async def transform(
         self, itx: core.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:
-        try:
-            value = int(value)
-            member = itx.guild.get_member(value)
-            if member:
-                return member
-            return utils.FakeUser(value, itx.client.all_users[value])
-        except ValueError:
-            member = discord.utils.find(lambda u: cogs.case_ignore_compare(u.name, value), itx.guild.members)
-            if member:
-                return member
-            for user_id, user_data in itx.client.all_users.items():
-                if cogs.case_ignore_compare(value, user_data["nickname"]):
-                    return utils.FakeUser(user_id, itx.client.all_users[user_id])
+        return await transform_user(itx.client, value)
+
+
+async def transform_user(
+    client: core.Genji, value: str
+) -> utils.FakeUser | discord.Member:
+    guild = client.get_guild(utils.GUILD_ID)
+    try:
+        value = int(value)
+        member = guild.get_member(value)
+        if member:
+            return member
+        return utils.FakeUser(value, client.all_users[value])
+    except ValueError:
+        member = discord.utils.find(
+            lambda u: cogs.case_ignore_compare(u.name, value), guild.members
+        )
+        if member:
+            return member
+        for user_id, user_data in client.all_users.items():
+            if cogs.case_ignore_compare(value, user_data["nickname"]):
+                return utils.FakeUser(user_id, client.all_users[user_id])
 
 
 class RecordTransformer(app_commands.Transformer):

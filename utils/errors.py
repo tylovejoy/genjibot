@@ -65,27 +65,27 @@ class InvalidMapTypeError(BaseParkourException, app_commands.errors.AppCommandEr
     """Invalid map name given. Please make sure to use the autocompleted map types."""
 
 
-class RecordNotFasterError(BaseParkourException):
+class RecordNotFasterError(BaseParkourException, app_commands.errors.AppCommandError):
     """Record must be faster than your previous submission."""
 
 
-class NoMapsFoundError(BaseParkourException):
+class NoMapsFoundError(BaseParkourException, app_commands.errors.AppCommandError):
     """No maps have been found with the given filters."""
 
 
-class NoRecordsFoundError(BaseParkourException):
+class NoRecordsFoundError(BaseParkourException, app_commands.errors.AppCommandError):
     """No records have been found."""
 
 
-class NoPermissionsError(BaseParkourException):
+class NoPermissionsError(BaseParkourException, app_commands.errors.AppCommandError):
     """You do not have permission to do this action."""
 
 
-class CreatorAlreadyExists(BaseParkourException):
+class CreatorAlreadyExists(BaseParkourException, app_commands.errors.AppCommandError):
     """Creator already associated with this map."""
 
 
-class CreatorDoesntExist(BaseParkourException):
+class CreatorDoesntExist(BaseParkourException, app_commands.errors.AppCommandError):
     """Creator is not associated with this map."""
 
 
@@ -93,54 +93,54 @@ class MapExistsError(BaseParkourException, app_commands.errors.AppCommandError):
     """This map code already exists!"""
 
 
-class NoGuidesExistError(BaseParkourException):
+class NoGuidesExistError(BaseParkourException, app_commands.errors.AppCommandError):
     """No guides exist for this map code."""
 
 
-class GuideExistsError(BaseParkourException):
+class GuideExistsError(BaseParkourException, app_commands.errors.AppCommandError):
     """This guide has already been submitted."""
 
 
-class OutOfRangeError(BaseParkourException):
+class OutOfRangeError(BaseParkourException, app_commands.errors.AppCommandError):
     """Choice is out of range."""
 
 
-class InvalidInteger(BaseParkourException):
+class InvalidInteger(BaseParkourException, app_commands.errors.AppCommandError):
     """Choice must be a valid integer."""
 
 
-class UserNotFoundError(BaseParkourException):
+class UserNotFoundError(BaseParkourException, app_commands.errors.AppCommandError):
     """User does not exist."""
 
 
-class RankTooLowError(BaseParkourException):
+class RankTooLowError(BaseParkourException, app_commands.errors.AppCommandError):
     """Your rank is too low to do this action."""
 
 
-class VideoNoRecord(BaseParkourException):
+class VideoNoRecord(BaseParkourException, app_commands.errors.AppCommandError):
     """If you add a video, you must submit a time record as well. Please submit again with the `record` argument."""
 
 
-class InvalidFakeUser(BaseParkourException):
+class InvalidFakeUser(BaseParkourException, app_commands.errors.AppCommandError):
     """This fake user does not exist."""
 
 
-class InvalidMedals(BaseParkourException):
+class InvalidMedals(BaseParkourException, app_commands.errors.AppCommandError):
     """
     Medals are incorrectly formatted.
     Make sure gold is faster than silver and silver is faster than bronze
     """
 
 
-class ArchivedMap(BaseParkourException):
+class ArchivedMap(BaseParkourException, app_commands.errors.AppCommandError):
     """Map has been archived. Records cannot be submitted."""
 
 
-class CannotVerifyOwnRecords(BaseParkourException):
+class CannotVerifyOwnRecords(BaseParkourException, app_commands.errors.AppCommandError):
     """You cannot verify your own records/submissions."""
 
 
-class WrongCompletionChannel(BaseParkourException):
+class WrongCompletionChannel(BaseParkourException, app_commands.errors.AppCommandError):
     """You can only submit in <#1072898844339224627>"""
 
 

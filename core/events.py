@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import re
 import typing
 
@@ -85,19 +86,20 @@ class BotEvents(commands.Cog):
                 )
             ]
             for x in queue:
-                self.bot.add_view(
-                    views.PlaytestVoting(
-                        x.map_code,
-                        utils.convert_num_to_difficulty(x.value),
-                        x.user_id,
-                        self.bot,
-                        x.message_id,
-                        await utils.Roles.find_highest_rank(
-                            self.bot.get_guild(utils.GUILD_ID).get_member(x.user_id)
+                with contextlib.suppress(AttributeError):
+                    self.bot.add_view(
+                        views.PlaytestVoting(
+                            x.map_code,
+                            utils.convert_num_to_difficulty(x.value),
+                            x.user_id,
+                            self.bot,
+                            x.message_id,
+                            await utils.Roles.find_highest_rank(
+                                self.bot.get_guild(utils.GUILD_ID).get_member(x.user_id)
+                            ),
                         ),
-                    ),
-                    message_id=x.message_id,
-                )
+                        message_id=x.message_id,
+                    )
 
             self.bot.logger.debug(f"Added persistent views.")
             self.bot.persistent_views_added = True
