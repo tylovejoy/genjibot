@@ -77,24 +77,69 @@ class BotEvents(commands.Cog):
                 view=view,
             )
 
+            # queue = [
+            #     x
+            #     async for x in self.bot.database.get(
+            #         "SELECT map_code, message_id, value, user_id "
+            #         "FROM playtest WHERE is_author = TRUE;"
+            #     )
+            # ]
             queue = [
                 x
                 async for x in self.bot.database.get(
-                    "SELECT map_code, message_id, value, user_id "
-                    "FROM playtest WHERE is_author = TRUE;"
+                    """
+                    SELECT map_name,
+                           map_type,
+                           m.map_code,
+                           "desc",
+                           official,
+                           archived,
+                           array_agg(DISTINCT url)              AS guide,
+                           array_agg(DISTINCT mech.mechanic)    AS mechanics,
+                           array_agg(DISTINCT rest.restriction) AS restrictions,
+                           checkpoints,
+                           array_agg(DISTINCT mc.user_id)       AS creator_ids,
+                           gold,
+                           silver,
+                           bronze,
+                           p.message_id
+                    FROM playtest p
+                             LEFT JOIN maps m on m.map_code = p.map_code
+                             LEFT JOIN map_mechanics mech on mech.map_code = m.map_code
+                             LEFT JOIN map_restrictions rest on rest.map_code = m.map_code
+                             LEFT JOIN map_creators mc on m.map_code = mc.map_code
+                             LEFT JOIN users u on mc.user_id = u.user_id
+                             LEFT JOIN guides g on m.map_code = g.map_code
+                             LEFT JOIN map_medals mm on m.map_code = mm.map_code
+                    WHERE is_author = TRUE
+                    GROUP BY checkpoints, map_name,
+                             m.map_code, "desc", official, map_type, gold, silver, bronze, archived, p.message_id
+                    """
                 )
             ]
             for x in queue:
+                if x.guide:
+                    x.guide = x.guide[0]
+
+                data = utils.MapSubmission(
+                    creator=utils.transform_user(self.bot, x.user_id),
+                    map_code=x.map_code,
+                    map_name=x.map_name,
+                    checkpoint_count=x.checkpoints,
+                    description=x.desc,
+                    guide_url=x.guide,
+                    medals=(x.gold, x.silver, x.bronze),
+                    map_types=x.map_types,
+                    mechanics=x.mechanics,
+                    restrictions=x.restrictions,
+                    difficulty=utils.convert_num_to_difficulty(x.value),
+                )
+
                 self.bot.add_view(
                     views.PlaytestVoting(
-                        x.map_code,
-                        utils.convert_num_to_difficulty(x.value),
-                        x.user_id,
+                        data,
                         self.bot,
                         x.message_id,
-                        await utils.Roles.find_highest_rank(
-                            self.bot.get_guild(utils.GUILD_ID).get_member(x.user_id)
-                        ),
                     ),
                     message_id=x.message_id,
                 )

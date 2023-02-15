@@ -96,13 +96,7 @@ async def users_autocomplete(
 
 async def submit_map_(
     itx: core.Interaction[core.Genji],
-    user: discord.Member | utils.FakeUser,
-    map_code: str,
-    map_name: str,
-    checkpoint_count: int,
-    description: str | None = None,
-    guide_url: str | None = None,
-    medals: tuple[float, float, float] | None = None,
+    data: utils.MapSubmission,
     mod: bool = False,
 ) -> None:
     """
@@ -110,13 +104,7 @@ async def submit_map_(
 
     Args:
         itx: Interaction
-        user: user
-        map_code: Overwatch share code
-        map_name: Overwatch map
-        checkpoint_count: Number of checkpoints in the map
-        description: Other optional information for the map
-        guide_url: Guide URL
-        medals: Gold, silver, bronze medal times
+        data: MapSubmission obj
         mod: Mod command
     """
 
@@ -130,8 +118,11 @@ async def submit_map_(
             raise utils.RankTooLowError
     else:
         diffs = utils.allowed_difficulties(7)
-    if medals:
-        if not 0 < medals[0] < medals[1] < medals[2]:
+
+    data.creator_diffs = diffs
+
+    if data.medals:
+        if not 0 < data.gold < data.silver < data.bronze:
             raise utils.InvalidMedals
 
     view = views.Confirm(
@@ -154,7 +145,7 @@ async def submit_map_(
     )
     await itx.edit_original_response(
         content=(
-            f"{user.mention}, "
+            f"{data.creator.mention}, "
             f"fill in additional details to complete map submission!"
         ),
         view=view,
@@ -163,155 +154,67 @@ async def submit_map_(
     if not view.value:
         return
 
-    map_types = view.map_type.values
-    mechanics = view.mechanics.values
-    restrictions = view.restrictions.values
-    difficulty = view.difficulty.values[0]
-    guide_txt = ""
-    medals_txt = ""
-    if guide_url:
-        guide_txt = f"┣ `Guide` [Link]({guide_url})\n"
-    if medals and medals[0] is not None:
-        gold, silver, bronze = medals
-        medals_txt = (
-            f"┣ `Medals` "
-            f"{utils.FULLY_VERIFIED_GOLD} {gold} | "
-            f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
-            f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n"
-        )
+    data.set_extras(
+        map_types=view.map_type.values,
+        mechanics=view.mechanics.values,
+        restrictions=view.restrictions.values,
+        difficulty=view.difficulty.values[0],
+    )
+
     embed = utils.GenjiEmbed(
         title="Map Submission",
-        description=(
-            f"┣ `Code` {map_code}\n"
-            f"┣ `Map` {map_name}\n"
-            f"┣ `Type` {', '.join(map_types)}\n"
-            f"┣ `Checkpoints` {checkpoint_count}\n"
-            f"┣ `Difficulty` {difficulty}\n"
-            f"┣ `Mechanics` {', '.join(mechanics)}\n"
-            f"┣ `Restrictions` {', '.join(restrictions)}\n"
-            f"{guide_txt}"
-            f"{medals_txt}"
-            f"┗ `Desc` {description}\n"
-        ),
+        description=str(data),
     )
     embed.set_author(
-        name=itx.client.all_users[user.id]["nickname"],
-        icon_url=user.display_avatar.url,
+        name=itx.client.all_users[data.creator.id]["nickname"],
+        icon_url=data.creator.display_avatar.url,
     )
-    embed = utils.set_embed_thumbnail_maps(map_name, embed)
+    embed = utils.set_embed_thumbnail_maps(data.map_name, embed)
+
     view_confirm = views.Confirm(view.original_itx, ephemeral=True)
     await view_confirm.original_itx.edit_original_response(
         content=f"{itx.user.mention}, is this correct?",
         embed=embed,
         view=view_confirm,
     )
+
     await view_confirm.wait()
     if not view_confirm.value:
         return
 
     if not mod:
         embed.title = "Calling all Playtesters!"
-        new_map = await itx.guild.get_channel(utils.PLAYTEST).send(embed=embed)
+        playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(embed=embed)
         embed = utils.GenjiEmbed(
             title="Difficulty Ratings",
             description="You can change your vote, but you cannot cast multiple!\n\n",
         )
-        thread = await new_map.create_thread(name=f"Discuss/rate {map_code} here.")
+        thread = await playtest_message.create_thread(
+            name=f"Discuss/rate {data.map_code} here."
+        )
 
         thread_msg = await thread.send(
             f"Discuss, play, rate, etc.",
             view=views.PlaytestVoting(
-                map_code,
-                difficulty,
-                itx.user.id,
+                data,
                 itx.client,
-                new_map.id,
-                await utils.Roles.find_highest_rank(itx.user),
+                playtest_message.id,
             ),
             embed=embed,
         )
 
-        await itx.client.database.set(
-            """
-            INSERT INTO playtest (thread_id, message_id, map_code, user_id, value, is_author, original_msg)
-            VALUES ($1, $2, $3, $4, $5, $6, $7) 
-            """,
-            thread.id,
-            thread_msg.id,
-            map_code,
-            itx.user.id,
-            utils.DIFFICULTIES_RANGES[difficulty][0],
-            True,
-            new_map.id,
-        )
+        await data.insert_playtest(itx, thread.id, thread_msg.id, playtest_message.id)
 
-    await itx.client.database.set(
-        """
-        INSERT INTO 
-        maps (map_name, map_type, map_code, "desc", official, checkpoints) 
-        VALUES ($1, $2, $3, $4, $5, $6);
-        """,
-        map_name,
-        map_types,
-        map_code,
-        description,
-        mod,
-        checkpoint_count,
-    )
-    mechanics = [(map_code, x) for x in mechanics]
-    await itx.client.database.set_many(
-        """
-        INSERT INTO map_mechanics (map_code, mechanic) VALUES ($1, $2);
-        """,
-        mechanics,
-    )
-    restrictions = [(map_code, x) for x in restrictions]
-    await itx.client.database.set_many(
-        """
-        INSERT INTO map_restrictions (map_code, restriction) VALUES ($1, $2);
-        """,
-        restrictions,
-    )
-    await itx.client.database.set(
-        """
-        INSERT INTO map_creators (map_code, user_id) VALUES ($1, $2);
-        """,
-        map_code,
-        user.id,
-    )
-    await itx.client.database.set(
-        """
-        INSERT INTO map_ratings (map_code, user_id, difficulty) VALUES ($1, $2, $3);
-        """,
-        map_code,
-        user.id,
-        utils.DIFFICULTIES_RANGES[difficulty][0],
-    )
-    if guide_url:
-        await itx.client.database.set(
-            """INSERT INTO guides (map_code, url) VALUES ($1, $2);""",
-            map_code,
-            guide_url,
-        )
-
-    if medals:
-        await itx.client.database.set(
-            """
-            INSERT INTO map_medals (gold, silver, bronze, map_code)
-            VALUES ($1, $2, $3, $4);
-            """,
-            medals[0],
-            medals[1],
-            medals[2],
-            map_code,
-        )
-
-    itx.client.map_cache[map_code] = utils.MapCacheData(
-        user_ids=[user.id],
+    await data.insert_all(itx, mod)
+    # ////////                    \\\\\\\\
+    # Everything below this is cache stuff
+    # \\\\\\\\                    ////////
+    itx.client.map_cache[data.map_code] = utils.MapCacheData(
+        user_ids=[data.creator.id],
         archived=False,
     )
     itx.client.map_codes_choices.append(
-        app_commands.Choice(name=map_code, value=map_code)
+        app_commands.Choice(name=data.map_code, value=data.map_code)
     )
     if not mod:
         map_maker = itx.guild.get_role(utils.Roles.MAP_MAKER)
@@ -328,10 +231,10 @@ async def submit_map_(
         )
         new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
         itx.client.dispatch(
-            "newsfeed_new_map", itx, itx.user, new_map_message.jump_url, map_code
+            "newsfeed_new_map", itx, itx.user, new_map_message.jump_url, data.map_code
         )
-    if user.id not in itx.client.creators:
-        itx.client.creators[user.id] = itx.client.all_users[user.id]
+    if data.creator.id not in itx.client.creators:
+        itx.client.creators[data.creator.id] = itx.client.all_users[data.creator.id]
 
 
 async def add_creator_(creator, itx, map_code, checks: bool = False):

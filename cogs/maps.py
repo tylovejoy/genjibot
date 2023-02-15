@@ -93,8 +93,8 @@ class Maps(commands.Cog):
         medals = None
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
-        await cogs.submit_map_(
-            itx,
+
+        map_submission = utils.MapSubmission(
             itx.user,
             map_code,
             map_name,
@@ -102,6 +102,10 @@ class Maps(commands.Cog):
             description,
             guide_url,
             medals,
+        )
+        await cogs.submit_map_(
+            itx,
+            map_submission,
         )
 
     @app_commands.command(name="map-search")

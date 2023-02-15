@@ -58,8 +58,6 @@ class UserCacheData(typing.TypedDict):
     flags: int
 
 
-
-
 _RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
 
 
