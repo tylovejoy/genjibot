@@ -50,7 +50,10 @@ class Records(commands.Cog):
     async def summary(
         self,
         itx: core.Interaction[core.Genji],
-        user: app_commands.Transform[int | discord.Member | utils.FakeUser, utils.AllUserTranformer] | None = None,
+        user: app_commands.Transform[
+            int | discord.Member | utils.FakeUser, utils.AllUserTranformer
+        ]
+        | None = None,
     ):
         """Display a summary of your records and associated difficulties/medals
 
@@ -282,7 +285,9 @@ class Records(commands.Cog):
         if not records:
             raise utils.NoRecordsFoundError
 
-        embeds = utils.all_levels_records_embed(records, f"{filters} Leaderboard - {map_code}")
+        embeds = utils.all_levels_records_embed(
+            records, f"{filters} Leaderboard - {map_code}"
+        )
 
         view = views.Paginator(embeds, itx.user)
         await view.start(itx)
@@ -293,7 +298,10 @@ class Records(commands.Cog):
     async def personal_records_slash(
         self,
         itx: core.Interaction[core.Genji],
-        user: app_commands.Transform[int | discord.Member | utils.FakeUser, utils.AllUserTranformer] | None = None,
+        user: app_commands.Transform[
+            int | discord.Member | utils.FakeUser, utils.AllUserTranformer
+        ]
+        | None = None,
         filters: typing.Literal["All", "World Record", "Completions", "Records"]
         | None = "All",
     ):

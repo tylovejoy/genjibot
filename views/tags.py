@@ -24,6 +24,7 @@ NUMBER_EMOJI = {
     10: "🔟",
 }
 
+
 class TagFuzzView(discord.ui.View):
     def __init__(self, itx: core.Interaction[core.Genji], options: list[str]):
         super().__init__(timeout=None)

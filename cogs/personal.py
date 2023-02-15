@@ -19,7 +19,9 @@ class Personal(commands.Cog):
     async def settings(self, itx: core.Interaction[core.Genji]):
         """Change various settings like notifications and your display name."""
         await itx.response.defer(ephemeral=True)
-        data = await itx.client.database.get_row("SELECT flags FROM users WHERE user_id = $1", itx.user.id)
+        data = await itx.client.database.get_row(
+            "SELECT flags FROM users WHERE user_id = $1", itx.user.id
+        )
         flags = data.flags
         view = views.SettingsView(itx, flags)
         await itx.edit_original_response(view=view)

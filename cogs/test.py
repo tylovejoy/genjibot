@@ -131,5 +131,6 @@ class Test(commands.Cog):
         await ctx.channel.send("Back online!")
         await ctx.message.delete()
 
+
 async def setup(bot: core.Genji):
     await bot.add_cog(Test(bot))
