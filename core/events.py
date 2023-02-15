@@ -100,6 +100,17 @@ class BotEvents(commands.Cog):
                         ),
                         message_id=x.message_id,
                     )
+            queue = [
+                x async for x in self.bot.database.get("SELECT * FROM polls_info;")
+            ]
+            for x in queue:
+                self.bot.add_view(
+                    views.PollView(
+                        x.options,
+                        x.title,
+                    ),
+                    message_id=x.message_id,
+                )
 
             self.bot.logger.debug(f"Added persistent views.")
             self.bot.persistent_views_added = True
