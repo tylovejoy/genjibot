@@ -89,6 +89,19 @@ class NameChangeModal(discord.ui.Modal, title="Change Name"):
             f"You have changed your display name to {self.name}!", ephemeral=True
         )
         itx.client.all_users[itx.user.id]["nickname"] = self.name.value
+        for x in itx.client.users_choices:
+            if x.value == str(itx.user.id):
+                x.name = self.name.value
+
+        maybe_creator = itx.client.creators.get(itx.user.id, None)
+        if maybe_creator:
+            maybe_creator["nickname"] = self.name.value
+
+        for x in itx.client.creators_choices:
+            if x.value == str(itx.user.id):
+                x.name = self.name.value
+
+
         await itx.client.database.set(
             "UPDATE users SET nickname = $1 WHERE user_id = $2;",
             self.name.value[:25],
