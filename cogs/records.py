@@ -103,7 +103,7 @@ class Records(commands.Cog):
         itx: core.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
         screenshot: discord.Attachment,
-        record: app_commands.Transform[float, utils.RecordTransformer] | None,
+        time: app_commands.Transform[float, utils.RecordTransformer],
         video: app_commands.Transform[str, utils.URLTransformer] | None,
     ) -> None:
         """
@@ -112,7 +112,7 @@ class Records(commands.Cog):
         Args:
             itx: Interaction
             map_code: Overwatch share code
-            record: Record in seconds/milliseconds
+            time: Time in seconds/milliseconds
             screenshot: Screenshot of completion
             video: Video of play through. REQUIRED FOR FULL VERIFICATION!
         """
@@ -127,11 +127,11 @@ class Records(commands.Cog):
         if itx.client.map_cache[map_code]["archived"] is True:
             raise utils.ArchivedMap
 
-        if video and not record:
+        if video and not time:
             raise utils.VideoNoRecord
 
-        if not record:
-            record = utils.COMPLETION_PLACEHOLDER
+        if not time:
+            time = utils.COMPLETION_PLACEHOLDER
 
         search = [
             x
@@ -148,9 +148,9 @@ class Records(commands.Cog):
             search = search[0]
 
             if search.video:
-                if record >= search.record:
+                if time >= search.record:
                     raise utils.RecordNotFasterError
-                if record < search.record and not video:
+                if time < search.record and not video:
                     overwrite_view = views.RecordVideoConfirmCompletion(itx)
                     await itx.edit_original_response(
                         content=(
@@ -165,7 +165,7 @@ class Records(commands.Cog):
                         print("Overwrite view returning (records.py)")
                         return
 
-            if not search.video and (record >= search.record) and not video:
+            if not search.video and (time >= search.record) and not video:
                 raise utils.RecordNotFasterError
 
         user = itx.client.all_users[itx.user.id]
@@ -180,7 +180,7 @@ class Records(commands.Cog):
         embed = utils.record_embed(
             {
                 "map_code": map_code,
-                "record": record,
+                "record": time,
                 "video": video,
                 "user_name": user["nickname"],
                 "user_url": itx.user.display_avatar.url,
@@ -221,7 +221,7 @@ class Records(commands.Cog):
             """,
             map_code,
             itx.user.id,
-            record,
+            time,
             channel_msg.jump_url,
             video,
             channel_msg.id,
