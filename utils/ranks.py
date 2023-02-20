@@ -64,8 +64,8 @@ ALL_DIFFICULTY_RANGES_MIDPOINT = {
 DIFFICULTIES_CHOICES = [app_commands.Choice(name=x, value=x) for x in DIFFICULTIES_EXT]
 
 
-def allowed_difficulties(rank_number: int) -> list[str | None]:
-    ranks = []
+def allowed_difficulties(rank_number: int) -> list[str]:
+    ranks: list[str] = []
     if rank_number >= 4:
         ranks += DIFFICULTIES_EXT[0:10]
     if rank_number >= 5:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import TYPE_CHECKING
 
 import discord
@@ -32,7 +31,7 @@ class Paginator(discord.ui.View):
             self.next.disabled = True
             self.last.disabled = True
 
-    async def start(self, itx: core.Interaction[core.Genji]) -> None:
+    async def start(self, itx: discord.Interaction[core.Genji]) -> None:
         if isinstance(self.pages[0], str):
             await itx.edit_original_response(
                 content=self.pages[0],
@@ -55,7 +54,7 @@ class Paginator(discord.ui.View):
     #             page.set_footer(text=f"({pages.index(page) + 1}/{len(pages)})")
     #     return pages
 
-    async def interaction_check(self, itx: core.Interaction[core.Genji]) -> bool:
+    async def interaction_check(self, itx: discord.Interaction[core.Genji]) -> bool:
         """
         Check if the itx user is the original users who started the itx.
         """
@@ -70,7 +69,7 @@ class Paginator(discord.ui.View):
 
     @discord.ui.button(label="First", emoji="⏮")
     async def first(
-        self, itx: core.Interaction[core.Genji], button: discord.ui.Button
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ) -> None:
         """Button component to return to the first pagination page."""
         if len(self.pages) == 1:
@@ -80,7 +79,7 @@ class Paginator(discord.ui.View):
 
     @discord.ui.button(label="Back", emoji="◀")
     async def back(
-        self, itx: core.Interaction[core.Genji], button: discord.ui.Button
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ) -> None:
         """Button component to go back to the last pagination page."""
         if len(self.pages) == 1:
@@ -92,7 +91,7 @@ class Paginator(discord.ui.View):
 
         return await self.change_page(itx)
 
-    async def change_page(self, itx: core.Interaction[core.Genji]) -> None:
+    async def change_page(self, itx: discord.Interaction[core.Genji]) -> None:
         self.page_number.label = f"{self._curr_page + 1}/{len(self.pages)}"
         try:
             if isinstance(self.pages[0], str):
@@ -116,7 +115,7 @@ class Paginator(discord.ui.View):
     @discord.ui.button(label="...")
     async def page_number(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         button: discord.ui.Button,
     ):
         modal = PageNumberModal(len(self.pages))
@@ -128,7 +127,7 @@ class Paginator(discord.ui.View):
 
     @discord.ui.button(label="Next", emoji="▶")
     async def next(
-        self, itx: core.Interaction[core.Genji], button: discord.ui.Button
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ) -> None:
         """Button component to go to the next pagination page."""
         if len(self.pages) == 1:
@@ -142,7 +141,7 @@ class Paginator(discord.ui.View):
 
     @discord.ui.button(label="Last", emoji="⏭")
     async def last(
-        self, itx: core.Interaction[core.Genji], button: discord.ui.Button
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ) -> None:
         """Button component to go to the last pagination page."""
         if len(self.pages) == 1:
@@ -161,7 +160,7 @@ class PageNumberModal(discord.ui.Modal):
         self.limit = limit
         self.number.placeholder = f"Must be an integer in range 1 - {self.limit}"
 
-    async def on_submit(self, itx: core.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True, thinking=True)
 
         try:
@@ -175,6 +174,6 @@ class PageNumberModal(discord.ui.Modal):
             await itx.delete_original_response()
 
     async def on_error(
-        self, itx: core.Interaction[core.Genji], error: Exception
+        self, itx: discord.Interaction[core.Genji], error: Exception
     ) -> None:
         await utils.on_app_command_error(itx, error)

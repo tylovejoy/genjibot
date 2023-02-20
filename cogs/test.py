@@ -3,10 +3,8 @@ from __future__ import annotations
 import typing
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
-import utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -102,7 +100,7 @@ class Test(commands.Cog):
 
     # @app_commands.command(name="test")
     # @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    # async def testing_slash(self, itx: core.Interaction[core.Genji]) -> None:
+    # async def testing_slash(self, itx: discord.Interaction[core.Genji]) -> None:
     #     command = itx.client.tree.get_app_command("submit-record", guild=utils.GUILD_ID)
     #
     #     embed = utils.GenjiEmbed(

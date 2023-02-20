@@ -43,7 +43,7 @@ class ModCommands(commands.Cog):
     )
     async def add_creator(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         creator: app_commands.Transform[int, utils.CreatorTransformer],
     ) -> None:
@@ -64,7 +64,7 @@ class ModCommands(commands.Cog):
     )
     async def remove_creator(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         creator: app_commands.Transform[int, utils.CreatorTransformer],
     ) -> None:
@@ -84,7 +84,7 @@ class ModCommands(commands.Cog):
     )
     async def edit_medals(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         gold: app_commands.Transform[float, utils.RecordTransformer],
         silver: app_commands.Transform[float, utils.RecordTransformer],
@@ -148,7 +148,7 @@ class ModCommands(commands.Cog):
     )
     async def submit_fake_map(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         user: app_commands.Transform[
             utils.FakeUser | discord.Member, utils.AllUserTranformer
         ],
@@ -199,7 +199,7 @@ class ModCommands(commands.Cog):
     )
     async def remove_record(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         member: discord.Member,
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
     ):
@@ -258,7 +258,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(member=cogs.users_autocomplete)
     async def change_name(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         member: app_commands.Transform[int, utils.UserTransformer],
         nickname: app_commands.Range[str, 1, 25],
     ):
@@ -270,8 +270,8 @@ class ModCommands(commands.Cog):
             member: User
             nickname: New nickname
         """
-        old = self.bot.all_users[member]["nickname"]
-        self.bot.all_users[member]["nickname"] = nickname
+        old = self.bot.cache.users[member].nickname
+        self.bot.cache.users[member].update_nickname(nickname)
         await self.bot.database.set(
             "UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member
         )
@@ -282,7 +282,7 @@ class ModCommands(commands.Cog):
     @mod.command(name="create-fake-member")
     async def create_fake_member(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         fake_user: str,
     ):
         """
@@ -313,22 +313,22 @@ class ModCommands(commands.Cog):
             value,
             fake_user,
         )
-        itx.client.all_users[value] = utils.UserCacheData(
-            nickname=fake_user,
-            alertable=False,
-            flags=views.Settings.NONE.value,
-        )
-        itx.client.users_choices.append(
-            app_commands.Choice(
-                name=fake_user,
-                value=str(value),
+        itx.client.cache.users.add_one(
+            utils.UserData(
+                user_id=value,
+                nickname=fake_user,
+                flags=views.Settings.NONE.value,
+                is_creator=True,
             )
         )
 
     @mod.command(name="link-member")
     @app_commands.autocomplete(fake_user=cogs.users_autocomplete)
     async def link_member(
-        self, itx: core.Interaction[core.Genji], fake_user: str, member: discord.Member
+        self,
+        itx: discord.Interaction[core.Genji],
+        fake_user: str,
+        member: discord.Member,
     ):
         """
         Link a fake user to a server member.
@@ -363,7 +363,7 @@ class ModCommands(commands.Cog):
 
     @staticmethod
     async def link_fake_to_member(
-        itx: core.Interaction[core.Genji], fake_id: int, member: discord.Member
+        itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member
     ):
         await itx.client.database.set(
             "UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id
@@ -375,6 +375,7 @@ class ModCommands(commands.Cog):
             "DELETE FROM users WHERE user_id=$1",
             fake_id,
         )
+        itx.client.cache.users[fake_id].update_user_id(member.id)
 
     @map.command()
     @app_commands.choices(
@@ -386,20 +387,20 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def archive(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         action: app_commands.Choice[str],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
         await itx.response.defer(ephemeral=True)
         if (
             action.value == "archive"
-            and itx.client.map_cache[map_code]["archived"] is False
+            and itx.client.cache.maps[map_code].archived is False
         ):
             value = True
 
         elif (
             action.value == "unarchive"
-            and itx.client.map_cache[map_code]["archived"] is True
+            and itx.client.cache.maps[map_code].archived is True
         ):
             value = False
         else:
@@ -407,7 +408,7 @@ class ModCommands(commands.Cog):
                 content=f"**{map_code}** has already been {action.value}d."
             )
             return
-        itx.client.map_cache[map_code]["archived"] = value
+        itx.client.cache.maps[map_code].update_archived(value)
         await itx.client.database.set(
             """UPDATE maps SET archived = $1 WHERE map_code = $2""",
             value,
@@ -423,7 +424,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def difficulty(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: str,
         value: app_commands.Choice[str],
     ):
@@ -465,7 +466,7 @@ class ModCommands(commands.Cog):
     @app_commands.choices(value=utils.ALL_STARS_CHOICES)
     async def rating(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         value: app_commands.Choice[int],
     ):
@@ -506,7 +507,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def map_type(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
         """Change the type of a map.
@@ -519,7 +520,9 @@ class ModCommands(commands.Cog):
         await itx.response.defer(ephemeral=True)
 
         select = {
-            "map_type": views.MapTypeSelect(copy.deepcopy(itx.client.map_types_options))
+            "map_type": views.MapTypeSelect(
+                copy.deepcopy(itx.client.cache.map_types.options)
+            )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
         await itx.edit_original_response(
@@ -562,7 +565,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def mechanics(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
         """Change the mechanics of a map.
@@ -576,7 +579,7 @@ class ModCommands(commands.Cog):
 
         select = {
             "mechanics": views.MechanicsSelect(
-                copy.deepcopy(itx.client.map_mechanics_options)
+                copy.deepcopy(itx.client.cache.map_mechanics.options)
             )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
@@ -623,7 +626,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def restrictions(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
         """Change the restrictions of a map.
@@ -637,7 +640,7 @@ class ModCommands(commands.Cog):
 
         select = {
             "restrictions": views.RestrictionsSelect(
-                copy.deepcopy(itx.client.map_restrictions_options)
+                copy.deepcopy(itx.client.cache.map_restrictions.options)
             )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
@@ -686,7 +689,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def checkpoints(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
     ):
@@ -741,7 +744,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def map_code(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         new_map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
@@ -754,7 +757,7 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        if new_map_code in itx.client.map_cache:
+        if new_map_code in itx.client.cache.maps.keys:
             raise utils.MapExistsError
 
         view = views.Confirm(
@@ -786,7 +789,7 @@ class ModCommands(commands.Cog):
                 new_map_code,
                 map_code,
             )
-            itx.client.dispatch("code_cache_refresh")
+            itx.client.cache.maps[map_code].update_map_code(new_map_code)
             itx.client.dispatch(
                 "newsfeed_map_edit",
                 itx,
@@ -804,7 +807,7 @@ class ModCommands(commands.Cog):
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def description(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         description: str,
     ):
@@ -862,7 +865,7 @@ class ModCommands(commands.Cog):
     )
     async def map_name(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         map_name: app_commands.Transform[str, utils.MapNameTransformer],
     ):

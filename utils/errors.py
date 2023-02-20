@@ -12,7 +12,7 @@ from discord import app_commands
 import utils
 
 if typing.TYPE_CHECKING:
-    from core import Genji, Interaction
+    from core import Genji
 
 
 class BaseParkourException(Exception):
@@ -145,7 +145,8 @@ class WrongCompletionChannel(BaseParkourException, app_commands.errors.AppComman
 
 
 async def on_app_command_error(
-    itx: Interaction[Genji], error: app_commands.errors.CommandInvokeError | Exception
+    itx: discord.Interaction[Genji],
+    error: app_commands.errors.CommandInvokeError | Exception,
 ):
     exception = getattr(error, "original", error)
     if isinstance(exception, utils.BaseParkourException):

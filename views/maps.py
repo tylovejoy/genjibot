@@ -6,11 +6,8 @@ import re
 from typing import TYPE_CHECKING
 
 import discord
-from discord import app_commands
 import matplotlib.pyplot as plt
 from matplotlib import ticker
-
-from matplotlib.ticker import MaxNLocator
 
 import utils
 
@@ -19,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class MapSubmitSelection(discord.ui.Select):
-    async def callback(self, itx: core.Interaction[core.Genji]):
+    async def callback(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
         for x in self.options:
             x.default = x.value in self.values
@@ -85,7 +82,7 @@ class PlaytestVoting(discord.ui.View):
         self.author_rank = author_rank
         self.message_id = original_msg
 
-    async def interaction_check(self, itx: core.Interaction[core.Genji]) -> bool:
+    async def interaction_check(self, itx: discord.Interaction[core.Genji]) -> bool:
         res = False
         author = await self.client.database.get_row(
             "SELECT * FROM users WHERE user_id = $1",
@@ -115,7 +112,7 @@ class PlaytestVoting(discord.ui.View):
                 )
         return res
 
-    async def check_status(self, itx: core.Interaction[core.Genji], votes: int):
+    async def check_status(self, itx: discord.Interaction[core.Genji], votes: int):
         query = """
         SELECT * FROM records r LEFT JOIN users u ON u.user_id = r.user_id 
         WHERE map_code = $1 and rank >= $2 and r.user_id != $3;
@@ -322,7 +319,7 @@ class PlaytestVoting(discord.ui.View):
         custom_id="diff_voting",
     )
     async def difficulties(
-        self, itx: core.Interaction[core.Genji], select: discord.ui.Select
+        self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
         await itx.response.defer(ephemeral=True)
         role = itx.guild.get_role(utils.Roles.GRANDMASTER)

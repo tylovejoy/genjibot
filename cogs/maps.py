@@ -41,7 +41,7 @@ class Maps(commands.Cog):
     # )
     # async def remove_creator(
     #     self,
-    #     itx: core.Interaction[core.Genji],
+    #     itx: discord.Interaction[core.Genji],
     #     map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     #     creator: app_commands.Transform[int, utils.CreatorTransformer],
     # ) -> None:
@@ -55,7 +55,7 @@ class Maps(commands.Cog):
     # )
     # async def add_creator(
     #     self,
-    #     itx: core.Interaction[core.Genji],
+    #     itx: discord.Interaction[core.Genji],
     #     map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     #     creator: app_commands.Transform[int, utils.CreatorTransformer],
     # ) -> None:
@@ -66,7 +66,7 @@ class Maps(commands.Cog):
     @app_commands.autocomplete(map_name=cogs.map_name_autocomplete)
     async def submit_map(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeSubmitTransformer],
         map_name: app_commands.Transform[str, utils.MapNameTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
@@ -122,7 +122,7 @@ class Maps(commands.Cog):
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def map_search(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_type: app_commands.Transform[str, utils.MapTypeTransformer] | None = None,
         map_name: app_commands.Transform[str, utils.MapNameTransformer] | None = None,
         creator: app_commands.Transform[int, utils.CreatorTransformer] | None = None,
@@ -194,7 +194,9 @@ class Maps(commands.Cog):
                     GROUP BY checkpoints, map_name,
                     m.map_code, "desc", official, map_type, gold, silver, bronze, archived),
                 completions as (SELECT map_code FROM records WHERE user_id = $10)
-                SELECT am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, am.bronze, c.map_code IS NOT NULL as completed
+                SELECT am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, 
+                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, am.bronze, 
+                c.map_code IS NOT NULL as completed
                 FROM all_maps am
                 LEFT JOIN completions c on am.map_code = c.map_code
                 WHERE
@@ -204,10 +206,13 @@ class Maps(commands.Cog):
                 ($2::text IS NULL OR map_type LIKE $2) AND
                 ($3::text IS NULL OR map_name = $3) AND
                 ($4::text IS NULL OR mechanics LIKE $4) AND
-                ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2) AND difficulty < $6::numeric(10, 2))) AND
+                ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2) 
+                AND difficulty < $6::numeric(10, 2))) AND
                 ($7::int IS NULL OR quality >= $7) AND
                 ($8::bigint IS NULL OR $8 = ANY(creator_ids))
-                GROUP BY am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, am.bronze, c.map_code IS NOT NULL
+                GROUP BY am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, 
+                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, 
+                am.bronze, c.map_code IS NOT NULL
                 
                 HAVING ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
                 
@@ -306,7 +311,7 @@ class Maps(commands.Cog):
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def view_guide(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
         """
@@ -317,7 +322,7 @@ class Maps(commands.Cog):
             itx: Interaction
         """
         await itx.response.defer(ephemeral=False)
-        if map_code not in itx.client.map_cache.keys():
+        if map_code not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
         guides = [
@@ -339,7 +344,7 @@ class Maps(commands.Cog):
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def add_guide(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
         url: app_commands.Transform[str, utils.URLTransformer],
     ):
@@ -352,7 +357,7 @@ class Maps(commands.Cog):
             url: URL for guide
         """
         await itx.response.defer(ephemeral=True)
-        if map_code not in itx.client.map_cache.keys():
+        if map_code not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
         guides = [
