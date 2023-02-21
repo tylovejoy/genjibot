@@ -28,7 +28,7 @@ CODE_VERIFICATION = re.compile(r"^[A-Z0-9]{4,6}$")
 
 
 class MapCodeTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> str:
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         value = value.upper().replace("O", "0").lstrip().rstrip()
         if not re.match(CODE_VERIFICATION, value):
             raise utils.IncorrectCodeFormatError
@@ -36,20 +36,20 @@ class MapCodeTransformer(app_commands.Transformer):
 
 
 class MapCodeSubmitTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> str:
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         value = value.upper().replace("O", "0").lstrip().rstrip()
         if not re.match(CODE_VERIFICATION, value):
             raise utils.IncorrectCodeFormatError
-        if value in itx.client.map_cache.keys():
+        if value in itx.client.cache.maps.keys:
             raise utils.MapExistsError
         return value
 
 
 class MapCodeRecordsTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> str:
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         value = value.upper().replace("O", "0").lstrip().rstrip()
 
-        if value not in itx.client.map_cache.keys():
+        if value not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
         if not re.match(utils.CODE_VERIFICATION, value):
@@ -59,16 +59,16 @@ class MapCodeRecordsTransformer(app_commands.Transformer):
 
 
 class UserTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> int:
-        if value not in map(str, itx.client.all_users.keys()):
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> int:
+        if value not in map(str, itx.client.cache.users.keys):
             raise utils.UserNotFoundError
         return int(value)
 
 
 class CreatorTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> int:
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> int:
         user = await transform_user(itx.client, value)
-        if user.id not in itx.client.creators.keys():
+        if user.id not in itx.client.cache.users.creator_ids:
             raise utils.UserNotFoundError
         else:
             return user.id
@@ -76,7 +76,7 @@ class CreatorTransformer(app_commands.Transformer):
 
 class AllUserTranformer(app_commands.Transformer):
     async def transform(
-        self, itx: core.Interaction[core.Genji], value: str
+        self, itx: discord.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:
         return await transform_user(itx.client, value)
 
@@ -90,20 +90,22 @@ async def transform_user(
         member = guild.get_member(value)
         if member:
             return member
-        return utils.FakeUser(value, client.all_users[value])
+        return utils.FakeUser(value, client.cache.users[value])
     except ValueError:
         member = discord.utils.find(
             lambda u: cogs.case_ignore_compare(u.name, value), guild.members
         )
         if member:
             return member
-        for user_id, user_data in client.all_users.items():
-            if cogs.case_ignore_compare(value, user_data["nickname"]):
-                return utils.FakeUser(user_id, client.all_users[user_id])
+        for user in client.cache.users:
+            if cogs.case_ignore_compare(value, user.nickname):
+                return utils.FakeUser(user.user_id, client.cache.users[user.user_id])
 
 
 class RecordTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> float:
+    async def transform(
+        self, itx: discord.Interaction[core.Genji], value: str
+    ) -> float:
         try:
             value = utils.time_convert(value)
         except ValueError:
@@ -112,7 +114,7 @@ class RecordTransformer(app_commands.Transformer):
 
 
 class URLTransformer(app_commands.Transformer):
-    async def transform(self, itx: core.Interaction[core.Genji], value: str) -> str:
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         value = value.strip()
         if not value.startswith("https://") and not value.startswith("http://"):
             value = "https://" + value

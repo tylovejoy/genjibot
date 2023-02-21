@@ -21,7 +21,7 @@ class Polls(commands.Cog):
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def start_poll(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         title: str,
         option_1: str,
         option_2: str,
@@ -49,7 +49,7 @@ class Polls(commands.Cog):
 
     @staticmethod
     async def insert_poll_info(
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         options: list[str | None],
         message_id: int,
         title: str,

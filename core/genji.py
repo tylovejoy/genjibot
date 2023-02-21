@@ -4,12 +4,11 @@ import logging
 import typing
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 import cogs
 import core
-from utils import MapCacheData, UserCacheData
+import utils
 
 if typing.TYPE_CHECKING:
     import aiohttp
@@ -36,33 +35,7 @@ class Genji(commands.Bot):
         self.database = db
         self.logger = self._setup_logging()
         self.database.logger = self.logger
-        # Caches
-        self.map_names: list[str] | None = None
-        self.map_types: list[str] | None = None
-        self.map_mechanics: list[str] | None = None
-        self.map_restrictions: list[str] | None = None
-        self.map_cache: dict[str, MapCacheData] | None = {}
-        self.all_users: dict[int, UserCacheData] | None = {}
-        self.creators: dict[int, UserCacheData] | None = {}
-        self.fake_users: dict[int, UserCacheData] | None = {}
-
-        self.map_mechanics_options: list[discord.SelectOption] = []
-        self.map_restrictions_options: list[discord.SelectOption] = []
-        self.map_types_options: list[discord.SelectOption] = []
-
-        self.map_restrictions_convert: dict[int, str] = {}
-        self.map_mechanics_convert: dict[int, str] = {}
-
-        self.map_types_choices: list[app_commands.Choice] = []
-        self.map_mechanics_choices: list[app_commands.Choice] = []
-        self.map_names_choices: list[app_commands.Choice] = []
-        self.map_codes_choices: list[app_commands.Choice] = []
-        self.users_choices: list[app_commands.Choice] = []
-        self.creators_choices: list[app_commands.Choice] = []
-        self.fake_users_choices: list[app_commands.Choice] = []
-
-        self.tag_cache: list[str] = []
-        self.tag_choices: list[app_commands.Choice] = []
+        self.cache: utils.GenjiCache = utils.GenjiCache()
 
         self.persistent_views_added = False
 

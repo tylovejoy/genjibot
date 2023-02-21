@@ -29,7 +29,7 @@ DISABLED_EMOJI = "🔕"
 
 
 class SettingsView(discord.ui.View):
-    def __init__(self, original_itx: core.Interaction[core.Genji], flags: int):
+    def __init__(self, original_itx: discord.Interaction[core.Genji], flags: int):
         super().__init__(timeout=None)
         self.itx = original_itx
         self.flags = Settings(flags)
@@ -44,7 +44,7 @@ class SettingsView(discord.ui.View):
 
     @discord.ui.button(label="Change Name", style=discord.ButtonStyle.blurple, row=1)
     async def name_change(
-        self, itx: core.Interaction[core.Genji], button: discord.ui.Button
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ):
         await itx.response.send_modal(NameChangeModal())
 
@@ -57,7 +57,7 @@ class NotificationButton(discord.ui.Button):
         super().__init__()
         self.edit_button(name, value)
 
-    async def callback(self, itx: core.Interaction[core.Genji]):
+    async def callback(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
         self.view.flags ^= getattr(Settings, self.name.upper())
         self.edit_button(
@@ -69,7 +69,7 @@ class NotificationButton(discord.ui.Button):
             self.view.flags,
             itx.user.id,
         )
-        itx.client.all_users[itx.user.id]["flags"] = self.view.flags
+        itx.client.cache.users[itx.user.id].flags = self.view.flags
 
     def edit_button(self, name: str, value: bool):
         self.label = f"{name} Notifications are {bool_string(value)}"
@@ -84,23 +84,11 @@ class NameChangeModal(discord.ui.Modal, title="Change Name"):
         placeholder="Write your most commonly known nickname/alias.",
     )
 
-    async def on_submit(self, itx: core.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]):
         await itx.response.send_message(
             f"You have changed your display name to {self.name}!", ephemeral=True
         )
-        itx.client.all_users[itx.user.id]["nickname"] = self.name.value
-        for x in itx.client.users_choices:
-            if x.value == str(itx.user.id):
-                x.name = self.name.value
-
-        maybe_creator = itx.client.creators.get(itx.user.id, None)
-        if maybe_creator:
-            maybe_creator["nickname"] = self.name.value
-
-        for x in itx.client.creators_choices:
-            if x.value == str(itx.user.id):
-                x.name = self.name.value
-
+        itx.client.cache.users[itx.user.id].update_nickname(self.name.value)
 
         await itx.client.database.set(
             "UPDATE users SET nickname = $1 WHERE user_id = $2;",

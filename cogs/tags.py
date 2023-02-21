@@ -22,15 +22,15 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
     @app_commands.checks.cooldown(3, 30, key=lambda i: (i.guild_id, i.user.id))
     async def view(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         name: str,
     ) -> None:
         """View a tag."""
         await itx.response.defer()
-        if name not in itx.client.tag_cache:
-            fuzzed_options = utils.fuzz_multiple(name, itx.client.tag_cache)
+        if name not in itx.client.cache.tags:
+            fuzzed_options = utils.fuzz_multiple(name, itx.client.cache.tags)
             fuzz_desc = [
-                f"{utils.NUMBER_EMOJI[i + 1]} - {x}\n"
+                f"{views.NUMBER_EMOJI[i + 1]} - {x}\n"
                 for i, x in enumerate(fuzzed_options)
             ]
 
@@ -58,7 +58,7 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
         )
 
     @app_commands.command()
-    async def create(self, itx: core.Interaction[core.Genji]):
+    async def create(self, itx: discord.Interaction[core.Genji]):
         """Create a tag"""
         if (
             itx.guild.get_role(utils.TAG_MAKER) not in itx.user.roles

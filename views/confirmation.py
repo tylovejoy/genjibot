@@ -21,7 +21,7 @@ class ConfirmButton(discord.ui.Button):
             disabled=disabled,
         )
 
-    async def callback(self, itx: core.Interaction[core.Genji]):
+    async def callback(self, itx: discord.Interaction[core.Genji]):
         """Confirmation button callback."""
         if self.view.original_itx.user != itx.user:
             # await itx.response.send_message(
@@ -46,7 +46,7 @@ class RejectButton(discord.ui.Button):
             style=discord.ButtonStyle.red,
         )
 
-    async def callback(self, itx: core.Interaction[core.Genji]):
+    async def callback(self, itx: discord.Interaction[core.Genji]):
         """Rejection button callback."""
         await itx.response.defer(ephemeral=True)
         if self.view.original_itx.user != itx.user:
@@ -78,10 +78,10 @@ class Confirm(discord.ui.View):
 
     def __init__(
         self,
-        original_itx: core.Interaction[core.Genji],
-        confirm_msg: str = "Confirmed.",
-        preceeding_items: dict[str, views.MapTypeSelect | views.RestrictionsSelect | views.MapTypeSelect | views.MechanicsSelect] | None = None,
-        ephemeral: bool = False,
+        original_itx: discord.Interaction[core.Genji],
+        confirm_msg="Confirmed.",
+        preceeding_items: dict[str, discord.ui.Item] | None = None,
+        ephemeral=False,
     ):
         super().__init__()
 
@@ -126,7 +126,7 @@ class QualitySelect(discord.ui.Select):
             placeholder="Rate the quality of the map!",
         )
 
-    async def callback(self, interaction: core.Interaction[core.Genji]):
+    async def callback(self, interaction: discord.Interaction[core.Genji]):
         await interaction.response.defer(ephemeral=True)
         await self.view.enable_submit()
 
@@ -135,9 +135,9 @@ class ConfirmCompletion(discord.ui.View):
     def __init__(
         self,
         rank: int,
-        original_itx: core.Interaction[core.Genji],
-        confirm_msg: str = "Confirmed.",
-        ephemeral: bool = False,
+        original_itx: discord.Interaction[core.Genji],
+        confirm_msg="Confirmed.",
+        ephemeral=False,
     ):
         super().__init__(timeout=None)
         self.rank = rank
@@ -165,8 +165,8 @@ class ConfirmCompletion(discord.ui.View):
 class RecordVideoConfirmCompletion(discord.ui.View):
     def __init__(
         self,
-        original_itx: core.Interaction[core.Genji],
-        confirm_msg: str = "Confirmed.",
+        original_itx: discord.Interaction[core.Genji],
+        confirm_msg="Confirmed.",
     ):
         super().__init__(timeout=None)
         self.original_itx = original_itx

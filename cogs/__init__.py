@@ -27,14 +27,14 @@ def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
     Returns:
         True if string2 is in string1
     """
-    if None in [string1, string2]:
+    if string1 is None or string2 is None:
         return False
     return string2.casefold() in string1.casefold()
 
 
 async def _autocomplete(
     current: str,
-    choices: list[app_commands.Choice],
+    choices: list[app_commands.Choice[str]],
 ) -> list[app_commands.Choice[str]]:
     if not choices:  # Quietly ignore empty choices
         return []
@@ -46,57 +46,51 @@ async def _autocomplete(
 
 
 async def creator_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.creators_choices)
-
-
-# async def fake_users_autocomplete(
-#     itx: core.Interaction[core.Genji], current: str
-# ) -> list[app_commands.Choice[str]]:
-#     return await _autocomplete(current, itx.client.fake_users_choices)
+    return await _autocomplete(current, itx.client.cache.users.creator_choices)
 
 
 async def map_codes_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
     current = current.replace("O", "0").replace("o", "0")
-    return await _autocomplete(current, itx.client.map_codes_choices)
+    return await _autocomplete(current, itx.client.cache.maps.choices)
 
 
 async def map_name_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.map_names_choices)
+    return await _autocomplete(current, itx.client.cache.map_names.choices)
 
 
 async def map_type_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.map_types_choices)
+    return await _autocomplete(current, itx.client.cache.map_types.choices)
 
 
 async def map_mechanics_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.map_mechanics_choices)
+    return await _autocomplete(current, itx.client.cache.map_mechanics.choices)
 
 
 async def tags_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.tag_choices)
+    return await _autocomplete(current, itx.client.cache.tags.choices)
 
 
 async def users_autocomplete(
-    itx: core.Interaction[core.Genji], current: str
+    itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
-    return await _autocomplete(current, itx.client.users_choices)
+    return await _autocomplete(current, itx.client.cache.users.choices)
 
 
 async def submit_map_(
-    itx: core.Interaction[core.Genji],
-    user: discord.User | discord.Member | utils.FakeUser,
+    itx: discord.Interaction[core.Genji],
+    user: discord.Member | utils.FakeUser,
     map_code: str,
     map_name: str,
     checkpoint_count: int,
@@ -138,13 +132,13 @@ async def submit_map_(
         itx,
         preceeding_items={
             "map_type": views.MapTypeSelect(
-                copy.deepcopy(itx.client.map_types_options)
+                copy.deepcopy(itx.client.cache.map_types.options)
             ),
             "mechanics": views.MechanicsSelect(
-                copy.deepcopy(itx.client.map_mechanics_options)
+                copy.deepcopy(itx.client.cache.map_mechanics.options)
             ),
             "restrictions": views.RestrictionsSelect(
-                copy.deepcopy(itx.client.map_restrictions_options)
+                copy.deepcopy(itx.client.cache.map_restrictions.options)
             ),
             "difficulty": views.DifficultySelect(
                 [discord.SelectOption(label=x, value=x) for x in diffs]
@@ -179,7 +173,8 @@ async def submit_map_(
             f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
             f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n"
         )
-    embed = utils.GenjiEmbed(
+    embed = discord.Embed()
+    utils.GenjiEmbed(
         title="Map Submission",
         description=(
             f"┣ `Code` {map_code}\n"
@@ -195,7 +190,7 @@ async def submit_map_(
         ),
     )
     embed.set_author(
-        name=itx.client.all_users[user.id]["nickname"],
+        name=itx.client.cache.users[user.id].nickname,
         icon_url=user.display_avatar.url,
     )
     embed = utils.set_embed_thumbnail_maps(map_name, embed)
@@ -306,12 +301,12 @@ async def submit_map_(
             map_code,
         )
 
-    itx.client.map_cache[map_code] = utils.MapCacheData(
-        user_ids=[user.id],
-        archived=False,
-    )
-    itx.client.map_codes_choices.append(
-        app_commands.Choice(name=map_code, value=map_code)
+    itx.client.cache.maps.add_one(
+        utils.MapData(
+            map_code=map_code,
+            user_ids={user.id},
+            archived=False,
+        )
     )
     if not mod:
         map_maker = itx.guild.get_role(utils.Roles.MAP_MAKER)
@@ -330,45 +325,55 @@ async def submit_map_(
         itx.client.dispatch(
             "newsfeed_new_map", itx, itx.user, new_map_message.jump_url, map_code
         )
-    if user.id not in itx.client.creators:
-        itx.client.creators[user.id] = itx.client.all_users[user.id]
+    if not itx.client.cache.users.find(user.id).is_creator:
+        itx.client.cache.users.find(user.id).update_is_creator(True)
 
 
-async def add_creator_(creator, itx, map_code, checks: bool = False):
+async def add_creator_(
+    creator: int,
+    itx: discord.Interaction[core.Genji],
+    map_code: str,
+    checks: bool = False,
+):
     await itx.response.defer(ephemeral=True)
-    if not checks or itx.user.id not in itx.client.map_cache[map_code]["user_ids"]:
+    if not checks or itx.user.id not in itx.client.cache.maps.keys:
         raise utils.NoPermissionsError
-    if creator in itx.client.map_cache[map_code]["user_ids"]:
+    if creator in itx.client.cache.maps.keys:
         raise utils.CreatorAlreadyExists
     await itx.client.database.set(
         "INSERT INTO map_creators (map_code, user_id) VALUES ($1, $2)",
         map_code,
         creator,
     )
-    itx.client.map_cache[map_code]["user_ids"].append(creator)
+    itx.client.cache.maps[map_code].add_creator(creator)
     await itx.edit_original_response(
         content=(
-            f"Adding **{itx.client.all_users[creator]['nickname']}** "
+            f"Adding **{itx.client.cache.users.find(creator).nickname}** "
             f"to list of creators for map code **{map_code}**."
         )
     )
 
 
-async def remove_creator_(creator, itx, map_code, checks: bool = False):
+async def remove_creator_(
+    creator: int,
+    itx: discord.Interaction[core.Genji],
+    map_code: str,
+    checks: bool = False,
+):
     await itx.response.defer(ephemeral=True)
-    if not checks or itx.user.id not in itx.client.map_cache[map_code]["user_ids"]:
+    if not checks or itx.user.id not in itx.client.cache.maps.keys:
         raise utils.NoPermissionsError
-    if creator not in itx.client.map_cache[map_code]["user_ids"]:
+    if creator not in itx.client.cache.maps[map_code].user_ids:
         raise utils.CreatorDoesntExist
     await itx.client.database.set(
         "DELETE FROM map_creators WHERE map_code = $1 AND user_id = $2;",
         map_code,
         creator,
     )
-    itx.client.map_cache[map_code]["user_ids"].remove(creator)
+    itx.client.cache.maps[map_code].remove_creator(creator)
     await itx.edit_original_response(
         content=(
-            f"Removing **{itx.client.all_users[creator]['nickname']}** "
+            f"Removing **{itx.client.cache.users.find(creator).nickname}** "
             f"from list of creators for map code **{map_code}**."
         )
     )
