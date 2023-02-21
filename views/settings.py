@@ -5,16 +5,12 @@ import typing
 
 import discord.ui
 
+import utils
 
 if typing.TYPE_CHECKING:
     import core
 
 
-class Settings(enum.IntFlag):
-    VERIFICATION = enum.auto()
-    PROMOTION = enum.auto()
-    DEFAULT = VERIFICATION | PROMOTION
-    NONE = 0
 
 
 def bool_string(value: bool) -> str:
@@ -32,13 +28,13 @@ class SettingsView(discord.ui.View):
     def __init__(self, original_itx: discord.Interaction[core.Genji], flags: int):
         super().__init__(timeout=None)
         self.itx = original_itx
-        self.flags = Settings(flags)
+        self.flags = utils.SettingFlags(flags)
         self.verification = NotificationButton(
-            "Verification", Settings.VERIFICATION in self.flags
+            "Verification", utils.SettingFlags.VERIFICATION in self.flags
         )
         self.add_item(self.verification)
         self.promotion = NotificationButton(
-            "Promotion", Settings.PROMOTION in self.flags
+            "Promotion", utils.SettingFlags.PROMOTION in self.flags
         )
         self.add_item(self.promotion)
 
@@ -59,9 +55,9 @@ class NotificationButton(discord.ui.Button):
 
     async def callback(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
-        self.view.flags ^= getattr(Settings, self.name.upper())
+        self.view.flags ^= getattr(utils.SettingFlags, self.name.upper())
         self.edit_button(
-            self.name, getattr(Settings, self.name.upper()) in self.view.flags
+            self.name, getattr(utils.SettingFlags, self.name.upper()) in self.view.flags
         )
         await self.view.itx.edit_original_response(view=self.view)
         await itx.client.database.set(

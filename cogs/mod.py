@@ -317,7 +317,7 @@ class ModCommands(commands.Cog):
             utils.UserData(
                 user_id=value,
                 nickname=fake_user,
-                flags=views.Settings.NONE.value,
+                flags=utils.SettingFlags.NONE.value,
                 is_creator=True,
             )
         )
