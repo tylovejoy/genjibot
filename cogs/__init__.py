@@ -96,7 +96,7 @@ async def users_autocomplete(
 
 async def submit_map_(
     itx: core.Interaction[core.Genji],
-    user: discord.Member | utils.FakeUser,
+    user: discord.User | discord.Member | utils.FakeUser,
     map_code: str,
     map_name: str,
     checkpoint_count: int,

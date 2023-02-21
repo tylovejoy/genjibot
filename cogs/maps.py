@@ -129,7 +129,7 @@ class Maps(commands.Cog):
         difficulty: app_commands.Choice[str] | None = None,
         mechanics: app_commands.Transform[str, utils.MapMechanicsTransformer]
         | None = None,
-        minimum_rating: app_commands.Choice[int] = None,
+        minimum_rating: app_commands.Choice[int] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
     ) -> None:

@@ -79,9 +79,9 @@ class Confirm(discord.ui.View):
     def __init__(
         self,
         original_itx: core.Interaction[core.Genji],
-        confirm_msg="Confirmed.",
-        preceeding_items: dict[str, discord.ui.Item] | None = None,
-        ephemeral=False,
+        confirm_msg: str = "Confirmed.",
+        preceeding_items: dict[str, views.MapTypeSelect | views.RestrictionsSelect | views.MapTypeSelect | views.MechanicsSelect] | None = None,
+        ephemeral: bool = False,
     ):
         super().__init__()
 
@@ -136,8 +136,8 @@ class ConfirmCompletion(discord.ui.View):
         self,
         rank: int,
         original_itx: core.Interaction[core.Genji],
-        confirm_msg="Confirmed.",
-        ephemeral=False,
+        confirm_msg: str = "Confirmed.",
+        ephemeral: bool = False,
     ):
         super().__init__(timeout=None)
         self.rank = rank
@@ -166,7 +166,7 @@ class RecordVideoConfirmCompletion(discord.ui.View):
     def __init__(
         self,
         original_itx: core.Interaction[core.Genji],
-        confirm_msg="Confirmed.",
+        confirm_msg: str = "Confirmed.",
     ):
         super().__init__(timeout=None)
         self.original_itx = original_itx

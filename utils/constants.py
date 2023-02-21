@@ -158,7 +158,7 @@ class Roles:
         """
         ids = [r.id for r in user.roles]
         res = 0
-        for i, role in enumerate(cls.ranks()):
+        for role in cls.ranks():
             if role in ids:
                 res += 1
         return res
