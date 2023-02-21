@@ -31,14 +31,17 @@ class PollView(discord.ui.View):
             setattr(self, f"option_{i}", PollOptionButton(label, i))
             self.add_item(getattr(self, f"option_{i}"))
 
-    async def interaction_check(self, itx: core.Interaction[core.Genji]):
+    async def interaction_check(self, itx: discord.Interaction[core.Genji]):
         retry_after = self.cd.update_rate_limit(itx)
         if retry_after:
             raise ButtonOnCooldown(retry_after)
         return True
 
     async def on_error(
-        self, itx: core.Interaction[core.Genji], error: Exception, item: discord.ui.Item
+        self,
+        itx: discord.Interaction[core.Genji],
+        error: Exception,
+        item: discord.ui.Item,
     ):
         if isinstance(error, ButtonOnCooldown):
             seconds = int(error.retry_after)
@@ -55,7 +58,9 @@ class PollView(discord.ui.View):
         custom_id="end_poll",
         row=4,
     )
-    async def end(self, itx: core.Interaction[core.Genji], button: discord.ui.Button):
+    async def end(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ):
         if itx.guild.get_role(utils.STAFF) not in itx.user.roles:
             await itx.response.send_message(
                 "You are not allowed to pres this button", ephemeral=True
@@ -82,7 +87,7 @@ class PollOptionButton(discord.ui.Button):
         )
         self.option_number = option_number
 
-    async def callback(self, itx: core.Interaction[core.Genji]):
+    async def callback(self, itx: discord.Interaction[core.Genji]):
         await itx.response.send_message(
             content=f"You voted for {self.label}!", ephemeral=True
         )
@@ -121,7 +126,8 @@ class PollOptionButton(discord.ui.Button):
             itx.message.id,
         )
 
-    async def get_all_counts(self, itx):
+    @staticmethod
+    async def get_all_counts(itx: discord.Interaction[core.Genji]):
         return [
             x.count
             async for x in itx.client.database.get(

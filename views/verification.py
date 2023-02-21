@@ -16,7 +16,7 @@ import utils
 class RejectReasonModal(discord.ui.Modal, title="Rejection Reason"):
     reason = discord.ui.TextInput(label="Reason", style=discord.TextStyle.long)
 
-    async def on_submit(self, itx: core.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]):
         await itx.response.send_message("Sending reason to user.", ephemeral=True)
 
 
@@ -29,7 +29,9 @@ class VerificationView(discord.ui.View):
         style=discord.ButtonStyle.green,
         custom_id="persistent_view:accept",
     )
-    async def green(self, itx: core.Interaction[core.Genji], button: discord.ui.Button):
+    async def green(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ):
         await itx.response.defer(ephemeral=True)
         await self.verification(itx, True)
 
@@ -38,7 +40,9 @@ class VerificationView(discord.ui.View):
         style=discord.ButtonStyle.red,
         custom_id="persistent_view:reject",
     )
-    async def red(self, itx: core.Interaction[core.Genji], button: discord.ui.Button):
+    async def red(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ):
         modal = RejectReasonModal()
         await itx.response.send_modal(modal)
         await modal.wait()
@@ -46,7 +50,7 @@ class VerificationView(discord.ui.View):
 
     async def verification(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         verified: bool,
         rejection: str | None = None,
     ):
@@ -139,9 +143,7 @@ class VerificationView(discord.ui.View):
             data = self.rejected(itx, search, rejection)
         await original_message.edit(content=data["edit"])
 
-        if views.Settings.VERIFICATION in views.Settings(
-            itx.client.all_users[user.id]["flags"]
-        ):
+        if views.Settings.VERIFICATION in itx.client.cache.users[user.id].flags:
             try:
                 await user.send(
                     "`- - - - - - - - - - - - - -`\n"
@@ -196,7 +198,7 @@ class VerificationView(discord.ui.View):
 
     @staticmethod
     async def find_original_message(
-        itx: core.Interaction[core.Genji], channel_id: int, message_id: int
+        itx: discord.Interaction[core.Genji], channel_id: int, message_id: int
     ) -> discord.Message | None:
         """Try to fetch message from either Records channel."""
         try:
@@ -207,7 +209,7 @@ class VerificationView(discord.ui.View):
 
     @staticmethod
     def accepted(
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         search: database.DotRecord,
         medals: tuple[float, float, float],
     ) -> dict[str, str]:
@@ -235,7 +237,7 @@ class VerificationView(discord.ui.View):
 
     @staticmethod
     def rejected(
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         search: database.DotRecord,
         rejection: str,
     ) -> dict[str, str]:

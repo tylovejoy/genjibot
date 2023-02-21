@@ -5,7 +5,6 @@ import re
 import typing
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 import core
@@ -127,16 +126,15 @@ class BotEvents(commands.Cog):
             member.id,
             member.name[:25],
         )
+        self.bot.cache.users.add_one(
+            utils.UserData(
+                user_id=member.id,
+                nickname=member.nick,
+                flags=utils.SettingFlags.DEFAULT,
+                is_creator=False,
+            )
+        )
 
-        # Add user to cache
-        self.bot.all_users[member.id] = utils.UserCacheData(
-            nickname=member.nick,
-            alertable=True,
-            flags=3,
-        )
-        self.bot.users_choices.append(
-            app_commands.Choice(name=member.nick, value=str(member.id))
-        )
         self.bot.logger.debug(f"Adding user to DB/cache: {member.name}: {member.id}")
         res = [
             x
@@ -185,7 +183,7 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_record(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         record: database.DotRecord,
         medals: tuple[float, float, float],
     ):
@@ -216,7 +214,7 @@ class BotEvents(commands.Cog):
     async def on_newsfeed_role(
         self, client: core.Genji, user: discord.Member, roles: list[discord.Role]
     ):
-        nickname = client.all_users[user.id]["nickname"]
+        nickname = client.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
             title=f"{nickname} got promoted!",
             description="\n".join([f"{x.mention}" for x in roles]),
@@ -229,12 +227,12 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_guide(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         user: discord.Member,
         url: str,
         map_code: str,
     ):
-        nickname = itx.client.all_users[user.id]["nickname"]
+        nickname = itx.client.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
             title=f"{nickname} has posted a guide for {map_code}",
             url=url,
@@ -246,12 +244,12 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_new_map(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         user: discord.Member,
         url: str,
         map_code: str,
     ):
-        nickname = itx.client.all_users[user.id]["nickname"]
+        nickname = itx.client.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
             title=f"{nickname} has submitted a new map!",
             description=f"[Check out {map_code} here!]({url})",
@@ -263,7 +261,7 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_medals(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: str,
         gold: float,
         silver: float,
@@ -292,7 +290,7 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_archive(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: str,
         value: str,
     ):
@@ -318,7 +316,7 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: str,
         values: dict[str, str],
         thread_id: int | None = None,

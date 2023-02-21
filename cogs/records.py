@@ -49,7 +49,7 @@ class Records(commands.Cog):
     @app_commands.autocomplete(user=cogs.users_autocomplete)
     async def summary(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         user: app_commands.Transform[
             int | discord.Member | utils.FakeUser, utils.AllUserTranformer
         ]
@@ -100,7 +100,7 @@ class Records(commands.Cog):
     )
     async def submit_record(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
         screenshot: discord.Attachment,
         time: app_commands.Transform[float, utils.RecordTransformer],
@@ -121,10 +121,10 @@ class Records(commands.Cog):
         if itx.channel_id != utils.RECORDS:
             raise utils.WrongCompletionChannel
 
-        if map_code not in itx.client.map_cache.keys():
+        if map_code not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
-        if itx.client.map_cache[map_code]["archived"] is True:
+        if itx.client.cache.maps[map_code].archived is True:
             raise utils.ArchivedMap
 
         if video and not time:
@@ -168,7 +168,7 @@ class Records(commands.Cog):
             if not search.video and (time >= search.record) and not video:
                 raise utils.RecordNotFasterError
 
-        user = itx.client.all_users[itx.user.id]
+        user = itx.client.cache.users[itx.user.id]
         view = views.ConfirmCompletion(
             await utils.Roles.find_highest_rank(itx.user),
             itx,
@@ -238,7 +238,7 @@ class Records(commands.Cog):
     )
     async def view_records(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
         filters: typing.Literal["Fully Verified", "Verified", "Completions", "All"]
         | None = "All",
@@ -253,7 +253,7 @@ class Records(commands.Cog):
             filters: Type of submissions to show
         """
         await itx.response.defer(ephemeral=True)
-        if map_code not in itx.client.map_cache.keys():
+        if map_code not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
         query = f"""
@@ -297,7 +297,7 @@ class Records(commands.Cog):
     @app_commands.autocomplete(user=cogs.users_autocomplete)
     async def personal_records_slash(
         self,
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         user: app_commands.Transform[
             int | discord.Member | utils.FakeUser, utils.AllUserTranformer
         ]
@@ -316,23 +316,23 @@ class Records(commands.Cog):
         await self._personal_records(itx, user, filters)
 
     async def pr_context_callback(
-        self, itx: core.Interaction[core.Genji], user: discord.Member
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
     ):
         await self._personal_records(itx, user, "Records")
 
     async def wr_context_callback(
-        self, itx: core.Interaction[core.Genji], user: discord.Member
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
     ):
         await self._personal_records(itx, user, "World Records")
 
     async def completion_context_callback(
-        self, itx: core.Interaction[core.Genji], user: discord.Member
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
     ):
         await self._personal_records(itx, user, "Completions")
 
     @staticmethod
     async def _personal_records(
-        itx: core.Interaction[core.Genji],
+        itx: discord.Interaction[core.Genji],
         user: discord.Member | str,
         filters: PR_TYPES,
     ):
@@ -404,7 +404,7 @@ class Records(commands.Cog):
             raise utils.NoRecordsFoundError
         embeds = utils.pr_records_embed(
             records,
-            f"Personal {filters} | {itx.client.all_users[user]['nickname']}",
+            f"Personal {filters} | {itx.client.cache.users[user].nickname}",
         )
         view = views.Paginator(embeds, itx.user)
         await view.start(itx)

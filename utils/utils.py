@@ -17,7 +17,7 @@ if typing.TYPE_CHECKING:
 
 
 async def delete_interaction(
-    itx: core.Interaction[core.Genji], *, minutes: int | float
+    itx: discord.Interaction[core.Genji], *, minutes: int | float
 ):
     """Delete an itx message after x minutes. Fails silently.
     Args:
@@ -62,7 +62,7 @@ _RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
 
 
 async def update_affected_users(
-    itx: core.Interaction[core.Genji],
+    itx: discord.Interaction[core.Genji],
     map_code: str,
 ):
     users = [
@@ -134,8 +134,8 @@ async def auto_role(client: core.Genji, user: discord.Member):
 
     if added or removed:
         with contextlib.suppress(discord.errors.HTTPException):
-            flags = client.all_users[user.id]["flags"]
-            if views.Settings.PROMOTION in views.Settings(flags):
+            flags = client.cache.users[user.id].flags
+            if views.Settings.PROMOTION in flags:
                 await user.send(response)
 
 
@@ -190,10 +190,10 @@ async def get_completions_data(
 
 
 class FakeUser:
-    def __init__(self, id_: int, data: UserCacheData):
+    def __init__(self, id_: int, data: utils.UserData):
         self.id = id_
-        self.nickname = data["nickname"]
-        self.mention = data["nickname"]
+        self.nickname = data.nickname
+        self.mention = data.nickname
         self.display_avatar = FakeAvatar()
 
 

@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 class Personal(commands.Cog):
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    async def settings(self, itx: core.Interaction[core.Genji]):
+    async def settings(self, itx: discord.Interaction[core.Genji]):
         """Change various settings like notifications and your display name."""
         await itx.response.defer(ephemeral=True)
         data = await itx.client.database.get_row(

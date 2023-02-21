@@ -3,8 +3,8 @@ from __future__ import annotations
 import typing
 
 import discord.ui
-from discord import app_commands
 
+import utils
 import views
 
 if typing.TYPE_CHECKING:
@@ -26,7 +26,7 @@ NUMBER_EMOJI = {
 
 
 class TagFuzzView(discord.ui.View):
-    def __init__(self, itx: core.Interaction[core.Genji], options: list[str]):
+    def __init__(self, itx: discord.Interaction[core.Genji], options: list[str]):
         super().__init__(timeout=None)
         self.itx = itx
         self.matches.options = [
@@ -36,7 +36,7 @@ class TagFuzzView(discord.ui.View):
 
     @discord.ui.select()
     async def matches(
-        self, itx: core.Interaction[core.Genji], select: discord.SelectMenu
+        self, itx: discord.Interaction[core.Genji], select: discord.SelectMenu
     ):
         await itx.response.defer()
         tag = [
@@ -56,7 +56,7 @@ class TagCreate(discord.ui.Modal, title="Create Tag"):
     name = discord.ui.TextInput(label="Name")
     value = discord.ui.TextInput(label="Value", style=discord.TextStyle.paragraph)
 
-    async def on_submit(self, itx: core.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]):
 
         view = views.Confirm(itx)
         await itx.response.send_message(
@@ -73,7 +73,4 @@ class TagCreate(discord.ui.Modal, title="Create Tag"):
             self.name.value,
             self.value.value,
         )
-        itx.client.tag_cache.append(self.name.value)
-        itx.client.tag_choices.append(
-            app_commands.Choice(name=self.name.value, value=self.name.value)
-        )
+        itx.client.cache.tags.add_one(utils.TagsData(self.name.value))

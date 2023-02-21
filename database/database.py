@@ -28,6 +28,9 @@ class DotRecord(asyncpg.Record):
     def __getattr__(self, attr: str):
         return super().__getitem__(attr)
 
+    def __hash__(self):
+        return hash(self.values())
+
 
 class Database:
     """Handles all database transactions."""
