@@ -9,9 +9,7 @@ import typing
 import discord
 from discord import app_commands
 
-from .embeds import ErrorEmbed
-from .utils import delete_interaction
-
+import utils
 
 if typing.TYPE_CHECKING:
     from core import Genji
@@ -151,8 +149,8 @@ async def on_app_command_error(
     error: app_commands.errors.CommandInvokeError | Exception,
 ):
     exception = getattr(error, "original", error)
-    if isinstance(exception, BaseParkourException):
-        embed = ErrorEmbed(description=str(exception))
+    if isinstance(exception, utils.BaseParkourException):
+        embed = utils.ErrorEmbed(description=str(exception))
         content = (
             "This message will delete in "
             f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
@@ -168,13 +166,13 @@ async def on_app_command_error(
                 embed=embed,
                 ephemeral=True,
             )
-        await delete_interaction(itx, minutes=1)
+        await utils.delete_interaction(itx, minutes=1)
 
     elif isinstance(exception, app_commands.CommandOnCooldown):
         now = discord.utils.utcnow()
         seconds = float(re.search(r"(\d+\.\d{2})s", str(exception)).group(1))
         end = now + datetime.timedelta(seconds=seconds)
-        embed = ErrorEmbed(
+        embed = utils.ErrorEmbed(
             description=(
                 f"Command is on cooldown. "
                 f"Cooldown ends {discord.utils.format_dt(end, style='R')}.\n"
@@ -190,7 +188,7 @@ async def on_app_command_error(
                 embed=embed,
                 ephemeral=True,
             )
-        await delete_interaction(itx, minutes=seconds / 60)
+        await utils.delete_interaction(itx, minutes=seconds / 60)
     else:
         content = (
             "This message will delete in "
@@ -201,7 +199,7 @@ async def on_app_command_error(
             if itx.response.is_done()
             else itx.response.send_message
         )
-        embed = ErrorEmbed(
+        embed = utils.ErrorEmbed(
             description=(
                 f"{content}\n"
                 "Unknown.\n"
@@ -246,4 +244,4 @@ async def on_app_command_error(
                     filename="error.log",
                 ),
             )
-    await delete_interaction(itx, minutes=1)
+    await utils.delete_interaction(itx, minutes=1)
