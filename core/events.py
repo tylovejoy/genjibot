@@ -80,17 +80,16 @@ class BotEvents(commands.Cog):
             queue = await utils.get_map_info(self.bot)
             for x in queue:
                 data = utils.MapSubmission(
-                    creator=await utils.transform_user(self.bot, x.user_id),
+                    creator=await utils.transform_user(self.bot, x.creator_ids[0]),
                     map_code=x.map_code,
                     map_name=x.map_name,
                     checkpoint_count=x.checkpoints,
                     description=x.desc,
                     guides=x.guide,
                     medals=(x.gold, x.silver, x.bronze),
-                    map_types=x.map_types,
+                    map_types=x.map_type,
                     mechanics=x.mechanics,
                     restrictions=x.restrictions,
-                    difficulty=utils.convert_num_to_difficulty(x.value),
                 )
                 with contextlib.suppress(AttributeError):
                     self.bot.add_view(

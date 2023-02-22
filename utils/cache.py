@@ -257,7 +257,7 @@ class StrCacheSequence(SequenceCache[T]):
         return [x.value for x in self.values]
 
     def __iter__(self) -> Iterable[str]:
-        return iter(self.list)
+        return iter(self.values)
 
 
 class MapTypes(StrCacheSequence[T]):
@@ -319,7 +319,7 @@ class GenjiCache:
         self._refresh(self.tags)
 
     @staticmethod
-    def _refresh(cls_var: list[T]):
+    def _refresh(cls_var: SequenceCache[T]):
         for x in cls_var:
             x.refresh()
 
