@@ -107,10 +107,6 @@ class Maps(commands.Cog):
             itx,
             map_submission,
         )
-        await cogs.submit_map_(
-            itx,
-            map_submission,
-        )
 
     @app_commands.command(name="map-search")
     @app_commands.choices(
