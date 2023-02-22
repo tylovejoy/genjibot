@@ -187,7 +187,7 @@ class PlaytestVoting(discord.ui.View):
 
         await self.check_status(itx, count)
 
-    async def get_plot_data(self, itx):
+    async def get_plot_data(self, itx: discord.Interaction[core.Genji]):
         row = await itx.client.database.get_row(
             """
                 SELECT AVG(value) as value, SUM(CASE WHEN user_id != $2 THEN 1 ELSE 0 END) as count
@@ -200,10 +200,12 @@ class PlaytestVoting(discord.ui.View):
         avg = row.value
         count = row.count
         func = functools.partial(self.plot, avg)
+        self.data.difficulty = utils.convert_num_to_difficulty(avg)
+
         image = await itx.client.loop.run_in_executor(None, func)
         return count, image
 
-    async def set_select_vote_value(self, itx, select):
+    async def set_select_vote_value(self, itx: discord.Interaction[core.Genji], select: discord.ui.Select):
         vote_value = int(select.values[0]) * 11 / 17
         await self.update_playtest_vote(itx, vote_value)
 
