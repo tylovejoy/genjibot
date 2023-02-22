@@ -6,6 +6,7 @@ import typing
 import discord
 from discord import app_commands
 
+import database
 import utils
 
 if typing.TYPE_CHECKING:
@@ -47,9 +48,9 @@ class MapSubmission:
     map_name: str
     checkpoint_count: int
     description: str | None
-    guide_url: str | None
     medals: tuple[float, float, float] | None
 
+    guides: list[str] | None = None
     map_types: list[str] | None = None
     mechanics: list[str] | None = None
     restrictions: list[str] | None = None
@@ -57,18 +58,33 @@ class MapSubmission:
     creator_diffs: list[str] | None = None
 
     def __str__(self):
-        return (
-            f"┣ `Code` {self.map_code}\n"
-            f"┣ `Map` {self.map_name}\n"
-            f"┣ `Type` {', '.join(self.map_types)}\n"
-            f"┣ `Checkpoints` {self.checkpoint_count}\n"
-            f"┣ `Difficulty` {self.difficulty}\n"
-            f"┣ `Mechanics` {', '.join(self.mechanics)}\n"
-            f"┣ `Restrictions` {', '.join(self.restrictions)}\n"
-            f"{self.guide_text}"
-            f"{self.medals_text}"
-            f"┗ `Desc` {self.description}\n"
-        )
+        return utils.Formatter(self.to_dict()).format_map()
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "Code": self.map_code,
+            "Map": self.map_name,
+            "Type": self.map_types_str,
+            "Checkpoints": str(self.checkpoint_count),
+            "Difficulty": self.difficulty,
+            "Mechanics": self.mechanics_str,
+            "Restriction": self.restrictions_str,
+            "Guide": self.guide_str,
+            "Medals": self.medals_str,
+            "Desc": self.description,
+        }
+
+    @property
+    def mechanics_str(self):
+        return ", ".join(self.mechanics)
+
+    @property
+    def restrictions_str(self):
+        return ", ".join(self.restrictions)
+
+    @property
+    def map_types_str(self):
+        return ", ".join(self.map_types)
 
     @property
     def gold(self):
@@ -83,23 +99,28 @@ class MapSubmission:
         return self.medals[2]
 
     @property
-    def guide_text(self):
+    def guide_str(self):
         res = ""
-        if self.guide_url:
-            res = f"┣ `Guide` [Link]({self.guide_url})\n"
+        for count, link in enumerate(self.guides):
+            res += f"[{count}]({link}),"
         return res
 
     @property
-    def medals_text(self):
-        res = ""
-        if all([self.gold, self.silver, self.bronze]):
-            res = (
-                "┣ `Medals` "
-                f"{utils.FULLY_VERIFIED_GOLD} {self.gold} | "
-                f"{utils.FULLY_VERIFIED_SILVER} {self.silver} | "
-                f"{utils.FULLY_VERIFIED_BRONZE} {self.bronze}\n"
-            )
-        return res
+    def medals_str(self):
+        formatted_medals = []
+
+        if self.gold:
+            formatted_medals.append(f"{utils.FULLY_VERIFIED_GOLD} {self.gold}")
+
+        if self.silver:
+            formatted_medals.append(f"{utils.FULLY_VERIFIED_SILVER} {self.silver}")
+
+        if self.bronze:
+            formatted_medals.append(f"{utils.FULLY_VERIFIED_BRONZE} {self.bronze}")
+
+        if not formatted_medals:
+            return ""
+        return " | ".join(formatted_medals)
 
     def set_extras(self, **args):
         for k, v in args.items():
@@ -210,3 +231,40 @@ class MapSubmission:
         await self.insert_map_creators(itx)
         await self.insert_guide(itx)
         await self.insert_medals(itx)
+
+
+async def get_map_info(client: core.Genji, message_id: int | None = None) -> list[database.DotRecord | None]:
+    return [
+        x
+        async for x in client.database.get(
+            """
+            SELECT map_name,
+                   map_type,
+                   m.map_code,
+                   "desc",
+                   official,
+                   archived,
+                   array_agg(DISTINCT url)              AS guide,
+                   array_agg(DISTINCT mech.mechanic)    AS mechanics,
+                   array_agg(DISTINCT rest.restriction) AS restrictions,
+                   checkpoints,
+                   array_agg(DISTINCT mc.user_id)       AS creator_ids,
+                   gold,
+                   silver,
+                   bronze,
+                   p.message_id
+            FROM playtest p
+                     LEFT JOIN maps m on m.map_code = p.map_code
+                     LEFT JOIN map_mechanics mech on mech.map_code = m.map_code
+                     LEFT JOIN map_restrictions rest on rest.map_code = m.map_code
+                     LEFT JOIN map_creators mc on m.map_code = mc.map_code
+                     LEFT JOIN users u on mc.user_id = u.user_id
+                     LEFT JOIN guides g on m.map_code = g.map_code
+                     LEFT JOIN map_medals mm on m.map_code = mm.map_code
+            WHERE is_author = TRUE AND ($1 IS NULL OR $1 = p.message_id)
+            GROUP BY checkpoints, map_name,
+                     m.map_code, "desc", official, map_type, gold, silver, bronze, archived, p.message_id
+            """,
+            message_id,
+        )
+    ]
