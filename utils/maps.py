@@ -6,6 +6,7 @@ import typing
 import discord
 from discord import app_commands
 
+import database
 import utils
 
 if typing.TYPE_CHECKING:
@@ -230,3 +231,40 @@ class MapSubmission:
         await self.insert_map_creators(itx)
         await self.insert_guide(itx)
         await self.insert_medals(itx)
+
+
+async def get_map_info(client: core.Genji, message_id: int | None = None) -> list[database.DotRecord | None]:
+    return [
+        x
+        async for x in client.database.get(
+            """
+            SELECT map_name,
+                   map_type,
+                   m.map_code,
+                   "desc",
+                   official,
+                   archived,
+                   array_agg(DISTINCT url)              AS guide,
+                   array_agg(DISTINCT mech.mechanic)    AS mechanics,
+                   array_agg(DISTINCT rest.restriction) AS restrictions,
+                   checkpoints,
+                   array_agg(DISTINCT mc.user_id)       AS creator_ids,
+                   gold,
+                   silver,
+                   bronze,
+                   p.message_id
+            FROM playtest p
+                     LEFT JOIN maps m on m.map_code = p.map_code
+                     LEFT JOIN map_mechanics mech on mech.map_code = m.map_code
+                     LEFT JOIN map_restrictions rest on rest.map_code = m.map_code
+                     LEFT JOIN map_creators mc on m.map_code = mc.map_code
+                     LEFT JOIN users u on mc.user_id = u.user_id
+                     LEFT JOIN guides g on m.map_code = g.map_code
+                     LEFT JOIN map_medals mm on m.map_code = mm.map_code
+            WHERE is_author = TRUE AND ($1 IS NULL OR $1 = p.message_id)
+            GROUP BY checkpoints, map_name,
+                     m.map_code, "desc", official, map_type, gold, silver, bronze, archived, p.message_id
+            """,
+            message_id,
+        )
+    ]

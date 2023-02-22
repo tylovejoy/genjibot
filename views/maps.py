@@ -436,6 +436,27 @@ class PlaytestVoting(discord.ui.View):
         )
         return embed
 
+    def generate_new_embed(self, itx: discord.Interaction[core.Genji]):
+        queue = await utils.get_map_info(self.client, itx.message.id)
+        if not queue:
+            return
+        data = queue[0]
+        utils.MapSubmission(
+            creator=await utils.transform_user(self.client, data.user_id),
+            map_code=data.map_code,
+            map_name=data.map_name,
+            checkpoint_count=data.checkpoints,
+            description=data.desc,
+            guides=data.guide,
+            medals=(data.gold, data.silver, data.bronze),
+            map_types=data.map_types,
+            mechanics=data.mechanics,
+            restrictions=data.restrictions,
+            difficulty=utils.convert_num_to_difficulty(data.value),
+        ).to_dict()
+
+
+
     async def delete_map_from_db(self):
         await self.client.database.set(
             """DELETE FROM maps WHERE map_code=$1;""",
