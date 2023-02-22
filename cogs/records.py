@@ -182,7 +182,7 @@ class Records(commands.Cog):
                 "map_code": map_code,
                 "record": time,
                 "video": video,
-                "user_name": user["nickname"],
+                "user_name": user.nickname,
                 "user_url": itx.user.display_avatar.url,
             }
         )
