@@ -368,16 +368,9 @@ class PlaytestVoting(discord.ui.View):
     ):
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
-        avg = (
-            await itx.client.database.get_row(
-                "SELECT AVG(difficulty) avg FROM map_ratings WHERE map_code=$1;",
-                self.data.map_code,
-            )
-        ).avg
-        # Post new maps channel
         thread = itx.guild.get_channel(utils.PLAYTEST)
         thread_msg = await thread.fetch_message(votes[0].thread_id)
-        new_map_embed = await self.edit_embed(thread_msg.embeds[0], avg)
+        new_map_embed = await self.edit_embed(thread_msg.embeds[0], itx)
         new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
             embed=new_map_embed
         )
@@ -420,40 +413,36 @@ class PlaytestVoting(discord.ui.View):
             votes_args,
         )
 
-    @staticmethod
-    async def edit_embed(embed: discord.Embed, avg: float) -> discord.Embed:
-        # TODO: Regenerate the entire embed, no need for avg arg if so
+    async def edit_embed(self, embed: discord.Embed, itx: discord.Interaction[core.Genji]) -> discord.Embed:
         embed.title = "New Map!"
         embed.set_footer(
             text="For notification of newly added maps only. "
             "Data may be wrong or out of date. "
             "Use the /map-search command for the latest info."
         )
-        embed.description = re.sub(
-            r"┣ `Difficulty` (.+)\n┣",
-            f"┣ `Difficulty` {utils.convert_num_to_difficulty(avg)}\n┣",
-            embed.description,
-        )
+        embed.description = self.generate_new_embed_text(itx)
         return embed
 
-    def generate_new_embed(self, itx: discord.Interaction[core.Genji]):
+    def generate_new_embed_text(self, itx: discord.Interaction[core.Genji]) -> str:
         queue = await utils.get_map_info(self.client, itx.message.id)
         if not queue:
-            return
+            return ""
         data = queue[0]
-        utils.MapSubmission(
-            creator=await utils.transform_user(self.client, data.user_id),
-            map_code=data.map_code,
-            map_name=data.map_name,
-            checkpoint_count=data.checkpoints,
-            description=data.desc,
-            guides=data.guide,
-            medals=(data.gold, data.silver, data.bronze),
-            map_types=data.map_types,
-            mechanics=data.mechanics,
-            restrictions=data.restrictions,
-            difficulty=utils.convert_num_to_difficulty(data.value),
-        ).to_dict()
+        return str(
+            utils.MapSubmission(
+                creator=await utils.transform_user(self.client, data.user_id),
+                map_code=data.map_code,
+                map_name=data.map_name,
+                checkpoint_count=data.checkpoints,
+                description=data.desc,
+                guides=data.guide,
+                medals=(data.gold, data.silver, data.bronze),
+                map_types=data.map_types,
+                mechanics=data.mechanics,
+                restrictions=data.restrictions,
+                difficulty=utils.convert_num_to_difficulty(data.value),
+            )
+        )
 
 
 
