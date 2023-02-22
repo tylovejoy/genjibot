@@ -47,9 +47,9 @@ class MapSubmission:
     map_name: str
     checkpoint_count: int
     description: str | None
-    guide_url: str | None
     medals: tuple[float, float, float] | None
 
+    guides: list[str] | None = None
     map_types: list[str] | None = None
     mechanics: list[str] | None = None
     restrictions: list[str] | None = None
@@ -57,18 +57,33 @@ class MapSubmission:
     creator_diffs: list[str] | None = None
 
     def __str__(self):
-        return (
-            f"┣ `Code` {self.map_code}\n"
-            f"┣ `Map` {self.map_name}\n"
-            f"┣ `Type` {', '.join(self.map_types)}\n"
-            f"┣ `Checkpoints` {self.checkpoint_count}\n"
-            f"┣ `Difficulty` {self.difficulty}\n"
-            f"┣ `Mechanics` {', '.join(self.mechanics)}\n"
-            f"┣ `Restrictions` {', '.join(self.restrictions)}\n"
-            f"{self.guide_text}"
-            f"{self.medals_text}"
-            f"┗ `Desc` {self.description}\n"
-        )
+        return utils.Formatter(self.to_dict()).format_map()
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "Code": self.map_code,
+            "Map": self.map_name,
+            "Type": self.map_types_str,
+            "Checkpoints": str(self.checkpoint_count),
+            "Difficulty": self.difficulty,
+            "Mechanics": self.mechanics_str,
+            "Restriction": self.restrictions_str,
+            "Guide": self.guide_str,
+            "Medals": self.medals_str,
+            "Desc": self.description,
+        }
+
+    @property
+    def mechanics_str(self):
+        return ", ".join(self.mechanics)
+
+    @property
+    def restrictions_str(self):
+        return ", ".join(self.restrictions)
+
+    @property
+    def map_types_str(self):
+        return ", ".join(self.map_types)
 
     @property
     def gold(self):
@@ -83,23 +98,28 @@ class MapSubmission:
         return self.medals[2]
 
     @property
-    def guide_text(self):
+    def guide_str(self):
         res = ""
-        if self.guide_url:
-            res = f"┣ `Guide` [Link]({self.guide_url})\n"
+        for count, link in enumerate(self.guides):
+            res += f"[{count}]({link}),"
         return res
 
     @property
-    def medals_text(self):
-        res = ""
-        if all([self.gold, self.silver, self.bronze]):
-            res = (
-                "┣ `Medals` "
-                f"{utils.FULLY_VERIFIED_GOLD} {self.gold} | "
-                f"{utils.FULLY_VERIFIED_SILVER} {self.silver} | "
-                f"{utils.FULLY_VERIFIED_BRONZE} {self.bronze}\n"
-            )
-        return res
+    def medals_str(self):
+        formatted_medals = []
+
+        if self.gold:
+            formatted_medals.append(f"{utils.FULLY_VERIFIED_GOLD} {self.gold}")
+
+        if self.silver:
+            formatted_medals.append(f"{utils.FULLY_VERIFIED_SILVER} {self.silver}")
+
+        if self.bronze:
+            formatted_medals.append(f"{utils.FULLY_VERIFIED_BRONZE} {self.bronze}")
+
+        if not formatted_medals:
+            return ""
+        return " | ".join(formatted_medals)
 
     def set_extras(self, **args):
         for k, v in args.items():

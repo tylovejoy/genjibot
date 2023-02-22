@@ -111,16 +111,13 @@ class BotEvents(commands.Cog):
                 )
             ]
             for x in queue:
-                if x.guide:
-                    x.guide = x.guide[0]
-
                 data = utils.MapSubmission(
                     creator=await utils.transform_user(self.bot, x.user_id),
                     map_code=x.map_code,
                     map_name=x.map_name,
                     checkpoint_count=x.checkpoints,
                     description=x.desc,
-                    guide_url=x.guide,
+                    guides=x.guide,
                     medals=(x.gold, x.silver, x.bronze),
                     map_types=x.map_types,
                     mechanics=x.mechanics,
