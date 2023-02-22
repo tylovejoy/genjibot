@@ -199,9 +199,6 @@ async def submit_map_(
         await data.insert_playtest(itx, thread.id, thread_msg.id, playtest_message.id)
 
     await data.insert_all(itx, mod)
-    # ////////                    \\\\\\\\
-    # Everything below this is cache stuff
-    # \\\\\\\\                    ////////
     itx.client.cache.maps.add_one(
         utils.MapData(
             map_code=data.map_code,
