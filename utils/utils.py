@@ -135,7 +135,7 @@ async def auto_role(client: core.Genji, user: discord.Member):
     if added or removed:
         with contextlib.suppress(discord.errors.HTTPException):
             flags = client.cache.users[user.id].flags
-            if views.Settings.PROMOTION in flags:
+            if utils.SettingFlags.PROMOTION in flags:
                 await user.send(response)
 
 

@@ -4,8 +4,8 @@ import discord
 
 
 # GUILD_ID = 968951072599187476  # Test
-# GUILD_ID = 842778964673953812
-GUILD_ID = 868981788968640554
+GUILD_ID = 842778964673953812
+#GUILD_ID = 868981788968640554
 
 # STAFF = 1021889200242573322  # Test
 STAFF = 842790097312153610
@@ -159,7 +159,7 @@ class Roles:
         """
         ids = [r.id for r in user.roles]
         res = 0
-        for i, role in enumerate(cls.ranks()):
+        for role in cls.ranks():
             if role in ids:
                 res += 1
         return res

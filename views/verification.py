@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 import discord
@@ -143,7 +144,7 @@ class VerificationView(discord.ui.View):
             data = self.rejected(itx, search, rejection)
         await original_message.edit(content=data["edit"])
 
-        if views.Settings.VERIFICATION in itx.client.cache.users[user.id].flags:
+        if views.utils.SettingFlags.VERIFICATION in itx.client.cache.users[user.id].flags:
             try:
                 await user.send(
                     "`- - - - - - - - - - - - - -`\n"
@@ -152,7 +153,8 @@ class VerificationView(discord.ui.View):
                 )
             except Exception as e:
                 itx.client.logger.info(e)
-        await itx.message.delete()
+        with contextlib.suppress(discord.NotFound):
+            await itx.message.delete()
         await itx.client.database.set(
             "DELETE FROM records_queue WHERE hidden_id=$1",
             itx.message.id,
