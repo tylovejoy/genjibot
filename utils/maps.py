@@ -15,28 +15,28 @@ if typing.TYPE_CHECKING:
 class MapNameTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         if value not in itx.client.cache.map_names:
-            value = utils.fuzz_(value, itx.client.cache.map_names)
+            value = utils.fuzz_(value, itx.client.cache.map_names.list)
         return value
 
 
 class MapTypeTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         if value not in itx.client.cache.map_types:
-            value = utils.fuzz_(value, itx.client.cache.map_types)
+            value = utils.fuzz_(value, itx.client.cache.map_types.list)
         return value
 
 
 class MapMechanicsTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         if value not in itx.client.cache.map_mechanics:
-            value = utils.fuzz_(value, itx.client.cache.map_mechanics)
+            value = utils.fuzz_(value, itx.client.cache.map_mechanics.list)
         return value
 
 
 class MapRestrictionsTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         if value not in itx.client.cache.map_restrictions:
-            value = utils.fuzz_(value, itx.client.cache.map_restrictions)
+            value = utils.fuzz_(value, itx.client.cache.map_restrictions.list)
         return value
 
 

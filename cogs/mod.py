@@ -181,8 +181,7 @@ class ModCommands(commands.Cog):
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
 
-        await cogs.submit_map_(
-            itx,
+        map_submission = utils.MapSubmission(
             user,
             map_code,
             map_name,
@@ -190,6 +189,10 @@ class ModCommands(commands.Cog):
             description,
             guide_url,
             medals,
+        )
+        await cogs.submit_map_(
+            itx,
+            map_submission,
             mod=True,
         )
 

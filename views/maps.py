@@ -462,6 +462,7 @@ class PlaytestVoting(discord.ui.View):
         style=discord.ButtonStyle.red,
         row=3,
         disabled=True,
+        custom_id="ready_up"
     )
     async def ready_up_button(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
@@ -494,6 +495,7 @@ class PlaytestVoting(discord.ui.View):
             for option, description in _ModOnlyOptions.get_all()
         ],
         row=4,
+        custom_id="sensei_only_select",
     )
     async def sensei_only_select(
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
