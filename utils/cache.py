@@ -20,6 +20,7 @@ class AlreadyExists(Exception):
 
 
 class SettingFlags(enum.IntFlag):
+    """Enum Integer Flags for various settings."""
     VERIFICATION = enum.auto()
     PROMOTION = enum.auto()
     DEFAULT = VERIFICATION | PROMOTION
@@ -50,6 +51,7 @@ class ChoiceMixin:
     choice: app_commands.Choice[str] | None = None
 
     def _update_choice(self, *, name: str, value: str) -> None:
+        """Update Choice. Init a Choice obj if one doesn't already exist."""
         if not self.choice:
             self.choice = app_commands.Choice(name=name, value=value)
         else:
@@ -61,6 +63,7 @@ class OptionMixin:
     option: discord.SelectOption | None = None
 
     def _update_option(self, *, label: str, value: str) -> None:
+        """Update Option. Init a Option obj if one doesn't already exist."""
         if not self.option:
             self.option = discord.SelectOption(label=label, value=value)
         else:
@@ -73,6 +76,7 @@ class ChoiceOptionStrCache(StrCache, ChoiceMixin, OptionMixin):
         super().__init__(value)
 
     def refresh(self) -> None:
+        """Refresh Choice and Option for a StrCache object."""
         self._update_choice(name=self.value, value=self.value)
         self._update_option(label=self.value, value=self.value)
 
@@ -105,23 +109,28 @@ class MapData(Cache, ChoiceMixin):
         super().__init__()
 
     def refresh(self):
+        """Refresh the MapData Choice."""
         self._update_choice(name=self.map_code, value=self.map_code)
 
     def update_map_code(self, map_code: str):
+        """Update the map code of a particular map."""
         self.map_code = map_code
         self.refresh()
 
     def add_creator(self, user_id: int):
+        """Add a creator to the list of creators."""
         if user_id in self.user_ids:
             raise AlreadyExists
         self.user_ids.add(user_id)
 
     def remove_creator(self, user_id: int):
+        """Remove a creator from the list of creators"""
         if user_id not in self.user_ids:
             raise DoesNotExist
         self.user_ids.remove(user_id)
 
     def update_archived(self, value: bool):
+        """Update if a Map is archived or not."""
         self.archived = value
 
 
@@ -136,20 +145,25 @@ class UserData(Cache, ChoiceMixin):
         super().__init__()
 
     def refresh(self):
+        """Refresh the UserData Choice."""
         self._update_choice(name=self.nickname, value=str(self.user_id))
 
     def update_nickname(self, nickname: str):
+        """Update a User nickname."""
         self.nickname = nickname
         self.refresh()
 
     def update_user_id(self, user_id: int):
+        """Update a user ID."""
         self.user_id = user_id
         self.refresh()
 
     def update_flag(self, flag: SettingFlags):
+        """Update a user's flags."""
         self.flags = self.flags.get_new_flag(flag.value)
 
     def update_is_creator(self, value: bool):
+        """Update whether user is a creator or not."""
         self.is_creator = value
 
 
@@ -166,25 +180,27 @@ class SequenceCache(Generic[T]):
 
     @property
     def keys(self) -> list[str | int]:
+        """A list of keys from this SequenceCache"""
         return [getattr(x, self.key_value) for x in self.values]
 
     @property
     def choices(self):
+        """A list of Choices from this SequenceCache"""
         return self._choices(self.values)
 
     @staticmethod
     def _choices(iterable: list[T]) -> list[app_commands.Choice[str]]:
+        """A list of Choices from a specific iterable."""
         return [x.choice for x in iterable]
 
-    def create_obj(self, *args: Any, **kwargs: Any):
-        return self.__class__(*args, **kwargs)
-
     def add_one(self, obj: T):
+        """Add an object (T) to the SequenceCache."""
         if getattr(obj, self.key_value) in self.values:
             raise AlreadyExists
         self.add_many([obj])
 
     def add_many(self, objs: list[T]):
+        """Add many objects (T) to the SequenceCache."""
         _objs: list[T] = []
         for obj in objs:
             if getattr(obj, self.key_value) in self.keys:
@@ -193,6 +209,7 @@ class SequenceCache(Generic[T]):
         self.values.extend(_objs)
 
     def remove_one(self, key: str | int):
+        """Remove an object (T) from the SequenceCache."""
         if key not in self.keys:
             raise DoesNotExist
         found = self.find(key)
@@ -200,19 +217,23 @@ class SequenceCache(Generic[T]):
             self.values.remove(found)
 
     def clear_all(self):
+        """Clear all objects in a SequenceCache."""
         self.values = []
 
     def find(self, key: int | str) -> T:
+        """Find a value using its key in the SequenceCache."""
         return self._find_one(self.values, self.key_value, key)
 
     @staticmethod
     def _find_one(cls_var: list[T], key: str, value: Any) -> T:
+        """Look for a value in a specific class variable where a key is equal to value."""
         for obj in cls_var:
             if getattr(obj, key) == value:
                 return obj
 
     @staticmethod
     def _find_many(cls_var: list[T], key: str, value: Any) -> list[T]:
+        """Look for multiple values in a specific class variable where a key is equal to value."""
         res: list[T] = []
         for obj in cls_var:
             if getattr(obj, key) == value:
@@ -227,10 +248,12 @@ class Users(SequenceCache[T]):
 
     @property
     def creator_choices(self) -> list[app_commands.Choice[str]]:
+        """Choices of Users that are also Creators"""
         return self._choices(self._find_many(self.values, "is_creator", True))
 
     @property
     def creator_ids(self) -> list[int]:
+        """List of user IDs who are also Creators"""
         return [x.user_id for x in self._find_many(self.values, "is_creator", True)]
 
 
@@ -250,10 +273,12 @@ class StrCacheSequence(SequenceCache[T]):
 
     @property
     def options(self) -> list[discord.SelectOption]:
+        """List of Options in a StrCacheSequence"""
         return [x.option for x in self.values]
 
     @property
     def list(self) -> list[str]:
+        """List of string values in a StrCacheSequence"""
         return [x.value for x in self.values]
 
     def __iter__(self) -> Iterable[str]:
