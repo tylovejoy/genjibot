@@ -182,13 +182,13 @@ class ModCommands(commands.Cog):
             medals = (gold, silver, bronze)
 
         map_submission = utils.MapSubmission(
-            user,
-            map_code,
-            map_name,
-            checkpoint_count,
-            description,
-            guide_url,
-            medals,
+            creator=user,
+            map_code=map_code,
+            map_name=map_name,
+            checkpoint_count=checkpoint_count,
+            description=description,
+            guides=[guide_url],
+            medals=medals,
         )
         await cogs.submit_map_(
             itx,

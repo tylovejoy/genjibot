@@ -57,6 +57,13 @@ class MapSubmission:
     difficulty: str | None = None  # base difficulty
     creator_diffs: list[str] | None = None
 
+    # def __post_init__(self):
+    #     gold = float(self.medals[0])
+    #     silver = float(self.medals[1])
+    #     bronze = float(self.medals[2])
+    #     self.medals = (gold, silver, bronze)
+
+
     def __str__(self):
         return utils.Formatter(self.to_dict()).format_map()
 
@@ -261,7 +268,7 @@ async def get_map_info(client: core.Genji, message_id: int | None = None) -> lis
                      LEFT JOIN users u on mc.user_id = u.user_id
                      LEFT JOIN guides g on m.map_code = g.map_code
                      LEFT JOIN map_medals mm on m.map_code = mm.map_code
-            WHERE is_author = TRUE AND ($1 IS NULL OR $1 = p.message_id)
+            WHERE is_author = TRUE AND ($1::bigint IS NULL OR $1::bigint = p.message_id)
             GROUP BY checkpoints, map_name,
                      m.map_code, "desc", official, map_type, gold, silver, bronze, archived, p.message_id
             """,

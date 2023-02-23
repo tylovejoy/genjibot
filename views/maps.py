@@ -420,10 +420,10 @@ class PlaytestVoting(discord.ui.View):
             "Data may be wrong or out of date. "
             "Use the /map-search command for the latest info."
         )
-        embed.description = self.generate_new_embed_text(itx)
+        embed.description = await self.generate_new_embed_text(itx)
         return embed
 
-    def generate_new_embed_text(self, itx: discord.Interaction[core.Genji]) -> str:
+    async def generate_new_embed_text(self, itx: discord.Interaction[core.Genji]) -> str:
         queue = await utils.get_map_info(self.client, itx.message.id)
         if not queue:
             return ""
