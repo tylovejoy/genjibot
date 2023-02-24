@@ -101,7 +101,7 @@ class Maps(commands.Cog):
             checkpoint_count,
             description,
             medals,
-            guides=[guide_url]
+            guides=[guide_url],
         )
         await cogs.submit_map_(
             itx,

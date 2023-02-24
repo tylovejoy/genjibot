@@ -2,7 +2,6 @@ import typing
 
 
 class Formatter:
-
     def __init__(self, data: dict[str, typing.Any | None]):
         self.values = data
 
@@ -18,10 +17,14 @@ class Formatter:
 
     def format_map(self) -> str:
         res = ""
-        length = len(self.values)
-        for i, (name, value) in enumerate(self.values.items()):
+        filtered_values = {
+            k: v
+            for k, v in self.values.items()
+            if v is not False and v is not None and v != ""
+        }.items()
+        length = len(filtered_values)
+        for i, (name, value) in enumerate(filtered_values):
             char = self.formatting_character(i + 1 < length)
             wrapped_name = self.wrap_str_code_block(name)
             res += f"{char} {wrapped_name} {value}\n"
-
         return res

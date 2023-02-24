@@ -55,14 +55,6 @@ class MapSubmission:
     mechanics: list[str] | None = None
     restrictions: list[str] | None = None
     difficulty: str | None = None  # base difficulty
-    creator_diffs: list[str] | None = None
-
-    # def __post_init__(self):
-    #     gold = float(self.medals[0])
-    #     silver = float(self.medals[1])
-    #     bronze = float(self.medals[2])
-    #     self.medals = (gold, silver, bronze)
-
 
     def __str__(self):
         return utils.Formatter(self.to_dict()).format_map()
@@ -75,42 +67,62 @@ class MapSubmission:
             "Checkpoints": str(self.checkpoint_count),
             "Difficulty": self.difficulty,
             "Mechanics": self.mechanics_str,
-            "Restriction": self.restrictions_str,
+            "Restrictions": self.restrictions_str,
             "Guide": self.guide_str,
             "Medals": self.medals_str,
             "Desc": self.description,
         }
 
+    @staticmethod
+    def _remove_nulls(sequence):
+        return [x for x in sequence if x is not None]
+
     @property
     def mechanics_str(self):
-        return ", ".join(self.mechanics)
+        self.mechanics = self._remove_nulls(self.mechanics)
+        if self.mechanics:
+            return ", ".join(self.mechanics)
+        return None
 
     @property
     def restrictions_str(self):
-        return ", ".join(self.restrictions)
+        self.restrictions = self._remove_nulls(self.restrictions)
+        if self.restrictions:
+            return ", ".join(self.restrictions)
+        return None
 
     @property
     def map_types_str(self):
-        return ", ".join(self.map_types)
+        self.map_types = self._remove_nulls(self.map_types)
+        if self.map_types:
+            return ", ".join(self.map_types)
+        return None
 
     @property
     def gold(self):
-        return self.medals[0]
+        if self.medals and self.medals[0]:
+            return self.medals[0]
+        return None
 
     @property
     def silver(self):
-        return self.medals[1]
+        if self.medals and self.medals[1]:
+            return self.medals[1]
+        return None
 
     @property
     def bronze(self):
-        return self.medals[2]
+        if self.medals and self.medals[2]:
+            return self.medals[2]
+        return None
 
     @property
     def guide_str(self):
-        res = ""
-        for count, link in enumerate(self.guides):
-            res += f"[{count}]({link}),"
-        return res
+        all_guides = []
+        for count, link in enumerate(self.guides, start=1):
+            if link:
+                all_guides.append(f"[Link {count}]({link})")
+        return ", ".join(all_guides)
 
     @property
     def medals_str(self):
@@ -211,11 +223,11 @@ class MapSubmission:
         )
 
     async def insert_guide(self, itx: discord.Interaction[core.Genji]):
-        if self.guide_url:
-            await itx.client.database.set(
+        _guides = [(self.map_code, guide) for guide in self.guides if guide]
+        if _guides:
+            await itx.client.database.set_many(
                 """INSERT INTO guides (map_code, url) VALUES ($1, $2);""",
-                self.map_code,
-                self.guide_url,
+                _guides,
             )
 
     async def insert_medals(self, itx: discord.Interaction[core.Genji]):
@@ -236,11 +248,14 @@ class MapSubmission:
         await self.insert_mechanics(itx)
         await self.insert_restrictions(itx)
         await self.insert_map_creators(itx)
+        await self.insert_map_ratings(itx)
         await self.insert_guide(itx)
         await self.insert_medals(itx)
 
 
-async def get_map_info(client: core.Genji, message_id: int | None = None) -> list[database.DotRecord | None]:
+async def get_map_info(
+    client: core.Genji, message_id: int | None = None
+) -> list[database.DotRecord | None]:
     return [
         x
         async for x in client.database.get(
@@ -251,6 +266,7 @@ async def get_map_info(client: core.Genji, message_id: int | None = None) -> lis
                    "desc",
                    official,
                    archived,
+                   AVG(value) as value,
                    array_agg(DISTINCT url)              AS guide,
                    array_agg(DISTINCT mech.mechanic)    AS mechanics,
                    array_agg(DISTINCT rest.restriction) AS restrictions,

@@ -11,8 +11,6 @@ if typing.TYPE_CHECKING:
     import core
 
 
-
-
 def bool_string(value: bool) -> str:
     if value:
         return "ON"

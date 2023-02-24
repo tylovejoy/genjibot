@@ -144,7 +144,10 @@ class VerificationView(discord.ui.View):
             data = self.rejected(itx, search, rejection)
         await original_message.edit(content=data["edit"])
 
-        if views.utils.SettingFlags.VERIFICATION in itx.client.cache.users[user.id].flags:
+        if (
+            views.utils.SettingFlags.VERIFICATION
+            in itx.client.cache.users[user.id].flags
+        ):
             try:
                 await user.send(
                     "`- - - - - - - - - - - - - -`\n"

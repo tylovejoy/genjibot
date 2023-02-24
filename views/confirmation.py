@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import typing
 from typing import TYPE_CHECKING
 
 import discord
@@ -177,3 +178,122 @@ class RecordVideoConfirmCompletion(discord.ui.View):
         self.reject = RejectButton()
         self.add_item(self.confirm)
         self.add_item(self.reject)
+
+
+class ButtonBase(discord.ui.Button):
+    view: ConfirmBaseView
+
+    def __init__(self, value: bool, **kwargs):
+        super().__init__(**kwargs)
+        self.value = value
+
+    async def callback(self, itx: discord.Interaction[core.Genji]):
+        await itx.response.defer(ephemeral=True)
+        if self.view.itx.user != itx.user:
+            await itx.followup.send(
+                "You are not allowed to use this button.", ephemeral=True
+            )
+            return
+
+        self.view.value = self.value
+        self.view.clear_items()
+
+        if not self.view.value:
+            self.view.confirmation_message = (
+                "Not confirmed. "
+                "This message will delete in "
+                f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
+            )
+
+        await self.view.itx.edit_original_response(
+            content=self.view.confirmation_message, view=self.view
+        )
+        if not self.view.value:
+            await utils.delete_interaction(self.view.itx, minutes=1)
+        self.view.stop()
+
+
+class BaseConfirmButton(ButtonBase):
+    def __init__(self, disabled: bool):
+        super().__init__(
+            label="Yes, the information I have entered is correct.",
+            emoji=utils.CONFIRM_EMOJI,
+            style=discord.ButtonStyle.green,
+            disabled=disabled,
+            value=True,
+        )
+
+
+class BaseRejectButton(ButtonBase):
+    def __init__(self):
+        super().__init__(
+            label="No, the information I have entered is not correct.",
+            emoji=utils.UNVERIFIED_EMOJI,
+            style=discord.ButtonStyle.red,
+            value=False,
+        )
+
+
+class ConfirmBaseView(discord.ui.View):
+    def __init__(
+        self,
+        itx: discord.Interaction[core.Genji],
+        partial_callback,
+        *,
+        initial_message="Confirm?",
+        confirmation_message="Confirmed.",
+        timeout=300,
+    ):
+        super().__init__(timeout=timeout)
+        self.confirm_button = BaseConfirmButton(disabled=False)
+        self.reject_button = BaseRejectButton()
+        self.add_item(self.confirm_button)
+        self.add_item(self.reject_button)
+        self.itx = itx
+        self.partial_callback = partial_callback
+        self.initial_message = initial_message + self._get_timeout_message()
+        self.confirmation_message = confirmation_message
+        self.value = None
+
+    def _get_timeout_message(self):
+        view_expires_at = self.itx.created_at + datetime.timedelta(seconds=self.timeout)
+        formatted_timestamp = discord.utils.format_dt(view_expires_at, style="R")
+        return f"\n\nThis form will timeout {formatted_timestamp}."
+
+    async def _respond(
+        self,
+        embed: discord.Embed = None,
+        attachment: discord.Attachment | discord.File = None,
+    ):
+        if attachment is not None:
+            attachment = [attachment]
+        else:
+            attachment = discord.utils.MISSING
+        if self.itx.response.is_done():
+            await self.itx.edit_original_response(
+                content=self.initial_message,
+                view=self,
+                embed=embed,
+                attachments=attachment,
+            )
+        else:
+            await self.itx.response.send_message(
+                content=self.initial_message,
+                view=self,
+                embed=embed,
+                files=attachment,
+                ephemeral=True,
+            )
+
+    async def start(
+        self,
+        embed: discord.Embed = None,
+        attachment: discord.Attachment | discord.File = None,
+    ):
+        await self._respond(embed, attachment)
+        await self.wait()
+
+        if not self.value:
+            return
+
+        await discord.utils.maybe_coroutine(self.partial_callback)

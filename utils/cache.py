@@ -21,6 +21,7 @@ class AlreadyExists(Exception):
 
 class SettingFlags(enum.IntFlag):
     """Enum Integer Flags for various settings."""
+
     VERIFICATION = enum.auto()
     PROMOTION = enum.auto()
     DEFAULT = VERIFICATION | PROMOTION
@@ -63,7 +64,7 @@ class OptionMixin:
     option: discord.SelectOption | None = None
 
     def _update_option(self, *, label: str, value: str) -> None:
-        """Update Option. Init a Option obj if one doesn't already exist."""
+        """Update Option. Init an Option obj if one doesn't already exist."""
         if not self.option:
             self.option = discord.SelectOption(label=label, value=value)
         else:

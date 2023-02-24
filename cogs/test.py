@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import functools
 import typing
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
+import utils
+import views
 
 if typing.TYPE_CHECKING:
     import core
@@ -128,6 +132,24 @@ class Test(commands.Cog):
         await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
         await ctx.channel.send("Back online!")
         await ctx.message.delete()
+
+    @app_commands.command(name="oogabooga")
+    @app_commands.guilds(discord.Object(id=868981788968640554))
+    async def _test_server_test_command(
+        self, itx: discord.Interaction[core.Genji], attachment: discord.Attachment
+    ):
+        partial = functools.partial(self._poop)
+        view = views.ConfirmBaseView(itx, partial)
+        file = await attachment.to_file(filename="image.png")
+        embed = utils.GenjiEmbed(
+            title="eskjfnsdkf",
+            description="lkdfjgd\nksjdf\ndklfjg",
+            image="attachment://image.png",
+        )
+        await view.start(embed=embed, attachment=file)
+
+    async def _poop(self):
+        print("WOW")
 
 
 async def setup(bot: core.Genji):

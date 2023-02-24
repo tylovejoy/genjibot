@@ -459,10 +459,22 @@ class ModCommands(commands.Cog):
             difficulty,
             map_code,
         )
-        await utils.update_affected_users(itx, map_code)
-        itx.client.dispatch(
-            "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
-        )
+        if playtest := await itx.client.database.get_row(
+            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
+        ):
+            itx.client.dispatch(
+                "newsfeed_map_edit",
+                itx,
+                map_code,
+                {"Difficulty": value.value},
+                playtest.thread_id,
+                playtest.original_msg,
+            )
+        else:
+            await utils.update_affected_users(itx, map_code)
+            itx.client.dispatch(
+                "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
+            )
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -513,7 +525,7 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
-        """Change the type of a map.
+        """Change the type of map.
 
         Args:
             itx: Discord itx

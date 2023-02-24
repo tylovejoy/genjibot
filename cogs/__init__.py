@@ -103,17 +103,11 @@ async def submit_map_(
     """
 
     await itx.response.defer(ephemeral=True)
-    if not mod:
-        diffs = utils.allowed_difficulties(
-            await utils.Roles.find_highest_rank(itx.user)
-        )
-
-        if "Hard" not in diffs:
-            raise utils.RankTooLowError
-    else:
-        diffs = utils.allowed_difficulties(7)
-
-    data.creator_diffs = diffs
+    if (
+        await utils.Roles.find_highest_rank(itx.user) < 4
+        or itx.guild.get_role(utils.ANCIENT_GOD) not in itx.user.roles
+    ):
+        raise utils.RankTooLowError
 
     if data.medals:
         if not 0 < data.gold < data.silver < data.bronze:
@@ -132,7 +126,7 @@ async def submit_map_(
                 copy.deepcopy(itx.client.cache.map_restrictions.options)
             ),
             "difficulty": views.DifficultySelect(
-                [discord.SelectOption(label=x, value=x) for x in diffs]
+                [discord.SelectOption(label=x, value=x) for x in utils.DIFFICULTIES_EXT]
             ),
         },
         ephemeral=True,
@@ -194,6 +188,10 @@ async def submit_map_(
                 itx.client,
             ),
             embed=embed,
+        )
+        await thread.send(
+            f"{itx.user.mention}, you can receive feedback on your map here. "
+            f"I'm pinging you so you are able to join this thread automatically!"
         )
 
         await data.insert_playtest(itx, thread.id, thread_msg.id, playtest_message.id)

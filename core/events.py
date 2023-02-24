@@ -338,28 +338,21 @@ class BotEvents(commands.Cog):
             )
             embed = None
             for k, v in values.items():
-                if k == "Desc":
-                    embed = self.edit_description(original.embeds[0], v)
-                else:
-                    embed = self.edit_embed(original.embeds[0], k, v)
+                embed = self.edit_embed(original.embeds[0], k, v)
             await original.edit(embed=embed)
         else:
             await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
-        embed.description = re.sub(
-            f"┣ `{field}" + r"` (.+)\n┣",
-            f"┣ `{field}` {value}\n┣",
-            embed.description,
-        )
-        return embed
+        pattern = re.compile(r"(┣?┗?) `" + field + r"` (.+)(\n?┣?┗?)")
+        search = re.search(pattern, embed.description)
+        start_char = search.group(1)
+        end_char = search.group(3)
 
-    @staticmethod
-    def edit_description(embed: discord.Embed, value: str) -> discord.Embed:
         embed.description = re.sub(
-            f"┗ `Desc` (.+)",
-            f"┗ `Desc` {value}",
+            pattern,
+            f"{start_char} `{field}` {value}{end_char}",
             embed.description,
         )
         return embed

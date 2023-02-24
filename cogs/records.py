@@ -65,7 +65,7 @@ class Records(commands.Cog):
         if not user:
             user = itx.user
 
-        if isinstance(user, discord.Member):
+        if isinstance(user, discord.Member) or isinstance(user, utils.FakeUser):
             user = user.id
         else:
             user = int(user)

@@ -94,7 +94,7 @@ class Paginator(discord.ui.View):
     async def change_page(self, itx: discord.Interaction[core.Genji]) -> None:
         self.page_number.label = f"{self._curr_page + 1}/{len(self.pages)}"
         try:
-            if isinstance(self.pages[0], str):
+            if isinstance(self.pages[self._curr_page], str):
                 await itx.response.edit_message(
                     content=self.pages[self._curr_page], view=self
                 )
@@ -103,7 +103,7 @@ class Paginator(discord.ui.View):
                     embed=self.pages[self._curr_page], view=self
                 )
         except discord.errors.InteractionResponded:
-            if isinstance(self.pages[0], str):
+            if isinstance(self.pages[self._curr_page], str):
                 await itx.edit_original_response(
                     content=self.pages[self._curr_page], view=self
                 )
