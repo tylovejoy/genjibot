@@ -130,7 +130,7 @@ class Records(commands.Cog):
         if video and not time:
             raise utils.VideoNoRecord
 
-        if not time:
+        if not time or await self.check_playtest(map_code):
             time = utils.COMPLETION_PLACEHOLDER
 
         search = [
@@ -182,7 +182,7 @@ class Records(commands.Cog):
                 "map_code": map_code,
                 "record": time,
                 "video": video,
-                "user_name": user.nickname,
+                "user_name": itx.client.cache.users[itx.user.id].nickname,
                 "user_url": itx.user.display_avatar.url,
             }
         )
@@ -230,6 +230,13 @@ class Records(commands.Cog):
             None if not getattr(view, "quality", None) else int(view.quality.values[0]),
         )
         await user_msg.delete()
+
+    async def check_playtest(self, map_code: str):
+        return bool(
+            await self.bot.database.get_row(
+                "SELECT * FROM playtest WHERE map_code = $1", map_code
+            )
+        )
 
     @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))

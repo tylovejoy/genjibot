@@ -90,14 +90,11 @@ def record_embed(data: dict[str, typing.Any]):
 
     if not data.get("video", None):
         description = (
-            f"┣ `   Code ` {data['map_code']}\n"
-            # f"┣ `  Level ` {data['map_level']}\n"
-            f"┗ ` Record ` {data['record']}\n"
+            f"┣ `   Code ` {data['map_code']}\n" f"┗ ` Record ` {data['record']}\n"
         )
     else:
         description = (
             f"┣ `   Code ` {data['map_code']}\n"
-            # f"┣ `  Level ` {data['map_level']}\n"
             f"┣ ` Record ` {data['record']}\n"
             f"┗ `  Video ` [Link]({data['video']})\n"
         )

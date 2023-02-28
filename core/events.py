@@ -90,6 +90,7 @@ class BotEvents(commands.Cog):
                     map_types=x.map_type,
                     mechanics=x.mechanics,
                     restrictions=x.restrictions,
+                    difficulty=utils.convert_num_to_difficulty(x.value),
                 )
                 with contextlib.suppress(AttributeError):
                     self.bot.add_view(
@@ -345,16 +346,31 @@ class BotEvents(commands.Cog):
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
+
+        # TODO: missing fields dont get edited
         pattern = re.compile(r"(┣?┗?) `" + field + r"` (.+)(\n?┣?┗?)")
         search = re.search(pattern, embed.description)
-        start_char = search.group(1)
-        end_char = search.group(3)
 
-        embed.description = re.sub(
-            pattern,
-            f"{start_char} `{field}` {value}{end_char}",
-            embed.description,
-        )
+        if search:
+            start_char = search.group(1)
+            end_char = search.group(3)
+
+            embed.description = re.sub(
+                pattern,
+                f"{start_char} `{field}` {value}{end_char}",
+                embed.description,
+            )
+        else:
+            last_field_pattern = re.compile(r"(┣?.+\n)┗")
+            last_field = re.search(last_field_pattern, embed.description)
+            new_field = f"{last_field.group(1)}┣ `{field}` {value}\n┗"
+            embed.description = re.sub(
+                last_field_pattern,
+                new_field,
+                embed.description,
+            )
+            print(embed.description)
+
         return embed
 
     @staticmethod

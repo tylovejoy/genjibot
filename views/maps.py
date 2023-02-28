@@ -23,6 +23,9 @@ class _ModOnlyOptions(enum.Enum):
     FORCE_DENY = "Force Deny"
     APPROVE = "Approve Submission"
     START_OVER = "Start Process Over"
+    REMOVE_COMPLETIONS = "Remove Completions"
+    REMOVE_VOTES = "Remove Votes"
+    TOGGLE_FINALIZE_BUTTON = "Toggle Finalize Button"
 
     @classmethod
     def get_all(cls):
@@ -43,10 +46,24 @@ class _ModOnlyOptions(enum.Enum):
                 cls.START_OVER.value,
                 "Remove all completions and votes for a map without deleting the submission.",
             ),
+            (
+                cls.REMOVE_COMPLETIONS.value,
+                "Remove all completions for a map without deleting the submission.",
+            ),
+            (
+                cls.REMOVE_VOTES.value,
+                "Remove all votes for a map without deleting the submission.",
+            ),
+            (
+                cls.TOGGLE_FINALIZE_BUTTON.value,
+                "Enable/Disable the Finalize button for the creator to use.",
+            ),
         ]
 
 
 class MapSubmitSelection(discord.ui.Select):
+    view: views.ConfirmBaseView
+
     async def callback(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
         for x in self.options:
@@ -111,6 +128,9 @@ class PlaytestVoting(discord.ui.View):
             _ModOnlyOptions.FORCE_DENY.value: self.force_deny,
             _ModOnlyOptions.APPROVE.value: self.approve_submission,
             _ModOnlyOptions.START_OVER.value: self.start_process_over,
+            _ModOnlyOptions.REMOVE_COMPLETIONS.value: self.remove_votes_option,
+            _ModOnlyOptions.REMOVE_VOTES.value: self.remove_votes_option,
+            _ModOnlyOptions.TOGGLE_FINALIZE_BUTTON.value: self.toggle_finalize_button,
         }
 
     def _required_votes(self) -> int:
@@ -126,6 +146,12 @@ class PlaytestVoting(discord.ui.View):
 
     async def _interaction_check(self, itx: discord.Interaction[core.Genji]) -> bool:
         is_creator = await self.check_creator(itx)
+        if is_creator:
+            await itx.followup.send(
+                "You cannot vote for your own map.",
+                ephemeral=True,
+            )
+
         is_sensei = await self.check_sensei(itx)
         return not is_creator and (
             is_sensei or await self.check_playtester_has_completions(itx)
@@ -147,13 +173,8 @@ class PlaytestVoting(discord.ui.View):
         return res
 
     async def check_creator(self, itx: discord.Interaction[core.Genji]) -> bool:
-        res = itx.user.id == self.data.creator.id
-        if res:
-            await itx.followup.send(
-                "You cannot vote for your own map.",
-                ephemeral=True,
-            )
-        return res
+        return itx.user.id == self.data.creator.id
+
 
     @staticmethod
     async def check_sensei(itx: discord.Interaction[core.Genji]) -> bool:
@@ -203,8 +224,10 @@ class PlaytestVoting(discord.ui.View):
         count, image = await self.get_plot_data(itx)
 
         await itx.message.edit(
+            content=f"Total Votes: {count}",
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
+            view=self,
         )
 
         await self.check_status(itx, count)
@@ -316,13 +339,29 @@ class PlaytestVoting(discord.ui.View):
 
     async def check_status(self, itx: discord.Interaction[core.Genji], count: int):
         records = await self.get_records_for_map()
-        if count >= self.required_votes and len(records) >= self.required_votes:
+        if (
+            count >= self.required_votes and len(records) >= self.required_votes
+        ) or await self._get_sensei_vote_count() >= self.required_votes:
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
             await self.data.creator.send(
                 f"**{self.data.map_code}** has received enough completions and votes. "
                 f"Go to the thread and *Finalize* the submission!"
             )
+
+    async def _get_sensei_vote_count(self):
+        sensei_count = 0
+        sensei_role = self.client.get_guild(utils.GUILD_ID).get_role(utils.STAFF)
+        async for row in self.client.database.get(
+            """SELECT user_id FROM playtest WHERE user_id != $1 AND map_code = $2;""",
+            self.data.creator.id,
+            self.data.map_code,
+        ):
+            member = self.client.get_guild(utils.GUILD_ID).get_member(row.user_id)
+            if member and sensei_role in member.roles:
+                sensei_count += 1
+
+        return sensei_count
 
     async def get_records_for_map(self) -> list[database.DotRecord | None]:
         return [
@@ -498,17 +537,41 @@ class PlaytestVoting(discord.ui.View):
     @discord.ui.button(
         label="Finalize Submission (Creator Only)",
         style=discord.ButtonStyle.red,
-        row=3,
+        row=2,
         disabled=True,
         custom_id="ready_up",
     )
-    async def ready_up_button(self, itx: discord.Interaction[core.Genji]):
+    async def ready_up_button(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ):
         await itx.response.defer(ephemeral=True)
         if itx.user.id != self.data.creator.id:
             await itx.followup.send("You are not allowed to use this button.")
             return
-
+        await self._set_ready_button(itx, button)
         await self.send_verification_embed(itx)
+
+    async def _set_ready_button(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ):
+        button.style = discord.ButtonStyle.green
+        button.disabled = True
+        button.label = "Ready! Waiting on Sensei response..."
+        button.emoji = utils.TIME
+        await itx.message.edit(view=self)
+
+    async def _unset_ready_button(
+        self,
+        itx: discord.Interaction[core.Genji],
+        button: discord.ui.Button,
+        edit_now: bool = False,
+    ):
+        button.style = discord.ButtonStyle.red
+        button.disabled = True
+        button.label = "Finalize Submission (Creator Only)"
+        button.emoji = None
+        if edit_now:
+            await itx.message.edit(view=self)
 
     async def send_verification_embed(self, itx: discord.Interaction[core.Genji]):
         embed = utils.GenjiEmbed(
@@ -517,7 +580,7 @@ class PlaytestVoting(discord.ui.View):
             url=itx.message.jump_url,
             description=(
                 "Click the link to go to the playtest thread.\n"
-                "The following can be done at any time:"
+                "The following can be done at any time:\n"
                 "- `Force Accept` Override all votes with a chosen difficulty.\n"
                 "- `Force Deny` Delete submission and remove completely.\n"
                 "The following can be used after the creator has marked the map as ready:\n"
@@ -534,7 +597,7 @@ class PlaytestVoting(discord.ui.View):
             discord.SelectOption(label=option, value=option, description=description)
             for option, description in _ModOnlyOptions.get_all()
         ],
-        row=4,
+        row=1,
         custom_id="sensei_only_select",
     )
     async def sensei_only_select(
@@ -543,17 +606,25 @@ class PlaytestVoting(discord.ui.View):
         if not await self.check_sensei(itx):
             await itx.followup.send("You cannot use this.", ephemeral=True)
             return
+        await itx.message.edit(view=self)
         await self.mod_options[select.values[0]](itx)
 
     async def force_accept(self, itx: discord.Interaction[core.Genji]):
-        # TODO: Check if creator
+        if await self.check_creator(itx):
+            await itx.response.send_message(
+                "You cannot use this if you are the creator.", ephemeral=True
+            )
+            return
+
         view = views.Confirm(
             itx,
             preceeding_items={"difficulty": DifficultySelect(self.options)},
         )
 
         await itx.response.send_message(
-            f"{itx.user.mention}, choose a difficulty.", view=view, ephemeral=True
+            content=f"{itx.user.mention}, choose a difficulty.",
+            ephemeral=True,
+            view=view,
         )
 
         await view.wait()
@@ -576,9 +647,10 @@ class PlaytestVoting(discord.ui.View):
     async def force_deny(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
         await itx.response.send_message(
-            "Are you sure you want to Force Deny this submission? \n"
+            content="Are you sure you want to Force Deny this submission? \n"
             "Doing so will remove all records and votes as well as delete the entire submission.",
             view=view,
+            ephemeral=True,
         )
         await view.wait()
         if not view.value:
@@ -601,13 +673,16 @@ class PlaytestVoting(discord.ui.View):
         ).delete()
 
     async def approve_submission(self, itx: discord.Interaction[core.Genji]):
-        # TODO: Make sure submission is finalized before this is allowed. Maybe even dont show the option
-        # TODO: Check if creator
-        # TODO: Make sure completions are no time
+        if await self.check_creator(itx):
+            await itx.response.send_message(
+                "You cannot use this if you are the creator.", ephemeral=True
+            )
+            return
         view = views.Confirm(itx)
         await itx.response.send_message(
-            "Are you sure you want to Approve this submission?",
+            content="Are you sure you want to Approve this submission?",
             view=view,
+            ephemeral=True,
         )
         await view.wait()
         if not view.value:
@@ -622,18 +697,20 @@ class PlaytestVoting(discord.ui.View):
     async def start_process_over(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
         await itx.response.send_message(
-            "Are you sure you want to Start the Process Over for this submission? \n"
+            content="Are you sure you want to Start the Process Over for this submission? \n"
             "Doing so will remove all records and votes.",
             view=view,
+            ephemeral=True,
         )
         await view.wait()
         if not view.value:
             return
         await self.remove_votes()
         await self.remove_records()
-        self.ready_up_button.disabled = True
+        await self._unset_ready_button(itx, self.ready_up_button)
         _, image = await self.get_plot_data(itx)
         await itx.message.edit(
+            content="Total Votes: 0",
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
             view=self,
@@ -642,9 +719,53 @@ class PlaytestVoting(discord.ui.View):
         await author.send(
             "Your map submission process has been reset by a Sensei.\n"
             "All records and votes have been removed.\n"
-            "This usually happens when your map has breaking changes which void current votes."
+            "This usually happens when your map has breaking changes which void current votes.\n"
             f"{itx.message.jump_url}"
         )
+
+    async def remove_votes_option(self, itx: discord.Interaction[core.Genji]):
+        view = views.Confirm(itx)
+        await itx.response.send_message(
+            content="Are you sure you want to remove all the votes for this submission?",
+            view=view,
+            ephemeral=True,
+        )
+        await view.wait()
+        if not view.value:
+            return
+
+        await self.remove_votes()
+
+    async def remove_completions_option(self, itx: discord.Interaction[core.Genji]):
+        view = views.Confirm(itx)
+        await itx.response.send_message(
+            content="Are you sure you want to remove all the completions for this submission?",
+            view=view,
+            ephemeral=True,
+        )
+        await view.wait()
+        if not view.value:
+            return
+
+        await self.remove_records()
+
+    async def toggle_finalize_button(self, itx: discord.Interaction[core.Genji]):
+        if await self.check_creator(itx):
+            await itx.response.send_message(
+                "You cannot use this if you are the creator.", ephemeral=True
+            )
+            return
+        view = views.Confirm(itx)
+        await itx.response.send_message(
+            content="Are you sure you want to toggle the Finalize button for this submission?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+
+        self.ready_up_button.disabled = not self.ready_up_button.disabled
+        await itx.message.edit(view=self)
 
     async def remove_votes(self):
         await self.client.database.set(

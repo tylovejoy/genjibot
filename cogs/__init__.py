@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import functools
 import pkgutil
 import typing
 
@@ -103,52 +104,41 @@ async def submit_map_(
     """
 
     await itx.response.defer(ephemeral=True)
-    if (
-        await utils.Roles.find_highest_rank(itx.user) < 4
-        or itx.guild.get_role(utils.ANCIENT_GOD) not in itx.user.roles
-    ):
-        raise utils.RankTooLowError
+    if not mod:
+        if await utils.Roles.find_highest_rank(itx.user) < 4:
+            if itx.guild.get_role(utils.ANCIENT_GOD) not in itx.user.roles:
+                raise utils.RankTooLowError
 
     if data.medals:
         if not 0 < data.gold < data.silver < data.bronze:
             raise utils.InvalidMedals
 
-    view = views.Confirm(
+    initial_message = (
+        f"{data.creator.mention}, "
+        f"fill in additional details to complete map submission!"
+    )
+    view = views.ConfirmMapSubmission(
         itx,
-        preceeding_items={
-            "map_type": views.MapTypeSelect(
-                copy.deepcopy(itx.client.cache.map_types.options)
-            ),
-            "mechanics": views.MechanicsSelect(
-                copy.deepcopy(itx.client.cache.map_mechanics.options)
-            ),
-            "restrictions": views.RestrictionsSelect(
-                copy.deepcopy(itx.client.cache.map_restrictions.options)
-            ),
-            "difficulty": views.DifficultySelect(
-                [discord.SelectOption(label=x, value=x) for x in utils.DIFFICULTIES_EXT]
-            ),
-        },
-        ephemeral=True,
+        partial_callback=None,
+        initial_message=initial_message,
     )
-    await itx.edit_original_response(
-        content=(
-            f"{data.creator.mention}, "
-            f"fill in additional details to complete map submission!"
-        ),
-        view=view,
-    )
-    await view.wait()
-    if not view.value:
-        return
+    callback = functools.partial(map_submission_first_step, data, itx, mod, view)
+    view.partial_callback = callback
+    await view.start()
 
+
+async def map_submission_first_step(
+    data: utils.MapSubmission,
+    itx: discord.Interaction[core.Genji],
+    mod: bool,
+    view: views.ConfirmMapSubmission,
+):
     data.set_extras(
         map_types=view.map_type.values,
         mechanics=view.mechanics.values,
         restrictions=view.restrictions.values,
         difficulty=view.difficulty.values[0],
     )
-
     embed = utils.GenjiEmbed(
         title="Map Submission",
         description=str(data),
@@ -158,18 +148,22 @@ async def submit_map_(
         icon_url=data.creator.display_avatar.url,
     )
     embed = utils.set_embed_thumbnail_maps(data.map_name, embed)
-
-    view_confirm = views.Confirm(view.original_itx, ephemeral=True)
-    await view_confirm.original_itx.edit_original_response(
-        content=f"{itx.user.mention}, is this correct?",
-        embed=embed,
-        view=view_confirm,
+    view_final_confirmation = views.ConfirmBaseView(
+        view.itx,
+        partial_callback=None,
+        initial_message=f"{itx.user.mention}, is this correct?",
     )
+    callback = functools.partial(map_submission_second_step, data, embed, itx, mod)
+    view_final_confirmation.partial_callback = callback
+    await view_final_confirmation.start(embed=embed)
 
-    await view_confirm.wait()
-    if not view_confirm.value:
-        return
 
+async def map_submission_second_step(
+    data: utils.MapSubmission,
+    embed: discord.Embed,
+    itx: discord.Interaction[core.Genji],
+    mod: bool,
+):
     if not mod:
         embed.title = "Calling all Playtesters!"
         playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(embed=embed)
@@ -195,7 +189,6 @@ async def submit_map_(
         )
 
         await data.insert_playtest(itx, thread.id, thread_msg.id, playtest_message.id)
-
     await data.insert_all(itx, mod)
     itx.client.cache.maps.add_one(
         utils.MapData(

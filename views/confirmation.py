@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime
 import typing
 from typing import TYPE_CHECKING
@@ -72,7 +73,7 @@ class RejectButton(discord.ui.Button):
 
 
 class Confirm(discord.ui.View):
-    difficulty: views.MapTypeSelect | None
+    difficulty: views.DifficultySelect | None
     restrictions: views.RestrictionsSelect | None
     map_type: views.MapTypeSelect | None
     mechanics: views.MechanicsSelect | None
@@ -221,6 +222,7 @@ class BaseConfirmButton(ButtonBase):
             style=discord.ButtonStyle.green,
             disabled=disabled,
             value=True,
+            row=4,
         )
 
 
@@ -231,6 +233,7 @@ class BaseRejectButton(ButtonBase):
             emoji=utils.UNVERIFIED_EMOJI,
             style=discord.ButtonStyle.red,
             value=False,
+            row=4,
         )
 
 
@@ -297,3 +300,162 @@ class ConfirmBaseView(discord.ui.View):
             return
 
         await discord.utils.maybe_coroutine(self.partial_callback)
+
+    async def map_submit_enable(self):
+        return True
+
+
+class ConfirmMechanicsMixin(ConfirmBaseView):
+    mechanics: views.MechanicsSelect
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mechanics = views.MechanicsSelect(
+            copy.deepcopy(self.itx.client.cache.map_mechanics.options)
+        )
+        self.add_item(self.mechanics)
+
+
+class ConfirmRestrictionsMixin(ConfirmBaseView):
+    restrictions: views.RestrictionsSelect
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.restrictions = views.RestrictionsSelect(
+            copy.deepcopy(self.itx.client.cache.map_restrictions.options)
+        )
+        self.add_item(self.restrictions)
+
+
+class ConfirmMapTypeMixin(ConfirmBaseView):
+    map_type: views.MapTypeSelect
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.map_type = views.MapTypeSelect(
+            copy.deepcopy(self.itx.client.cache.map_types.options)
+        )
+        self.add_item(self.map_type)
+
+    async def map_submit_enable(self):
+        return await super().map_submit_enable() and self.map_type.values
+
+
+class ConfirmDifficultyMixin(ConfirmBaseView):
+    difficulty: views.DifficultySelect
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.difficulty = views.DifficultySelect(
+            [discord.SelectOption(label=x, value=x) for x in utils.DIFFICULTIES_EXT]
+        )
+        self.add_item(self.difficulty)
+
+    async def map_submit_enable(self):
+        return await super().map_submit_enable() and self.difficulty.values
+
+
+class ConfirmMapSubmission(
+    ConfirmMechanicsMixin,
+    ConfirmRestrictionsMixin,
+    ConfirmMapTypeMixin,
+    ConfirmDifficultyMixin,
+):
+    def __init__(
+        self,
+        itx: discord.Interaction[core.Genji],
+        partial_callback,
+        *,
+        initial_message="Confirm?",
+        confirmation_message="Confirmed.",
+        timeout=300,
+    ):
+        super().__init__(
+            itx,
+            partial_callback,
+            initial_message=initial_message,
+            confirmation_message=confirmation_message,
+            timeout=timeout,
+        )
+        self.confirm_button.disabled = True
+
+    async def map_submit_enable(self):
+        if await super().map_submit_enable():
+            self.confirm_button.disabled = False
+            await self.itx.edit_original_response(view=self)
+
+
+class ConfirmMechanics(ConfirmMechanicsMixin):
+    def __init__(
+        self,
+        itx: discord.Interaction[core.Genji],
+        partial_callback,
+        *,
+        initial_message="Confirm?",
+        confirmation_message="Confirmed.",
+        timeout=300,
+    ):
+        super().__init__(
+            itx,
+            partial_callback,
+            initial_message=initial_message,
+            confirmation_message=confirmation_message,
+            timeout=timeout,
+        )
+
+
+class ConfirmRestrictions(ConfirmRestrictionsMixin):
+    def __init__(
+        self,
+        itx: discord.Interaction[core.Genji],
+        partial_callback,
+        *,
+        initial_message="Confirm?",
+        confirmation_message="Confirmed.",
+        timeout=300,
+    ):
+        super().__init__(
+            itx,
+            partial_callback,
+            initial_message=initial_message,
+            confirmation_message=confirmation_message,
+            timeout=timeout,
+        )
+
+
+class ConfirmDifficulty(ConfirmDifficultyMixin):
+    def __init__(
+        self,
+        itx: discord.Interaction[core.Genji],
+        partial_callback,
+        *,
+        initial_message="Confirm?",
+        confirmation_message="Confirmed.",
+        timeout=300,
+    ):
+        super().__init__(
+            itx,
+            partial_callback,
+            initial_message=initial_message,
+            confirmation_message=confirmation_message,
+            timeout=timeout,
+        )
+
+
+class ConfirmMapType(ConfirmMapTypeMixin):
+    def __init__(
+        self,
+        itx: discord.Interaction[core.Genji],
+        partial_callback,
+        *,
+        initial_message="Confirm?",
+        confirmation_message="Confirmed.",
+        timeout=300,
+    ):
+        super().__init__(
+            itx,
+            partial_callback,
+            initial_message=initial_message,
+            confirmation_message=confirmation_message,
+            timeout=timeout,
+        )

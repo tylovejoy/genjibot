@@ -98,8 +98,8 @@ async def auto_role(client: core.Genji, user: discord.Member):
     added = list(filter(lambda x: x not in user.roles, rank_roles[:rank])) + list(
         filter(lambda x: x not in user.roles, rank_plus_roles[:rank_plus])
     )
-    removed = list(filter(lambda x: x in user.roles, rank_roles[rank + 1 :])) + list(
-        filter(lambda x: x in user.roles, rank_plus_roles[rank_plus + 1 :])
+    removed = list(filter(lambda x: x in user.roles, rank_roles[rank:])) + list(
+        filter(lambda x: x in user.roles, rank_plus_roles[rank_plus:])
     )
     new_roles = user.roles
     for a in added:
