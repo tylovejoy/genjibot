@@ -170,57 +170,80 @@ class Maps(commands.Cog):
 
         async for _map in itx.client.database.get(
             """
-                WITH all_maps AS (SELECT map_name,
-                    array_to_string((map_type), ', ')     AS map_type,
-                    m.map_code,
-                    "desc",
-                    official,
-                    archived,
-                    array_agg(DISTINCT url)               AS guide,
-                    array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
-                    array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
-                    checkpoints,
-                    string_agg(DISTINCT (nickname), ', ') AS creators,
-                    COALESCE(AVG(difficulty), 0)          AS difficulty,
-                    COALESCE(AVG(quality), 0)             AS quality,
-                    array_agg(DISTINCT mc.user_id)        AS creator_ids,
-                    gold,
-                    silver,
-                    bronze
-                    FROM maps m
-                    LEFT JOIN map_mechanics mech on mech.map_code = m.map_code
-                    LEFT JOIN map_restrictions rest on rest.map_code = m.map_code
-                    LEFT JOIN map_creators mc on m.map_code = mc.map_code
-                    LEFT JOIN users u on mc.user_id = u.user_id
-                    LEFT JOIN map_ratings mr on m.map_code = mr.map_code
-                    LEFT JOIN guides g on m.map_code = g.map_code
-                    LEFT JOIN map_medals mm on m.map_code = mm.map_code
-                    GROUP BY checkpoints, map_name,
-                    m.map_code, "desc", official, map_type, gold, silver, bronze, archived),
-                completions as (SELECT map_code FROM records WHERE user_id = $10)
-                SELECT am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, 
-                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, am.bronze, 
-                c.map_code IS NOT NULL as completed
-                FROM all_maps am
-                LEFT JOIN completions c on am.map_code = c.map_code
-                WHERE
-                (official = TRUE) AND
-                (archived = FALSE) AND
-                ($1::text IS NULL OR am.map_code = $1) AND
-                ($2::text IS NULL OR map_type LIKE $2) AND
-                ($3::text IS NULL OR map_name = $3) AND
-                ($4::text IS NULL OR mechanics LIKE $4) AND
-                ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2) 
-                AND difficulty < $6::numeric(10, 2))) AND
-                ($7::int IS NULL OR quality >= $7) AND
-                ($8::bigint IS NULL OR $8 = ANY(creator_ids))
-                GROUP BY am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics, 
-                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver, 
-                am.bronze, c.map_code IS NOT NULL
+                WITH ALL_MAPS AS (
+                SELECT MAP_NAME,
+                       ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
+                       M.MAP_CODE,
+                       "desc",
+                       OFFICIAL,
+                       ARCHIVED,
+                       ARRAY_AGG(DISTINCT URL)                                     AS GUIDE,
+                       ARRAY_TO_STRING(ARRAY_AGG(DISTINCT MECH.MECHANIC), ', ')    AS MECHANICS,
+                       ARRAY_TO_STRING(ARRAY_AGG(DISTINCT REST.RESTRICTION), ', ') AS RESTRICTIONS,
+                       CHECKPOINTS,
+                       STRING_AGG(DISTINCT (NICKNAME), ', ')                       AS CREATORS,
+                       COALESCE(AVG(DIFFICULTY), 0)                                AS DIFFICULTY,
+                       COALESCE(AVG(QUALITY), 0)                                   AS QUALITY,
+                       ARRAY_AGG(DISTINCT MC.USER_ID)                              AS CREATOR_IDS,
+                       GOLD,
+                       SILVER,
+                       BRONZE
+                FROM MAPS                           M
+                       LEFT JOIN MAP_MECHANICS    MECH ON MECH.MAP_CODE = M.MAP_CODE
+                       LEFT JOIN MAP_RESTRICTIONS REST ON REST.MAP_CODE = M.MAP_CODE
+                       LEFT JOIN MAP_CREATORS     MC ON M.MAP_CODE = MC.MAP_CODE
+                       LEFT JOIN USERS            U ON MC.USER_ID = U.USER_ID
+                       LEFT JOIN MAP_RATINGS      MR ON M.MAP_CODE = MR.MAP_CODE
+                       LEFT JOIN GUIDES           G ON M.MAP_CODE = G.MAP_CODE
+                       LEFT JOIN MAP_MEDALS       MM ON M.MAP_CODE = MM.MAP_CODE
+                GROUP BY CHECKPOINTS, MAP_NAME,
+                       M.MAP_CODE, "desc", OFFICIAL, MAP_TYPE, GOLD, SILVER, BRONZE, ARCHIVED),
+                    
+                COMPLETIONS AS (SELECT MAP_CODE, RECORD FROM RECORDS WHERE USER_ID = $10)
                 
-                HAVING ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
+                SELECT AM.MAP_NAME,
+                       MAP_TYPE,
+                       AM.MAP_CODE,
+                       AM."desc",
+                       AM.OFFICIAL,
+                       AM.ARCHIVED,
+                       GUIDE,
+                       MECHANICS,
+                       RESTRICTIONS,
+                       AM.CHECKPOINTS,
+                       CREATORS,
+                       DIFFICULTY,
+                       QUALITY,
+                       CREATOR_IDS,
+                       AM.GOLD,
+                       AM.SILVER,
+                       AM.BRONZE,
+                       C.MAP_CODE IS NOT NULL AS COMPLETED,
+                       CASE
+                           WHEN C.RECORD <= AM.GOLD THEN 'Gold'
+                           WHEN C.RECORD <= AM.SILVER THEN 'Silver'
+                           WHEN C.RECORD <= AM.BRONZE THEN 'Bronze'
+                           ELSE ''
+                       END AS medal_type
+                FROM ALL_MAPS                  AM
+                       LEFT JOIN COMPLETIONS C ON AM.MAP_CODE = C.MAP_CODE
+                WHERE (OFFICIAL = TRUE)
+                       AND (ARCHIVED = FALSE)
+                       AND ($1::text IS NULL OR AM.MAP_CODE = $1)
+                       AND ($2::text IS NULL OR MAP_TYPE LIKE $2)
+                       AND ($3::text IS NULL OR MAP_NAME = $3)
+                       AND ($4::text IS NULL OR MECHANICS LIKE $4)
+                       AND ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (DIFFICULTY >= $5::numeric(10, 2)
+                       AND DIFFICULTY < $6::numeric(10, 2)))
+                       AND ($7::int IS NULL OR QUALITY >= $7)
+                       AND ($8::bigint IS NULL OR $8 = ANY (CREATOR_IDS))
+                GROUP BY AM.MAP_NAME, MAP_TYPE, AM.MAP_CODE, AM."desc", AM.OFFICIAL, AM.ARCHIVED, GUIDE, MECHANICS,
+                         RESTRICTIONS, AM.CHECKPOINTS, CREATORS, DIFFICULTY, QUALITY, CREATOR_IDS, AM.GOLD, AM.SILVER,
+                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD
                 
-                ORDER BY difficulty, quality DESC;
+                HAVING ($9::BOOL IS NULL OR C.MAP_CODE IS NOT NULL = $9)
+                
+                ORDER BY DIFFICULTY, QUALITY DESC;
             """,
             map_code,
             map_type,
@@ -264,6 +287,9 @@ class Maps(commands.Cog):
                 )
             if _map.completed:
                 completed = "🗸 Completed"
+                if _map.medal_type:
+                    completed += " | 🗸 " + _map.medal_type
+
             embed.add_description_field(
                 name=f"{_map.map_code} {completed}",
                 value=(
