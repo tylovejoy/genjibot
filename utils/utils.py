@@ -164,15 +164,15 @@ async def get_completions_data(
                                          ('[7.65,9.41)'::numrange, 'Extreme'),
                                          ('[9.41,10.0]'::numrange, 'Hell')),
              map_data AS (SELECT AVG(mr.difficulty)                   AS difficulty,
-                                 record <= gold                       AS gold,
-                                 record <= silver AND record > gold   AS silver,
-                                 record <= bronze AND record > silver AS bronze
+                                 VERIFIED=TRUE AND record <= gold                       AS gold,
+                                 VERIFIED=TRUE AND record <= silver AND record > gold   AS silver,
+                                 VERIFIED=TRUE AND record <= bronze AND record > silver AS bronze
                           FROM records r
                                    LEFT JOIN maps m         ON r.map_code = m.map_code
                                    LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
                                    LEFT JOIN map_medals mm  ON r.map_code = mm.map_code
                           WHERE r.user_id = $1 AND m.official = TRUE AND m.archived = FALSE
-                          GROUP BY m.map_code, record, gold, silver, bronze)
+                          GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED)
         SELECT COUNT(name)                        AS completions,
                name                               AS difficulty,
                count(CASE WHEN gold THEN 1 END)   AS gold,

@@ -145,8 +145,7 @@ class PlaytestVoting(discord.ui.View):
         return requirement
 
     async def _interaction_check(self, itx: discord.Interaction[core.Genji]) -> bool:
-        is_creator = await self.check_creator(itx)
-        if is_creator:
+        if is_creator := await self.check_creator(itx):
             await itx.followup.send(
                 "You cannot vote for your own map.",
                 ephemeral=True,

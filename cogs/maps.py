@@ -199,7 +199,7 @@ class Maps(commands.Cog):
                 GROUP BY CHECKPOINTS, MAP_NAME,
                        M.MAP_CODE, "desc", OFFICIAL, MAP_TYPE, GOLD, SILVER, BRONZE, ARCHIVED),
                     
-                COMPLETIONS AS (SELECT MAP_CODE, RECORD FROM RECORDS WHERE USER_ID = $10)
+                COMPLETIONS AS (SELECT MAP_CODE, RECORD, VERIFIED FROM RECORDS WHERE USER_ID = $10)
                 
                 SELECT AM.MAP_NAME,
                        MAP_TYPE,
@@ -220,9 +220,9 @@ class Maps(commands.Cog):
                        AM.BRONZE,
                        C.MAP_CODE IS NOT NULL AS COMPLETED,
                        CASE
-                           WHEN C.RECORD <= AM.GOLD THEN 'Gold'
-                           WHEN C.RECORD <= AM.SILVER THEN 'Silver'
-                           WHEN C.RECORD <= AM.BRONZE THEN 'Bronze'
+                           WHEN VERIFIED=TRUE AND C.RECORD <= AM.GOLD THEN 'Gold'
+                           WHEN VERIFIED=TRUE AND C.RECORD <= AM.SILVER THEN 'Silver'
+                           WHEN VERIFIED=TRUE AND C.RECORD <= AM.BRONZE THEN 'Bronze'
                            ELSE ''
                        END AS medal_type
                 FROM ALL_MAPS                  AM
@@ -239,7 +239,7 @@ class Maps(commands.Cog):
                        AND ($8::bigint IS NULL OR $8 = ANY (CREATOR_IDS))
                 GROUP BY AM.MAP_NAME, MAP_TYPE, AM.MAP_CODE, AM."desc", AM.OFFICIAL, AM.ARCHIVED, GUIDE, MECHANICS,
                          RESTRICTIONS, AM.CHECKPOINTS, CREATORS, DIFFICULTY, QUALITY, CREATOR_IDS, AM.GOLD, AM.SILVER,
-                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD
+                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD, VERIFIED
                 
                 HAVING ($9::BOOL IS NULL OR C.MAP_CODE IS NOT NULL = $9)
                 
