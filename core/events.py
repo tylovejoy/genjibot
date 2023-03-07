@@ -247,14 +247,14 @@ class BotEvents(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         user: discord.Member,
-        url: str,
-        map_code: str,
+        data: utils.MapSubmission,
     ):
         nickname = itx.client.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
-            title=f"{nickname} has submitted a new map!",
-            description=f"[Check out {map_code} here!]({url})",
-            url=url,
+            title=f"{nickname} has submitted a new {data.difficulty} map!",
+            description=(
+                f"Use the command `/map-search map_code:{data.map_code}` to see the details!"
+            ),
             color=discord.Color.blue(),
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
