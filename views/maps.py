@@ -235,11 +235,14 @@ class PlaytestVoting(discord.ui.View):
 
         if select.values[0] == "REMOVE":
             await self.delete_user_vote(itx, itx.user.id)
+            diff_string = select.values[0]
         else:
             await self.set_select_vote_value(itx, select)
+            diff_string = utils.DIFFICULTIES_EXT[select.values[0]]
+
 
         await itx.followup.send(
-            f"You voted: {select.values[0]}",
+            f"You voted: {diff_string}",
             ephemeral=True,
         )
 
