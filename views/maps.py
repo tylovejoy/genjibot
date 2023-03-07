@@ -238,7 +238,7 @@ class PlaytestVoting(discord.ui.View):
             diff_string = select.values[0]
         else:
             await self.set_select_vote_value(itx, select)
-            diff_string = utils.DIFFICULTIES_EXT[select.values[0]]
+            diff_string = utils.DIFFICULTIES_EXT[int(select.values[0])]
 
         await itx.followup.send(
             f"You voted: {diff_string}",
