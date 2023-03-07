@@ -18,6 +18,27 @@ if TYPE_CHECKING:
     import core
 
 
+colors = {
+    "Beginner": "#B9FFB7",
+    "Easy -": "#00ff1a",
+    "Easy": "#00ff1a",
+    "Easy +": "#00ff1a",
+    "Medium -": "#cdff3a",
+    "Medium": "#cdff3a",
+    "Medium +": "#cdff3a",
+    "Hard -": "#fbdf00",
+    "Hard": "#fbdf00",
+    "Hard +": "#fbdf00",
+    "Very Hard -": "#ff9700",
+    "Very Hard": "#ff9700",
+    "Very Hard +": "#ff9700",
+    "Extreme -": "#ff4500",
+    "Extreme": "#ff4500",
+    "Extreme +": "#ff4500",
+    "Hell": "#ff0000",
+}
+
+
 class _ModOnlyOptions(enum.Enum):
     FORCE_ACCEPT = "Force Accept"
     FORCE_DENY = "Force Deny"
@@ -111,7 +132,7 @@ class PlaytestVoting(discord.ui.View):
     options = [
         discord.SelectOption(label=x, value=str(i))
         for i, x in enumerate(utils.DIFFICULTIES_EXT)
-    ]
+    ] + [discord.SelectOption(label="Remove My Vote", value=str("REMOVE"))]
 
     def __init__(
         self,
@@ -174,7 +195,6 @@ class PlaytestVoting(discord.ui.View):
     async def check_creator(self, itx: discord.Interaction[core.Genji]) -> bool:
         return itx.user.id == self.data.creator.id
 
-
     @staticmethod
     async def check_sensei(itx: discord.Interaction[core.Genji]) -> bool:
         return itx.guild.get_role(utils.STAFF) in itx.user.roles
@@ -213,7 +233,10 @@ class PlaytestVoting(discord.ui.View):
         if not await self._interaction_check(itx):
             return
 
-        await self.set_select_vote_value(itx, select)
+        if select.values[0] == "REMOVE":
+            await self.delete_user_vote(itx, itx.user.id)
+        else:
+            await self.set_select_vote_value(itx, select)
 
         await itx.followup.send(
             f"You voted: {select.values[0]}",
@@ -285,56 +308,81 @@ class PlaytestVoting(discord.ui.View):
             vote_value,
         )
 
-    def plot(self, avg: int | float) -> discord.File:
-        # Change scale of average to 18 scale instead of 10
-        avg = float(avg) * 18 / 11
-        labels_ = [
-            "Beginner",
-            " ",
-            "Easy",
-            " ",
-            " ",
-            "Medium",
-            " ",
-            " ",
-            "Hard",
-            " ",
-            " ",
-            "Very Hard",
-            " ",
-            " ",
-            "Extreme",
-            " ",
-            "Hell",
-        ]
-        plt.figure(figsize=(8, 8))
-        n = 8
-        ax = plt.subplot(n, 1, 5)
-        self.setup(ax)
-        ax.plot(range(0, 18), [0] * 18, color="White")
-        plt.plot(avg, 0.5, "ro", ms=20.75, mfc="r")
-        ax.xaxis.set_major_locator(ticker.IndexLocator(base=1, offset=1))
-        ax.set_xticklabels(labels_, rotation=90, fontsize=18)
-        ax.xaxis.set_tick_params(pad=10)
-        plt.xlabel("Average", fontsize=24)
-        plt.subplots_adjust(top=1.25)
-        plt.margins(y=0)
+    async def delete_user_vote(self, itx: discord.Interaction[core.Genji], user_id: int):
+        await itx.client.database.set(
+            "DELETE FROM playtest WHERE user_id = $1 AND map_code = $2",
+            user_id,
+            self.data.map_code,
+        )
+
+    @staticmethod
+    def plot(avg: int | float):
+        avg = float(avg)
+        fig, ax = plt.subplots()
+        ax.plot([0, 0], [0, 0])
+
+        for k, diff in utils.DIFFICULTIES_RANGES.items():
+            if "-" in k:
+                ax.add_patch(
+                    plt.Rectangle(
+                        (diff[0], -3),
+                        diff[1] - diff[0],
+                        4,
+                        color=colors[k[:-2]],
+                        alpha=0.3,
+                        hatch="\\",
+                    )
+                )
+
+            elif "+" in k:
+                ax.add_patch(
+                    plt.Rectangle(
+                        (diff[0], -3),
+                        diff[1] - diff[0],
+                        4,
+                        color=colors[k[:-2]],
+                        alpha=0.3,
+                        hatch="/",
+                    )
+                )
+
+            else:
+                ax.add_patch(
+                    plt.Rectangle(
+                        (diff[0], -3),
+                        diff[1] - diff[0],
+                        4,
+                        color=colors[k],
+                    ),
+                )
+                plt.text(
+                    (diff[0] + diff[1]) / 2,
+                    -1.5,
+                    k,
+                    rotation=90 if k == "Beginner" else 0,
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                )
+
+        plt.axvline(x=avg, ymin=0.55, ymax=0.95, color="black", linestyle="solid")
+        plt.plot(avg, -0.7, "ko", ms=15, mfc="black")
+        fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+        ax.add_patch(
+            plt.Rectangle(
+                (0, -3),
+                10,
+                4,
+                color="black",
+                fill=False,
+            ),
+        )
+        plt.axis("off")
         b = io.BytesIO()
+        plt.show()
         plt.savefig(b, format="png")
         plt.close()
         b.seek(0)
         return discord.File(b, filename="vote_chart.png")
-
-    @staticmethod
-    def setup(ax):
-        ax.spines["right"].set_color("none")
-        ax.spines["left"].set_color("none")
-        ax.yaxis.set_major_locator(ticker.NullLocator())
-        ax.spines["top"].set_color("none")
-        ax.xaxis.set_ticks_position("bottom")
-        ax.set_xlim(0, 18)
-        ax.set_ylim(0, 1)
-        ax.patch.set_alpha(0.0)
 
     async def check_status(self, itx: discord.Interaction[core.Genji], count: int):
         records = await self.get_records_for_map()
