@@ -205,7 +205,7 @@ class BotEvents(commands.Cog):
 
         if record.rank_num == 1:
             embed.title = f"{record.nickname} set a new World Record!"
-        elif icon == utils.PARTIAL_VERIFIED:
+        elif icon in [utils.PARTIAL_VERIFIED, utils.FULLY_VERIFIED]:
             return
         else:
             embed.title = f"{record.nickname} got a medal!"

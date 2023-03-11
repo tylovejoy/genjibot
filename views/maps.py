@@ -653,7 +653,7 @@ class PlaytestVoting(discord.ui.View):
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
         if not await self.check_sensei(itx):
-            await itx.followup.send("You cannot use this.", ephemeral=True)
+            await itx.response.send_message("You cannot use this.", ephemeral=True)
             return
         await itx.message.edit(view=self)
         await self.mod_options[select.values[0]](itx)
@@ -694,7 +694,7 @@ class PlaytestVoting(discord.ui.View):
         await self.delete_playtest_db_entry()
 
     async def force_deny(self, itx: discord.Interaction[core.Genji]):
-        view = views.Confirm(itx)
+        view = views.Confirm(itx, preceeding_items={"modal": views.GiveReasonModalButton()})
         await itx.response.send_message(
             content="Are you sure you want to Force Deny this submission? \n"
             "Doing so will remove all records and votes as well as delete the entire submission.",
@@ -711,8 +711,7 @@ class PlaytestVoting(discord.ui.View):
         await self.delete_playtest_post(record.thread_id)
         await self.delete_map_from_db()
         if author:
-            # TODO: Modal for reason
-            await self.send_denial_to_author(author)
+            await self.send_denial_to_author(author, reason=view.modal.value)
         await self.delete_playtest_db_entry()
         itx.client.cache.maps.remove_one(self.data.map_code)
 
@@ -784,6 +783,12 @@ class PlaytestVoting(discord.ui.View):
             return
 
         await self.remove_votes()
+        author = itx.guild.get_member(self.data.creator.id)
+        if author:
+            await author.send(
+                f"The votes for **{self.data.map_code}** have been removed by a Sensei.\n"
+                f"{itx.message.jump_url}"
+            )
 
     async def remove_completions_option(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
@@ -797,6 +802,12 @@ class PlaytestVoting(discord.ui.View):
             return
 
         await self.remove_records()
+        author = itx.guild.get_member(self.data.creator.id)
+        if author:
+            await author.send(
+                f"The completions for **{self.data.map_code}** have been removed by a Sensei.\n"
+                f"{itx.message.jump_url}"
+            )
 
     async def toggle_finalize_button(self, itx: discord.Interaction[core.Genji]):
         if await self.check_creator(itx):
@@ -815,6 +826,12 @@ class PlaytestVoting(discord.ui.View):
 
         self.ready_up_button.disabled = not self.ready_up_button.disabled
         await itx.message.edit(view=self)
+        author = itx.guild.get_member(self.data.creator.id)
+        if author:
+            await author.send(
+                f"The Finalize button for **{self.data.map_code}** has been toggled by a Sensei.\n"
+                f"{itx.message.jump_url}"
+            )
 
     async def remove_votes(self):
         await self.client.database.set(

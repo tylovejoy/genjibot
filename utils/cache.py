@@ -187,7 +187,9 @@ class SequenceCache(Generic[T]):
     @property
     def choices(self):
         """A list of Choices from this SequenceCache"""
-        return self._choices(self.values)
+        self.values: list[MapData]
+        sorted_vals = sorted(self.values, key=lambda x: getattr(x, self.key_value))
+        return self._choices(sorted_vals)
 
     @staticmethod
     def _choices(iterable: list[T]) -> list[app_commands.Choice[str]]:
@@ -202,6 +204,7 @@ class SequenceCache(Generic[T]):
 
     def add_many(self, objs: list[T]):
         """Add many objects (T) to the SequenceCache."""
+
         _objs: list[T] = []
         for obj in objs:
             if getattr(obj, self.key_value) in self.keys:
@@ -242,7 +245,7 @@ class SequenceCache(Generic[T]):
         return res
 
 
-class Users(SequenceCache[T]):
+class Users(SequenceCache[UserData]):
     def __init__(self):
         self.key_value = "user_id"
         super().__init__(self.key_value)
@@ -258,7 +261,7 @@ class Users(SequenceCache[T]):
         return [x.user_id for x in self._find_many(self.values, "is_creator", True)]
 
 
-class Maps(SequenceCache[T]):
+class Maps(SequenceCache[MapData]):
     def __init__(self):
         self.key_value = "map_code"
         super().__init__(self.key_value)
@@ -286,23 +289,23 @@ class StrCacheSequence(SequenceCache[T]):
         return iter(self.values)
 
 
-class MapTypes(StrCacheSequence[T]):
+class MapTypes(StrCacheSequence[MapTypesData]):
     ...
 
 
-class MapNames(StrCacheSequence[T]):
+class MapNames(StrCacheSequence[MapNamesData]):
     ...
 
 
-class MapRestrictions(StrCacheSequence[T]):
+class MapRestrictions(StrCacheSequence[MapRestrictionsData]):
     ...
 
 
-class MapMechanics(StrCacheSequence[T]):
+class MapMechanics(StrCacheSequence[MapMechanicsData]):
     ...
 
 
-class Tags(StrCacheSequence[T]):
+class Tags(StrCacheSequence[TagsData]):
     ...
 
 
@@ -313,7 +316,7 @@ class GenjiCache:
         self.map_names: MapNames[MapNamesData] = MapNames()
         self.map_types: MapTypes[MapTypesData] = MapTypes()
         self.map_mechanics: MapMechanics[MapMechanicsData] = MapMechanics()
-        self.map_restrictions: MapRestrictions[MapMechanicsData] = MapRestrictions()
+        self.map_restrictions: MapRestrictions[MapRestrictionsData] = MapRestrictions()
         self.tags: Tags[TagsData] = Tags()
 
     def setup(
@@ -410,7 +413,7 @@ class GenjiCache:
 
     def add_tags(self, tags: list[database.DotRecord]):
         _tags = [
-            MapRestrictionsData(
+            TagsData(
                 value=x.value,
             )
             for x in tags

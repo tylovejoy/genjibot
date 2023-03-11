@@ -459,3 +459,34 @@ class ConfirmMapType(ConfirmMapTypeMixin):
             confirmation_message=confirmation_message,
             timeout=timeout,
         )
+
+
+class GiveReasonModalButton(discord.ui.Button):
+    view: Confirm
+    value: str
+    def __init__(self):
+        super().__init__(
+            label="Give Reason",
+            style=discord.ButtonStyle.blurple,
+        )
+
+    async def callback(self, itx: discord.Interaction[core.Genji]):
+        modal = GiveReasonModal()
+        await itx.response.send_modal(modal)
+        await modal.wait()
+        if not modal.value:
+            return
+        self.view.confirm.disabled = False
+        await self.view.original_itx.edit_original_response(view=self.view)
+        self.value = modal.reason.value
+
+class GiveReasonModal(discord.ui.Modal, title="Give Reason"):
+    reason = discord.ui.TextInput(
+        label="Reason",
+        placeholder="Give a reason for denial.",
+        style=discord.TextStyle.long,
+    )
+    value: bool = False
+    async def on_submit(self, itx: discord.Interaction[core.Genji]):
+        await itx.response.defer(ephemeral=True)
+        self.value = True
