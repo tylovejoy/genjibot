@@ -483,16 +483,15 @@ class PlaytestVoting(discord.ui.View):
         await self.set_map_ratings(votes)
         thread = itx.guild.get_channel(utils.PLAYTEST)
         thread_msg = await thread.fetch_message(votes[0].thread_id)
-        new_map_embed = await self.edit_embed(thread_msg.embeds[0], itx)
-        new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
-            embed=new_map_embed
-        )
+        # new_map_embed = await self.edit_embed(thread_msg.embeds[0], itx)
+        # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
+        #     embed=new_map_embed
+        # )
         itx.client.dispatch(
             "newsfeed_new_map",
             itx,
             author,
-            new_map_message.jump_url,
-            self.data.map_code,
+            self.data,
         )
         try:
             await utils.update_affected_users(itx, self.data.map_code)
@@ -521,7 +520,11 @@ class PlaytestVoting(discord.ui.View):
         await self.client.database.set_many(
             """
             INSERT INTO map_ratings (map_code, user_id, difficulty) 
-                VALUES($1, $2, $3);
+                VALUES($1, $2, $3)
+            ON CONFLICT (map_code, user_id) 
+            DO UPDATE SET difficulty = $3
+            WHERE map_ratings.map_code = excluded.map_code and map_ratings.user_id = excluded.user_id;
+                ;
             """,
             votes_args,
         )

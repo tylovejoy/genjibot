@@ -202,15 +202,15 @@ async def map_submission_second_step(
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        embed.title = "New Map!"
-        embed.set_footer(
-            text=(
-                "For notification of newly added maps only. "
-                "Data may be wrong or out of date. "
-                "Use the /map-search command for the latest info."
-            )
-        )
-        new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
+        # embed.title = "New Map!"
+        # embed.set_footer(
+        #     text=(
+        #         "For notification of newly added maps only. "
+        #         "Data may be wrong or out of date. "
+        #         "Use the /map-search command for the latest info."
+        #     )
+        # )
+        # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
         itx.client.dispatch(
             "newsfeed_new_map", itx, itx.user, data
         )
