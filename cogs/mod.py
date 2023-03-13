@@ -137,7 +137,6 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-
             itx.client.dispatch("newsfeed_medals", itx, map_code, gold, silver, bronze)
             await utils.update_affected_users(itx, map_code)
 

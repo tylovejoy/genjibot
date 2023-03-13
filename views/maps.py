@@ -128,7 +128,6 @@ class RestrictionsSelect(MapSubmitSelection):
 
 
 class PlaytestVoting(discord.ui.View):
-
     options = [
         discord.SelectOption(label=x, value=str(i))
         for i, x in enumerate(utils.DIFFICULTIES_EXT)

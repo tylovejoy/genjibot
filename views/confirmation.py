@@ -116,7 +116,6 @@ class QualitySelect(discord.ui.Select):
     view: ConfirmCompletion
 
     def __init__(self):
-
         super().__init__(
             options=[
                 discord.SelectOption(

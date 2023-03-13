@@ -346,7 +346,6 @@ class BotEvents(commands.Cog):
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
-
         # TODO: missing fields dont get edited
         pattern = re.compile(r"(┣?┗?) `" + field + r"` (.+)(\n?┣?┗?)")
         search = re.search(pattern, embed.description)
