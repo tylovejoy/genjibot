@@ -8,3 +8,4 @@ venv
 .vscode/settings.json
 __pycache__
 /.github/
+.pre-commit-config.yaml
