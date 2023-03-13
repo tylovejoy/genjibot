@@ -211,9 +211,7 @@ async def map_submission_second_step(
         #     )
         # )
         # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
-        itx.client.dispatch(
-            "newsfeed_new_map", itx, itx.user, data
-        )
+        itx.client.dispatch("newsfeed_new_map", itx, itx.user, data)
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
 

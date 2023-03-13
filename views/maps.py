@@ -310,7 +310,9 @@ class PlaytestVoting(discord.ui.View):
             vote_value,
         )
 
-    async def delete_user_vote(self, itx: discord.Interaction[core.Genji], user_id: int):
+    async def delete_user_vote(
+        self, itx: discord.Interaction[core.Genji], user_id: int
+    ):
         await itx.client.database.set(
             "DELETE FROM playtest WHERE user_id = $1 AND map_code = $2",
             user_id,
