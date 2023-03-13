@@ -251,7 +251,7 @@ class BotEvents(commands.Cog):
     ):
         nickname = itx.client.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
-            title=f"{nickname} has submitted a new {data.difficulty} map!",
+            title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
             description=(
                 f"Use the command `/map-search map_code:{data.map_code}` to see the details!"
             ),
