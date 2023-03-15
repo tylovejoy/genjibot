@@ -136,9 +136,12 @@ class Test(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def enlarge(
-        self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji
+        self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji | str
     ):
-        await ctx.send(emoji.url)
+        if isinstance(emoji, discord.PartialEmoji):
+            await ctx.send(emoji.url)
+        else:
+            await ctx.send()
 
     @app_commands.command(name="oogabooga")
     @app_commands.guilds(discord.Object(id=868981788968640554))
