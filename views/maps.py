@@ -244,6 +244,9 @@ class PlaytestVoting(discord.ui.View):
             ephemeral=True,
         )
 
+        thread: discord.Thread = itx.channel
+        await thread.add_user(itx.user)
+
         count, image = await self.get_plot_data(itx)
 
         await itx.message.edit(
@@ -768,6 +771,7 @@ class PlaytestVoting(discord.ui.View):
             attachments=[image],
             view=self,
         )
+        await itx.message.channel.send("@here, All records and votes have been removed by a Sensei.")
         author = itx.guild.get_member(self.data.creator.id)
         await author.send(
             "Your map submission process has been reset by a Sensei.\n"
@@ -786,7 +790,8 @@ class PlaytestVoting(discord.ui.View):
         await view.wait()
         if not view.value:
             return
-
+        await self._unset_ready_button(itx, self.ready_up_button)
+        await itx.message.channel.send("@here, All votes have been removed by a Sensei.")
         await self.remove_votes()
 
     async def remove_completions_option(self, itx: discord.Interaction[core.Genji]):
@@ -799,7 +804,8 @@ class PlaytestVoting(discord.ui.View):
         await view.wait()
         if not view.value:
             return
-
+        await self._unset_ready_button(itx, self.ready_up_button)
+        await itx.message.channel.send("@here, All records have been removed by a Sensei.")
         await self.remove_records()
 
     async def toggle_finalize_button(self, itx: discord.Interaction[core.Genji]):
