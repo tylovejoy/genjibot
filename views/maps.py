@@ -172,9 +172,7 @@ class PlaytestVoting(discord.ui.View):
             )
 
         is_sensei = await self.check_sensei(itx)
-        return not is_creator and (
-            is_sensei or await self.check_playtester_has_completions(itx)
-        )
+        return not is_creator and (is_sensei or await self.check_for_completion(itx))
 
     async def check_for_completion(self, itx: discord.Interaction[core.Genji]) -> bool:
         res = bool(
@@ -197,27 +195,6 @@ class PlaytestVoting(discord.ui.View):
     @staticmethod
     async def check_sensei(itx: discord.Interaction[core.Genji]) -> bool:
         return itx.guild.get_role(utils.STAFF) in itx.user.roles
-
-    async def check_playtester_has_completions(
-        self, itx: discord.Interaction[core.Genji]
-    ) -> bool:
-        return await self.check_playtester_roles(
-            itx
-        ) and await self.check_for_completion(itx)
-
-    @staticmethod
-    async def check_playtester_roles(itx: discord.Interaction[core.Genji]) -> bool:
-        grandmaster = itx.guild.get_role(utils.Roles.GRANDMASTER)
-        ancient_god = itx.guild.get_role(utils.ANCIENT_GOD)
-        is_grandmaster = grandmaster in itx.user.roles
-        is_ancient_god = ancient_god in itx.user.roles
-        res = is_grandmaster or is_ancient_god
-        if not res:
-            await itx.followup.send(
-                content=f"You must be {grandmaster.mention} or {ancient_god} to vote.",
-                ephemeral=True,
-            )
-        return res
 
     @discord.ui.select(
         options=options,
@@ -391,10 +368,7 @@ class PlaytestVoting(discord.ui.View):
         return discord.File(b, filename="vote_chart.png")
 
     async def check_status(self, itx: discord.Interaction[core.Genji], count: int):
-        records = await self.get_records_for_map()
-        if (
-            count >= self.required_votes and len(records) >= self.required_votes
-        ) or await self._get_sensei_vote_count() >= self.required_votes:
+        if count >= self.required_votes:
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
             await self.data.creator.send(
@@ -402,47 +376,23 @@ class PlaytestVoting(discord.ui.View):
                 f"Go to the thread and *Finalize* the submission!"
             )
 
-    async def _get_sensei_vote_count(self):
-        sensei_count = 0
-        sensei_role = self.client.get_guild(utils.GUILD_ID).get_role(utils.STAFF)
-        async for row in self.client.database.get(
-            """SELECT user_id FROM playtest WHERE user_id != $1 AND map_code = $2;""",
-            self.data.creator.id,
-            self.data.map_code,
-        ):
-            member = self.client.get_guild(utils.GUILD_ID).get_member(row.user_id)
-            if member and sensei_role in member.roles:
-                sensei_count += 1
-
-        return sensei_count
-
-    async def get_records_for_map(self) -> list[database.DotRecord | None]:
-        return [
-            x
-            async for x in self.client.database.get(
-                """
-                SELECT * FROM records r LEFT JOIN users u ON u.user_id = r.user_id 
-                WHERE map_code = $1 and rank >= $2 and r.user_id != $3;
-                """,
-                self.data.map_code,
-                5,
-                self.data.creator.id,
-            )
-        ]
-
     async def approve_map(self, itx: discord.Interaction[core.Genji]):
         self.stop()
         record = await self.get_author_db_row()
         await self.lock_and_archive_thread(record.thread_id)
         author = itx.guild.get_member(self.data.creator.id)
         votes_db_rows = await self.get_votes_for_map()
-        difficulty = await self.get_difficulty(votes_db_rows)
-        if difficulty in utils.allowed_difficulties(await self.get_creator_rank()):
-            await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
-        else:
-            await self.delete_map_from_db()
-            if author:
-                await self.send_denial_to_author(author)
+        await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
+
+        query = """SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"""
+        row = await itx.client.database.get_row(
+            query, self.data.creator.id, self.data.map_code
+        )
+        if row.verification_id:
+            await itx.guild.get_channel(utils.VERIFICATION_QUEUE).get_partial_message(
+                row.verification_id
+            ).delete()
+
         await self.delete_playtest_db_entry()
 
     async def get_author_db_row(self) -> database.DotRecord:
@@ -605,7 +555,12 @@ class PlaytestVoting(discord.ui.View):
             await itx.followup.send("You are not allowed to use this button.")
             return
         await self._set_ready_button(itx, button)
-        await self.send_verification_embed(itx)
+        verification_msg = await self.send_verification_embed(itx)
+
+        query = """UPDATE playtest SET verification_id = $1 WHERE user_id = $2 AND map_code = $3;"""
+        await itx.client.database.set(
+            query, verification_msg.id, self.data.creator.id, self.data.map_code
+        )
 
     async def _set_ready_button(
         self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
@@ -629,7 +584,9 @@ class PlaytestVoting(discord.ui.View):
         if edit_now:
             await itx.message.edit(view=self)
 
-    async def send_verification_embed(self, itx: discord.Interaction[core.Genji]):
+    async def send_verification_embed(
+        self, itx: discord.Interaction[core.Genji]
+    ) -> discord.Message:
         embed = utils.GenjiEmbed(
             title=f"{itx.client.cache.users[self.data.creator.id].nickname} "
             f"has marked a map as ready ({self.data.map_code})!",
@@ -645,7 +602,7 @@ class PlaytestVoting(discord.ui.View):
                 "- `Start Process Over` Remove all prior completions and votes.\n"
             ),
         )
-        await itx.client.get_channel(utils.VERIFICATION_QUEUE).send(embed=embed)
+        return await itx.client.get_channel(utils.VERIFICATION_QUEUE).send(embed=embed)
 
     @discord.ui.select(
         placeholder="Sensei Only Options",
@@ -743,12 +700,8 @@ class PlaytestVoting(discord.ui.View):
         await view.wait()
         if not view.value:
             return
-        self.stop()
-        votes_db_rows = await self.get_votes_for_map()
-        record = await self.get_author_db_row()
-        author = itx.guild.get_member(self.data.creator.id)
-        await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
-        await self.delete_playtest_db_entry()
+
+        await self.approve_map(itx)
 
     async def start_process_over(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
@@ -771,7 +724,9 @@ class PlaytestVoting(discord.ui.View):
             attachments=[image],
             view=self,
         )
-        await itx.message.channel.send("@here, All records and votes have been removed by a Sensei.")
+        await itx.message.channel.send(
+            "@here, All records and votes have been removed by a Sensei."
+        )
         author = itx.guild.get_member(self.data.creator.id)
         await author.send(
             "Your map submission process has been reset by a Sensei.\n"
@@ -791,7 +746,9 @@ class PlaytestVoting(discord.ui.View):
         if not view.value:
             return
         await self._unset_ready_button(itx, self.ready_up_button)
-        await itx.message.channel.send("@here, All votes have been removed by a Sensei.")
+        await itx.message.channel.send(
+            "@here, All votes have been removed by a Sensei."
+        )
         await self.remove_votes()
 
     async def remove_completions_option(self, itx: discord.Interaction[core.Genji]):
@@ -805,7 +762,9 @@ class PlaytestVoting(discord.ui.View):
         if not view.value:
             return
         await self._unset_ready_button(itx, self.ready_up_button)
-        await itx.message.channel.send("@here, All records have been removed by a Sensei.")
+        await itx.message.channel.send(
+            "@here, All records have been removed by a Sensei."
+        )
         await self.remove_records()
 
     async def toggle_finalize_button(self, itx: discord.Interaction[core.Genji]):
@@ -818,6 +777,7 @@ class PlaytestVoting(discord.ui.View):
         await itx.response.send_message(
             content="Are you sure you want to toggle the Finalize button for this submission?",
             view=view,
+            ephemeral=True,
         )
         await view.wait()
         if not view.value:
@@ -825,6 +785,11 @@ class PlaytestVoting(discord.ui.View):
 
         self.ready_up_button.disabled = not self.ready_up_button.disabled
         await itx.message.edit(view=self)
+        if not self.ready_up_button.disabled:
+            await itx.channel.send(
+                f"{self.data.creator.mention}, "
+                f"the Finalize Submission button has been enabled by a Sensei."
+            )
 
     async def remove_votes(self):
         await self.client.database.set(

@@ -104,10 +104,6 @@ async def submit_map_(
     """
 
     await itx.response.defer(ephemeral=True)
-    if not mod:
-        if await utils.Roles.find_highest_rank(itx.user) < 4:
-            if itx.guild.get_role(utils.ANCIENT_GOD) not in itx.user.roles:
-                raise utils.RankTooLowError
 
     if data.medals:
         if not 0 < data.gold < data.silver < data.bronze:
