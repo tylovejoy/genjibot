@@ -4,7 +4,6 @@ import typing
 
 from discord.ext import commands, tasks
 
-
 if typing.TYPE_CHECKING:
     import core
 

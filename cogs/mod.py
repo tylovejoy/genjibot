@@ -1,6 +1,6 @@
 from __future__ import annotations
-import copy
 
+import copy
 import typing
 
 import discord

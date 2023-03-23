@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import enum
-from typing import Generic, TypeVar, TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any, Generic, Iterable, TypeVar
 
 import discord
 from discord import app_commands
-
 
 if TYPE_CHECKING:
     import database
