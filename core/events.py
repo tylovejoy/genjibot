@@ -368,7 +368,6 @@ class BotEvents(commands.Cog):
                 new_field,
                 embed.description,
             )
-            print(embed.description)
 
         return embed
 
