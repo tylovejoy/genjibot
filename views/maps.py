@@ -154,11 +154,11 @@ class PlaytestVoting(discord.ui.View):
         }
 
     def _required_votes(self) -> int:
-        if self.base_diff == "Hell":
+        if "Hell" in self.base_diff:
             requirement = 1
-        elif self.base_diff == "Extreme":
+        elif "Extreme" in self.base_diff:
             requirement = 2
-        elif self.base_diff == "Very Hard":
+        elif "Very Hard" in self.base_diff:
             requirement = 3
         else:
             requirement = 5
@@ -388,7 +388,11 @@ class PlaytestVoting(discord.ui.View):
         row = await itx.client.database.get_row(
             query, self.data.creator.id, self.data.map_code
         )
+        print(row)
+        print(row.verification_id)
         if row.verification_id:
+            print("deleting message")
+            print(utils.VERIFICATION_QUEUE, row.verification_id, sep="/")
             await itx.guild.get_channel(utils.VERIFICATION_QUEUE).get_partial_message(
                 row.verification_id
             ).delete()
