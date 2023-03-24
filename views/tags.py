@@ -57,7 +57,6 @@ class TagCreate(discord.ui.Modal, title="Create Tag"):
     value = discord.ui.TextInput(label="Value", style=discord.TextStyle.paragraph)
 
     async def on_submit(self, itx: discord.Interaction[core.Genji]):
-
         view = views.Confirm(itx)
         await itx.response.send_message(
             content=f"Is this correct?\n\n**{self.name}**\n\n{self.value}",

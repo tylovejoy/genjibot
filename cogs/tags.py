@@ -27,7 +27,7 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
     ) -> None:
         """View a tag."""
         await itx.response.defer()
-        if name not in itx.client.cache.tags:
+        if name not in itx.client.cache.tags.list:
             fuzzed_options = utils.fuzz_multiple(name, itx.client.cache.tags.list)
             fuzz_desc = [
                 f"{views.NUMBER_EMOJI[i + 1]} - {x}\n"

@@ -73,7 +73,6 @@ class Records(commands.Cog):
         data = await utils.get_completions_data(itx.client, user)
         description = ""
         for diff in utils.DIFFICULTIES:
-
             if diff not in data:
                 completions, gold, silver, bronze = 0, 0, 0, 0
             else:

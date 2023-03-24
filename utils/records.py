@@ -124,7 +124,6 @@ class URLTransformer(app_commands.Transformer):
                     raise utils.IncorrectURLFormatError
                 return str(resp.url)
         except Exception as e:
-            print(e)
             raise utils.IncorrectURLFormatError
 
 
@@ -258,7 +257,6 @@ def pr_records_embed(
             record.record = "Completion"
         cur_code = f"{record.map_name} by {record.creators} ({record.map_code})"
         description = ""
-        print(record.map_code)
         if record.gold:
             medals = (record.gold, record.silver, record.bronze)
             medals = tuple(map(float, medals))

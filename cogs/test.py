@@ -133,6 +133,16 @@ class Test(commands.Cog):
         await ctx.channel.send("Back online!")
         await ctx.message.delete()
 
+    @commands.command()
+    @commands.is_owner()
+    async def enlarge(
+        self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji | str
+    ):
+        if isinstance(emoji, discord.PartialEmoji):
+            await ctx.send(emoji.url)
+        else:
+            await ctx.send()
+
     @app_commands.command(name="oogabooga")
     @app_commands.guilds(discord.Object(id=868981788968640554))
     async def _test_server_test_command(

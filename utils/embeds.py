@@ -4,6 +4,7 @@ import re
 import typing
 
 import discord
+
 from .constants import COMPLETION_PLACEHOLDER
 
 

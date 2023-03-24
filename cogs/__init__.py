@@ -104,10 +104,6 @@ async def submit_map_(
     """
 
     await itx.response.defer(ephemeral=True)
-    if not mod:
-        if await utils.Roles.find_highest_rank(itx.user) < 4:
-            if itx.guild.get_role(utils.ANCIENT_GOD) not in itx.user.roles:
-                raise utils.RankTooLowError
 
     if data.medals:
         if not 0 < data.gold < data.silver < data.bronze:
@@ -202,18 +198,16 @@ async def map_submission_second_step(
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        embed.title = "New Map!"
-        embed.set_footer(
-            text=(
-                "For notification of newly added maps only. "
-                "Data may be wrong or out of date. "
-                "Use the /map-search command for the latest info."
-            )
-        )
-        new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
-        itx.client.dispatch(
-            "newsfeed_new_map", itx, itx.user, data
-        )
+        # embed.title = "New Map!"
+        # embed.set_footer(
+        #     text=(
+        #         "For notification of newly added maps only. "
+        #         "Data may be wrong or out of date. "
+        #         "Use the /map-search command for the latest info."
+        #     )
+        # )
+        # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
+        itx.client.dispatch("newsfeed_new_map", itx, itx.user, data)
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
 

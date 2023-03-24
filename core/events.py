@@ -251,7 +251,7 @@ class BotEvents(commands.Cog):
     ):
         nickname = itx.client.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
-            title=f"{nickname} has submitted a new {data.difficulty} map!",
+            title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
             description=(
                 f"Use the command `/map-search map_code:{data.map_code}` to see the details!"
             ),
@@ -346,7 +346,6 @@ class BotEvents(commands.Cog):
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
-
         # TODO: missing fields dont get edited
         pattern = re.compile(r"(┣?┗?) `" + field + r"` (.+)(\n?┣?┗?)")
         search = re.search(pattern, embed.description)
@@ -369,7 +368,6 @@ class BotEvents(commands.Cog):
                 new_field,
                 embed.description,
             )
-            print(embed.description)
 
         return embed
 
