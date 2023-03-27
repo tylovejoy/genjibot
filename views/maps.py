@@ -384,20 +384,31 @@ class PlaytestVoting(discord.ui.View):
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
 
-        query = """SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"""
+        await self.increment_playtest_count(itx, votes_db_rows)
+
+        query = (
+            "SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"
+        )
         row = await itx.client.database.get_row(
             query, self.data.creator.id, self.data.map_code
         )
-        print(row)
-        print(row.verification_id)
         if row.verification_id:
-            print("deleting message")
-            print(utils.VERIFICATION_QUEUE, row.verification_id, sep="/")
             await itx.guild.get_channel(utils.VERIFICATION_QUEUE).get_partial_message(
                 row.verification_id
             ).delete()
 
         await self.delete_playtest_db_entry()
+
+    async def increment_playtest_count(self, itx, votes_db_rows):
+        query = """
+            INSERT INTO playtest_count (user_id, amount)
+            VALUES ($1, 1)
+            ON CONFLICT (user_id) DO UPDATE SET amount = playtest_count.amount + 1;
+        """
+        await itx.client.database.set_many(
+            query,
+            [x.user_id for x in votes_db_rows if x.user_id != self.data.creator.id],
+        )
 
     async def get_author_db_row(self) -> database.DotRecord:
         return await self.client.database.get_row(
@@ -440,11 +451,7 @@ class PlaytestVoting(discord.ui.View):
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
         thread = itx.guild.get_channel(utils.PLAYTEST)
-        thread_msg = await thread.fetch_message(votes[0].thread_id)
-        # new_map_embed = await self.edit_embed(thread_msg.embeds[0], itx)
-        # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
-        #     embed=new_map_embed
-        # )
+        await thread.fetch_message(votes[0].thread_id)
         itx.client.dispatch(
             "newsfeed_new_map",
             itx,
@@ -659,6 +666,7 @@ class PlaytestVoting(discord.ui.View):
         author = itx.guild.get_member(self.data.creator.id)
 
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
+        await self.increment_playtest_count(itx, votes_db_rows)
         await self.delete_playtest_db_entry()
 
     async def force_deny(self, itx: discord.Interaction[core.Genji]):
