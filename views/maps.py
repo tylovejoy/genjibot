@@ -440,11 +440,8 @@ class PlaytestVoting(discord.ui.View):
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
         thread = itx.guild.get_channel(utils.PLAYTEST)
-        thread_msg = await thread.fetch_message(votes[0].thread_id)
-        # new_map_embed = await self.edit_embed(thread_msg.embeds[0], itx)
-        # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(
-        #     embed=new_map_embed
-        # )
+        await thread.fetch_message(votes[0].thread_id)
+
         itx.client.dispatch(
             "newsfeed_new_map",
             itx,

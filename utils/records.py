@@ -123,7 +123,7 @@ class URLTransformer(app_commands.Transformer):
                 if resp.status != 200:
                     raise utils.IncorrectURLFormatError
                 return str(resp.url)
-        except Exception as e:
+        except Exception:
             raise utils.IncorrectURLFormatError
 
 

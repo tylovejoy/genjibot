@@ -463,6 +463,7 @@ class ConfirmMapType(ConfirmMapTypeMixin):
 class GiveReasonModalButton(discord.ui.Button):
     view: Confirm
     value: str
+
     def __init__(self):
         super().__init__(
             label="Give Reason",
@@ -479,6 +480,7 @@ class GiveReasonModalButton(discord.ui.Button):
         await self.view.original_itx.edit_original_response(view=self.view)
         self.value = modal.reason.value
 
+
 class GiveReasonModal(discord.ui.Modal, title="Give Reason"):
     reason = discord.ui.TextInput(
         label="Reason",
@@ -486,6 +488,7 @@ class GiveReasonModal(discord.ui.Modal, title="Give Reason"):
         style=discord.TextStyle.long,
     )
     value: bool = False
+
     async def on_submit(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
         self.value = True

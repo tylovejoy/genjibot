@@ -167,7 +167,6 @@ class Records(commands.Cog):
             if not search.video and (time >= search.record) and not video:
                 raise utils.RecordNotFasterError
 
-        user = itx.client.cache.users[itx.user.id]
         view = views.ConfirmCompletion(
             await utils.Roles.find_highest_rank(itx.user),
             itx,
