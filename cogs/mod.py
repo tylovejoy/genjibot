@@ -55,7 +55,7 @@ class ModCommands(commands.Cog):
             map_code: Overwatch share code
             creator: User
         """
-        await cogs.add_creator_(creator, itx, map_code, checks=True)
+        await cogs.add_creator_(creator, itx, map_code)
 
     @map.command(name="remove-creator")
     @app_commands.autocomplete(
