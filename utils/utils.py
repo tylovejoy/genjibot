@@ -199,3 +199,9 @@ class FakeUser:
 
 class FakeAvatar:
     url: str = "https://cdn.discordapp.com/embed/avatars/2.png"
+
+
+def wrap_string_with_percent(string: str):
+    if not string:
+        return
+    return "%" + string + "%"

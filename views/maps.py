@@ -114,6 +114,7 @@ class MechanicsSelect(MapSubmitSelection):
         super().__init__(
             options=options,
             placeholder="Map mechanic(s)?",
+            min_values=0,
             max_values=len(options),
         )
 
@@ -123,6 +124,7 @@ class RestrictionsSelect(MapSubmitSelection):
         super().__init__(
             options=options,
             placeholder="Map restriction(s)?",
+            min_values=0,
             max_values=len(options),
         )
 
@@ -383,8 +385,12 @@ class PlaytestVoting(discord.ui.View):
         author = itx.guild.get_member(self.data.creator.id)
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
+        try:
+            print(votes_db_rows)
 
-        await self.increment_playtest_count(itx, votes_db_rows)
+            await self.increment_playtest_count(itx, votes_db_rows)
+        except Exception as e:
+            print(e)
 
         query = (
             "SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"
@@ -405,9 +411,12 @@ class PlaytestVoting(discord.ui.View):
             VALUES ($1, 1)
             ON CONFLICT (user_id) DO UPDATE SET amount = playtest_count.amount + 1;
         """
+
+        for aaaa in votes_db_rows:
+            print(aaaa)
         await itx.client.database.set_many(
             query,
-            [x.user_id for x in votes_db_rows if x.user_id != self.data.creator.id],
+            [(x.user_id,) for x in votes_db_rows if x.user_id != self.data.creator.id],
         )
 
     async def get_author_db_row(self) -> database.DotRecord:

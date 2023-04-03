@@ -10,6 +10,7 @@ import cogs
 import database
 import utils
 import views
+from utils import wrap_string_with_percent
 
 if typing.TYPE_CHECKING:
     import core
@@ -123,7 +124,9 @@ class Maps(commands.Cog):
         mechanics=cogs.map_mechanics_autocomplete,
         map_code=cogs.map_codes_autocomplete,
     )
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(
+        discord.Object(id=utils.GUILD_ID), discord.Object(id=868981788968640554)
+    )
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
@@ -167,7 +170,7 @@ class Maps(commands.Cog):
             "Not Completed": False,
             "Completed": True,
         }
-
+        print(mechanics)
         async for _map in itx.client.database.get(
             """
                 WITH ALL_MAPS AS (
@@ -246,9 +249,9 @@ class Maps(commands.Cog):
                 ORDER BY DIFFICULTY, QUALITY DESC;
             """,
             map_code,
-            map_type,
+            wrap_string_with_percent(map_type),
             map_name,
-            mechanics,
+            wrap_string_with_percent(mechanics),
             low_range,
             high_range,
             int(getattr(minimum_rating, "value", 0)),
