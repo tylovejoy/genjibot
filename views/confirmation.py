@@ -267,10 +267,7 @@ class ConfirmBaseView(discord.ui.View):
         embed: discord.Embed = None,
         attachment: discord.Attachment | discord.File = None,
     ):
-        if attachment is not None:
-            attachment = [attachment]
-        else:
-            attachment = discord.utils.MISSING
+        attachment = [attachment] if attachment is not None else discord.utils.MISSING
         if self.itx.response.is_done():
             await self.itx.edit_original_response(
                 content=self.initial_message,

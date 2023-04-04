@@ -112,7 +112,7 @@ class BotEvents(commands.Cog):
                     message_id=x.message_id,
                 )
 
-            self.bot.logger.debug(f"Added persistent views.")
+            self.bot.logger.debug("Added persistent views.")
             self.bot.persistent_views_added = True
 
     @commands.Cog.listener()
@@ -347,12 +347,10 @@ class BotEvents(commands.Cog):
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
         # TODO: missing fields dont get edited
-        pattern = re.compile(r"(┣?┗?) `" + field + r"` (.+)(\n?┣?┗?)")
-        search = re.search(pattern, embed.description)
-
-        if search:
-            start_char = search.group(1)
-            end_char = search.group(3)
+        pattern = re.compile(f"(┣?┗?) `{field}" + r"` (.+)(\n?┣?┗?)")
+        if search := re.search(pattern, embed.description):
+            start_char = search[1]
+            end_char = search[3]
 
             embed.description = re.sub(
                 pattern,
@@ -362,7 +360,7 @@ class BotEvents(commands.Cog):
         else:
             last_field_pattern = re.compile(r"(┣?.+\n)┗")
             last_field = re.search(last_field_pattern, embed.description)
-            new_field = f"{last_field.group(1)}┣ `{field}` {value}\n┗"
+            new_field = f"{last_field[1]}┣ `{field}` {value}\n┗"
             embed.description = re.sub(
                 last_field_pattern,
                 new_field,

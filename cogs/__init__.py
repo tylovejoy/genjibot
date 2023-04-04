@@ -39,11 +39,11 @@ async def _autocomplete(
 ) -> list[app_commands.Choice[str]]:
     if not choices:  # Quietly ignore empty choices
         return []
-    if current == "":
-        response = choices[:25]
-    else:
-        response = [x for x in choices if case_ignore_compare(x.name, current)][:25]
-    return response
+    return (
+        [x for x in choices if case_ignore_compare(x.name, current)][:25]
+        if current
+        else choices[:25]
+    )
 
 
 async def creator_autocomplete(
@@ -105,9 +105,8 @@ async def submit_map_(
 
     await itx.response.defer(ephemeral=True)
 
-    if data.medals:
-        if not 0 < data.gold < data.silver < data.bronze:
-            raise utils.InvalidMedals
+    if data.medals and not 0 < data.gold < data.silver < data.bronze:
+        raise utils.InvalidMedals
 
     initial_message = (
         f"{data.creator.mention}, "
@@ -172,7 +171,7 @@ async def map_submission_second_step(
         )
 
         thread_msg = await thread.send(
-            f"Discuss, play, rate, etc.",
+            "Discuss, play, rate, etc.",
             view=views.PlaytestVoting(
                 data,
                 itx.client,

@@ -25,18 +25,21 @@ class GenjiCommandTree(app_commands.CommandTree):
     ) -> Optional[app_commands.AppCommand]:
         commands = self._global_app_commands
         if guild:
-            guild_id = guild.id if not isinstance(guild, int) else guild
+            guild_id = guild if isinstance(guild, int) else guild.id
             guild_commands = self._guild_app_commands.get(guild_id, {})
             if not guild_commands and self.fallback_to_global:
                 commands = self._global_app_commands
             else:
                 commands = guild_commands
 
-        for cmd_name, cmd in commands.items():
-            if any(name in qualified_name for name in cmd_name.split()):
-                return cmd
-
-        return None
+        return next(
+            (
+                cmd
+                for cmd_name, cmd in commands.items()
+                if any(name in qualified_name for name in cmd_name.split())
+            ),
+            None,
+        )
 
     def get_app_command(
         self,
@@ -50,14 +53,14 @@ class GenjiCommandTree(app_commands.CommandTree):
             return None
 
         if guild:
-            guild_id = guild.id if not isinstance(guild, int) else guild
+            guild_id = guild if isinstance(guild, int) else guild.id
             guild_commands = self._guild_app_commands.get(guild_id, {})
-            if not self.fallback_to_global:
-                return search_dict(guild_commands)
-            else:
-                return search_dict(guild_commands) or search_dict(
-                    self._global_app_commands
-                )
+            return (
+                search_dict(guild_commands)
+                or search_dict(self._global_app_commands)
+                if self.fallback_to_global
+                else search_dict(guild_commands)
+            )
         else:
             return search_dict(self._global_app_commands)
 
@@ -96,11 +99,7 @@ class GenjiCommandTree(app_commands.CommandTree):
         # we need to convert it to a Snowflake like object if it's an int
         _guild: Optional[Snowflake] = None
         if guild is not None:
-            if isinstance(guild, int):
-                _guild = discord.Object(guild)
-            else:
-                _guild = guild
-
+            _guild = discord.Object(guild) if isinstance(guild, int) else guild
         if _guild:
             self._guild_app_commands[_guild.id] = self._unpack_app_commands(commands)
         else:

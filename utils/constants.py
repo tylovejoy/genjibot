@@ -120,7 +120,7 @@ class Roles:
 
     @classmethod
     def roles_per_rank(cls, rank_num: int) -> list[int]:
-        return cls.ranks[0 : rank_num + 1]
+        return cls.ranks[:rank_num + 1]
 
     @classmethod
     def ranks(cls) -> list[int]:
@@ -157,8 +157,4 @@ class Roles:
             int: index for highest rank
         """
         ids = [r.id for r in user.roles]
-        res = 0
-        for role in cls.ranks():
-            if role in ids:
-                res += 1
-        return res
+        return sum(role in ids for role in cls.ranks())

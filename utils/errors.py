@@ -170,7 +170,7 @@ async def on_app_command_error(
 
     elif isinstance(exception, app_commands.CommandOnCooldown):
         now = discord.utils.utcnow()
-        seconds = float(re.search(r"(\d+\.\d{2})s", str(exception)).group(1))
+        seconds = float(re.search(r"(\d+\.\d{2})s", str(exception))[1])
         end = now + datetime.timedelta(seconds=seconds)
         embed = utils.ErrorEmbed(
             description=(
@@ -219,7 +219,7 @@ async def on_app_command_error(
         user_name = f"**User:** `{itx.user}`"
         args = [f"┣ **{k}:** `{v}`\n" for k, v in itx.namespace.__dict__.items()]
         if args:
-            args[-1] = "┗" + args[-1][1:]
+            args[-1] = f"┗{args[-1][1:]}"
         args_name = "**Args:**\n" + "".join(args)
         formatted_tb = "".join(
             traceback.format_exception(None, exception, exception.__traceback__)

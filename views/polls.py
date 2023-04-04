@@ -32,8 +32,7 @@ class PollView(discord.ui.View):
             self.add_item(getattr(self, f"option_{i}"))
 
     async def interaction_check(self, itx: discord.Interaction[core.Genji]):
-        retry_after = self.cd.update_rate_limit(itx)
-        if retry_after:
+        if retry_after := self.cd.update_rate_limit(itx):
             raise ButtonOnCooldown(retry_after)
         return True
 

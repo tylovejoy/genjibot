@@ -215,8 +215,7 @@ class SequenceCache(Generic[T]):
         """Remove an object (T) from the SequenceCache."""
         if key not in self.keys:
             raise DoesNotExist
-        found = self.find(key)
-        if found:
+        if found := self.find(key):
             self.values.remove(found)
 
     def clear_all(self):
@@ -237,10 +236,7 @@ class SequenceCache(Generic[T]):
     @staticmethod
     def _find_many(cls_var: list[T], key: str, value: Any) -> list[T]:
         """Look for multiple values in a specific class variable where a key is equal to value."""
-        res: list[T] = []
-        for obj in cls_var:
-            if getattr(obj, key) == value:
-                res.append(obj)
+        res: list[T] = [obj for obj in cls_var if getattr(obj, key) == value]
         return res
 
 

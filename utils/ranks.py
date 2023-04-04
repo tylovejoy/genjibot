@@ -20,9 +20,9 @@ DIFFICULTIES_EXT = [
     "Hell",
 ]
 
-DIFFICULTIES = [
-    x for x in filter(lambda y: not ("-" in y or "+" in y), DIFFICULTIES_EXT)
-]
+DIFFICULTIES = list(
+    filter(lambda y: "-" not in y and "+" not in y, DIFFICULTIES_EXT)
+)
 
 
 def generate_difficulty_ranges(top_level=False) -> dict[str, tuple[float, float]]:
@@ -67,7 +67,7 @@ DIFFICULTIES_CHOICES = [app_commands.Choice(name=x, value=x) for x in DIFFICULTI
 def allowed_difficulties(rank_number: int) -> list[str]:
     ranks: list[str] = []
     if rank_number >= 4:
-        ranks += DIFFICULTIES_EXT[0:10]
+        ranks += DIFFICULTIES_EXT[:10]
     if rank_number >= 5:
         ranks += DIFFICULTIES_EXT[10:13]
     if rank_number >= 6:
@@ -78,9 +78,11 @@ def allowed_difficulties(rank_number: int) -> list[str]:
 
 
 def convert_num_to_difficulty(value: float | int) -> str:
-    res = "Hell"
-    for diff, _range in DIFFICULTIES_RANGES.items():
-        if float(_range[0]) <= float(value) + 0.01 < float(_range[1]):
-            res = diff
-            break
-    return res
+    return next(
+        (
+            diff
+            for diff, _range in DIFFICULTIES_RANGES.items()
+            if float(_range[0]) <= float(value) + 0.01 < float(_range[1])
+        ),
+        "Hell",
+    )

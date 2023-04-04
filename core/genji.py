@@ -95,7 +95,7 @@ class Genji(commands.Bot):
         Returns:
             Intents
         """
-        intents = discord.Intents(
+        return discord.Intents(
             guild_messages=True,
             guilds=True,
             integrations=True,
@@ -113,4 +113,3 @@ class Genji(commands.Bot):
             # dm_reactions=True,
             # guild_typing=True,
         )
-        return intents

@@ -73,7 +73,7 @@ class Test(commands.Cog):
         members = [(member.id, member.name[:25]) for member in ctx.guild.members]
         await ctx.bot.database.set_many(
             "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
-            [(_id, nick) for _id, nick in members],
+            list(members),
         )
         await ctx.send("done")
 
@@ -83,7 +83,7 @@ class Test(commands.Cog):
         members = [(member.id, member.name[:25]) for member in ctx.guild.members]
         await ctx.bot.database.set_many(
             "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
-            [(_id, nick) for _id, nick in members],
+            list(members),
         )
         await ctx.send("done")
 

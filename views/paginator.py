@@ -58,9 +58,7 @@ class Paginator(discord.ui.View):
         """
         Check if the itx user is the original users who started the itx.
         """
-        if itx.user == self.author:
-            return True
-        return False
+        return itx.user == self.author
 
     async def on_timeout(self) -> None:
         """Stop view on timeout."""

@@ -80,48 +80,37 @@ class MapSubmission:
     @property
     def mechanics_str(self):
         self.mechanics = self._remove_nulls(self.mechanics)
-        if self.mechanics:
-            return ", ".join(self.mechanics)
-        return None
+        return ", ".join(self.mechanics) if self.mechanics else None
 
     @property
     def restrictions_str(self):
         self.restrictions = self._remove_nulls(self.restrictions)
-        if self.restrictions:
-            return ", ".join(self.restrictions)
-        return None
+        return ", ".join(self.restrictions) if self.restrictions else None
 
     @property
     def map_types_str(self):
         self.map_types = self._remove_nulls(self.map_types)
-        if self.map_types:
-            return ", ".join(self.map_types)
-        return None
+        return ", ".join(self.map_types) if self.map_types else None
 
     @property
     def gold(self):
-        if self.medals and self.medals[0]:
-            return self.medals[0]
-        return None
+        return self.medals[0] if self.medals and self.medals[0] else None
 
     @property
     def silver(self):
-        if self.medals and self.medals[1]:
-            return self.medals[1]
-        return None
+        return self.medals[1] if self.medals and self.medals[1] else None
 
     @property
     def bronze(self):
-        if self.medals and self.medals[2]:
-            return self.medals[2]
-        return None
+        return self.medals[2] if self.medals and self.medals[2] else None
 
     @property
     def guide_str(self):
-        all_guides = []
-        for count, link in enumerate(self.guides, start=1):
-            if link:
-                all_guides.append(f"[Link {count}]({link})")
+        all_guides = [
+            f"[Link {count}]({link})"
+            for count, link in enumerate(self.guides, start=1)
+            if link
+        ]
         return ", ".join(all_guides)
 
     @property
@@ -137,9 +126,7 @@ class MapSubmission:
         if self.bronze:
             formatted_medals.append(f"{utils.FULLY_VERIFIED_BRONZE} {self.bronze}")
 
-        if not formatted_medals:
-            return ""
-        return " | ".join(formatted_medals)
+        return " | ".join(formatted_medals) if formatted_medals else ""
 
     def set_extras(self, **args):
         for k, v in args.items():
@@ -223,8 +210,7 @@ class MapSubmission:
         )
 
     async def insert_guide(self, itx: discord.Interaction[core.Genji]):
-        _guides = [(self.map_code, guide) for guide in self.guides if guide]
-        if _guides:
+        if _guides := [(self.map_code, guide) for guide in self.guides if guide]:
             await itx.client.database.set_many(
                 """INSERT INTO guides (map_code, url) VALUES ($1, $2);""",
                 _guides,

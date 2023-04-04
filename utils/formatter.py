@@ -11,9 +11,7 @@ class Formatter:
 
     @staticmethod
     def formatting_character(value: bool) -> str:
-        if value:
-            return "┣"
-        return "┗"
+        return "┣" if value else "┗"
 
     def format_map(self) -> str:
         res = ""

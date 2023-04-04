@@ -155,14 +155,13 @@ class PlaytestVoting(discord.ui.View):
 
     def _required_votes(self) -> int:
         if "Hell" in self.base_diff:
-            requirement = 1
+            return 1
         elif "Extreme" in self.base_diff:
-            requirement = 2
+            return 2
         elif "Very Hard" in self.base_diff:
-            requirement = 3
+            return 3
         else:
-            requirement = 5
-        return requirement
+            return 5
 
     async def _interaction_check(self, itx: discord.Interaction[core.Genji]) -> bool:
         if is_creator := await self.check_creator(itx):
@@ -539,8 +538,7 @@ class PlaytestVoting(discord.ui.View):
         self, author: discord.Member, reason: str | None = None
     ):
         await author.send(
-            f"The **{self.data.map_code}** map submission has been denied by a Sensei and has been deleted."
-            f"\n\n{reason if reason else ''}"
+            f"The **{self.data.map_code}** map submission has been denied by a Sensei and has been deleted.\n\n{reason or ''}"
         )
 
     async def delete_playtest_db_entry(

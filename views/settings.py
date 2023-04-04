@@ -12,10 +12,7 @@ if typing.TYPE_CHECKING:
 
 
 def bool_string(value: bool) -> str:
-    if value:
-        return "ON"
-    else:
-        return "OFF"
+    return "ON" if value else "OFF"
 
 
 ENABLED_EMOJI = "🔔"

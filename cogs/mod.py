@@ -176,10 +176,7 @@ class ModCommands(commands.Cog):
             bronze: Bronze medal time (must be the slowest time)
         """
 
-        medals = None
-        if gold and silver and bronze:
-            medals = (gold, silver, bronze)
-
+        medals = (gold, silver, bronze) if gold and silver and bronze else None
         map_submission = utils.MapSubmission(
             creator=user,
             map_code=map_code,
@@ -540,8 +537,7 @@ class ModCommands(commands.Cog):
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
         await itx.edit_original_response(
-            content=f"Select the new map type(s).",
-            view=view,
+            content="Select the new map type(s).", view=view
         )
         await view.wait()
         if not view.value:
@@ -598,8 +594,7 @@ class ModCommands(commands.Cog):
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
         await itx.edit_original_response(
-            content=f"Select the new map mechanic(s).",
-            view=view,
+            content="Select the new map mechanic(s).", view=view
         )
         await view.wait()
         if not view.value:
@@ -659,8 +654,7 @@ class ModCommands(commands.Cog):
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
         await itx.edit_original_response(
-            content=f"Select the new map restrictions(s).",
-            view=view,
+            content="Select the new map restrictions(s).", view=view
         )
         await view.wait()
         if not view.value:

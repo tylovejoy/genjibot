@@ -89,17 +89,11 @@ def record_embed(data: dict[str, typing.Any]):
     if data.get("record", None) and data["record"] == COMPLETION_PLACEHOLDER:
         data["record"] = "Completion"
 
-    if not data.get("video", None):
-        description = (
-            f"┣ `   Code ` {data['map_code']}\n" f"┗ ` Record ` {data['record']}\n"
-        )
-    else:
-        description = (
-            f"┣ `   Code ` {data['map_code']}\n"
-            f"┣ ` Record ` {data['record']}\n"
-            f"┗ `  Video ` [Link]({data['video']})\n"
-        )
-
+    description = (
+        f"┣ `   Code ` {data['map_code']}\n┣ ` Record ` {data['record']}\n┗ `  Video ` [Link]({data['video']})\n"
+        if data.get("video", None)
+        else f"┣ `   Code ` {data['map_code']}\n┗ ` Record ` {data['record']}\n"
+    )
     embed = GenjiEmbed(
         title="New Submission!",
         description=description,

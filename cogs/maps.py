@@ -90,10 +90,7 @@ class Maps(commands.Cog):
             silver: Silver medal time (must be between gold and bronze)
             bronze: Bronze medal time (must be the slowest time)
         """
-        medals = None
-        if gold and silver and bronze:
-            medals = (gold, silver, bronze)
-
+        medals = (gold, silver, bronze) if gold and silver and bronze else None
         map_submission = utils.MapSubmission(
             itx.user,
             map_code,
@@ -168,8 +165,7 @@ class Maps(commands.Cog):
             "Completed": True,
         }
 
-        async for _map in itx.client.database.get(
-            """
+        async for _map in itx.client.database.get("""
                 WITH ALL_MAPS AS (
                 SELECT MAP_NAME,
                        ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
@@ -244,18 +240,7 @@ class Maps(commands.Cog):
                 HAVING ($9::BOOL IS NULL OR C.MAP_CODE IS NOT NULL = $9)
                 
                 ORDER BY DIFFICULTY, QUALITY DESC;
-            """,
-            map_code,
-            map_type,
-            map_name,
-            mechanics,
-            low_range,
-            high_range,
-            int(getattr(minimum_rating, "value", 0)),
-            creator,
-            view_filter[completed],
-            itx.user.id,
-        ):
+            """, map_code, map_type, map_name, mechanics, low_range, high_range, getattr(minimum_rating, "value", 0), creator, view_filter[completed], itx.user.id):
             maps.append(_map)
         if not maps:
             raise utils.NoMapsFoundError
@@ -288,7 +273,7 @@ class Maps(commands.Cog):
             if _map.completed:
                 completed = "🗸 Completed"
                 if _map.medal_type:
-                    completed += " | 🗸 " + _map.medal_type
+                    completed += f" | 🗸 {_map.medal_type}"
 
             embed.add_description_field(
                 name=f"{_map.map_code} {completed}",
