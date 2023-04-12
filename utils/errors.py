@@ -81,11 +81,11 @@ class NoPermissionsError(BaseParkourException, app_commands.errors.AppCommandErr
     """You do not have permission to do this action."""
 
 
-class CreatorAlreadyExists(BaseParkourException, app_commands.errors.AppCommandError):
+class CreatorAlreadyExists(BaseParkourException):
     """Creator already associated with this map."""
 
 
-class CreatorDoesntExist(BaseParkourException, app_commands.errors.AppCommandError):
+class CreatorDoesntExist(BaseParkourException):
     """Creator is not associated with this map."""
 
 

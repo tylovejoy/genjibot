@@ -9,6 +9,7 @@ from discord.ext import commands
 import cogs
 import core
 import utils
+from views import PlaytestVoting
 
 if typing.TYPE_CHECKING:
     import aiohttp
@@ -36,7 +37,7 @@ class Genji(commands.Bot):
         self.logger = self._setup_logging()
         self.database.logger = self.logger
         self.cache: utils.GenjiCache = utils.GenjiCache()
-
+        self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
 
     async def setup_hook(self) -> None:

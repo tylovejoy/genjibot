@@ -139,6 +139,7 @@ class Maps(commands.Cog):
         minimum_rating: app_commands.Choice[int] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
+        playtest_only: bool = False,
     ) -> None:
         """
         Search for maps based on various filters.
@@ -153,6 +154,7 @@ class Maps(commands.Cog):
             mechanics: Mechanics filter
             minimum_rating: Show maps above a specific quality rating
             completed: Show completed maps, non completed maps or all
+            playtest_only: Show only playtest maps
         """
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
@@ -170,7 +172,6 @@ class Maps(commands.Cog):
             "Not Completed": False,
             "Completed": True,
         }
-        print(mechanics)
         async for _map in itx.client.database.get(
             """
                 WITH ALL_MAPS AS (
@@ -221,6 +222,7 @@ class Maps(commands.Cog):
                        AM.GOLD,
                        AM.SILVER,
                        AM.BRONZE,
+                       p.thread_id,
                        C.MAP_CODE IS NOT NULL AS COMPLETED,
                        CASE
                            WHEN VERIFIED=TRUE AND C.RECORD <= AM.GOLD THEN 'Gold'
@@ -230,8 +232,11 @@ class Maps(commands.Cog):
                        END AS medal_type
                 FROM ALL_MAPS                  AM
                        LEFT JOIN COMPLETIONS C ON AM.MAP_CODE = C.MAP_CODE
-                WHERE (OFFICIAL = TRUE)
-                       AND (ARCHIVED = FALSE)
+                       LEFT JOIN playtest p ON AM.map_code = p.map_code AND p.is_author IS TRUE
+                WHERE 
+                 ($11::bool IS FALSE or OFFICIAL = FALSE)
+                      AND 
+                       (ARCHIVED = FALSE)
                        AND ($1::text IS NULL OR AM.MAP_CODE = $1)
                        AND ($2::text IS NULL OR MAP_TYPE LIKE $2)
                        AND ($3::text IS NULL OR MAP_NAME = $3)
@@ -242,7 +247,7 @@ class Maps(commands.Cog):
                        AND ($8::bigint IS NULL OR $8 = ANY (CREATOR_IDS))
                 GROUP BY AM.MAP_NAME, MAP_TYPE, AM.MAP_CODE, AM."desc", AM.OFFICIAL, AM.ARCHIVED, GUIDE, MECHANICS,
                          RESTRICTIONS, AM.CHECKPOINTS, CREATORS, DIFFICULTY, QUALITY, CREATOR_IDS, AM.GOLD, AM.SILVER,
-                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD, VERIFIED
+                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD, VERIFIED, p.thread_id
                 
                 HAVING ($9::BOOL IS NULL OR C.MAP_CODE IS NOT NULL = $9)
                 
@@ -258,6 +263,7 @@ class Maps(commands.Cog):
             creator,
             view_filter[completed],
             itx.user.id,
+            playtest_only,
         ):
             maps.append(_map)
         if not maps:
@@ -278,6 +284,7 @@ class Maps(commands.Cog):
             guide_txt = ""
             medals_txt = ""
             completed = ""
+            playtest_str = ""
             if None not in _map.guide:
                 guides = [f"[{j}]({guide})" for j, guide in enumerate(_map.guide, 1)]
                 guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
@@ -292,11 +299,15 @@ class Maps(commands.Cog):
                 completed = "🗸 Completed"
                 if _map.medal_type:
                     completed += " | 🗸 " + _map.medal_type
-
+            if _map.thread_id:
+                playtest_str = (
+                    f"\n‼️**IN PLAYTESTING, SUBJECT TO CHANGE**‼️\n"
+                    f"[Click here to go to the playtest thread](https://discord.com/channels/842778964673953812/{_map.thread_id})\n"
+                )
             embed.add_description_field(
                 name=f"{_map.map_code} {completed}",
                 value=(
-                    f"┣ `Rating` {utils.create_stars(_map.quality)}\n"
+                    playtest_str + f"┣ `Rating` {utils.create_stars(_map.quality)}\n"
                     f"┣ `Creator` {discord.utils.escape_markdown(_map.creators)}\n"
                     f"┣ `Map` {_map.map_name}\n"
                     f"┣ `Difficulty` {utils.convert_num_to_difficulty(_map.difficulty)}\n"

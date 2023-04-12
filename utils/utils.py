@@ -35,7 +35,7 @@ async def delete_interaction(
 
 def fuzz_(string: str, iterable: typing.Iterable[str]) -> str:
     """Fuzz a value."""
-    values = [(val, fuzz.partial_ratio(string, val)) for val in iterable]
+    values = [(val, fuzz.ratio(string, val)) for val in iterable]
     return str(max(values, key=operator.itemgetter(1))[0])
 
 

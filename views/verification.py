@@ -83,7 +83,6 @@ class VerificationView(discord.ui.View):
             itx, search.channel_id, search.message_id
         )
         if not original_message:
-            print("No original found (verification.py)")
             return
         await itx.edit_original_response(view=self)
         user = itx.guild.get_member(search.user_id)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import typing
 
 import discord
@@ -459,8 +460,32 @@ class ModCommands(commands.Cog):
             map_code,
         )
         if playtest := await itx.client.database.get_row(
-            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
+            "SELECT thread_id, original_msg, message_id FROM playtest WHERE map_code=$1",
+            map_code,
         ):
+            await itx.client.database.set(
+                "UPDATE playtest SET value = $1 WHERE message_id = $2 AND is_author = TRUE",
+                difficulty,
+                playtest.message_id,
+            )
+            view = self.bot.playtest_views[playtest.message_id]
+            view.change_difficulty(difficulty)
+            msg = (
+                await itx.guild.get_channel(utils.PLAYTEST)
+                .get_partial_message(playtest.thread_id)
+                .fetch()
+            )
+            content, _ = await self._regex_replace_votes(msg, view)
+            await msg.edit(content=content)
+            msg = (
+                await itx.guild.get_thread(playtest.thread_id)
+                .get_partial_message(playtest.message_id)
+                .fetch()
+            )
+            content, total_votes = await self._regex_replace_votes(msg, view)
+            await msg.edit(content=content)
+            await view.mod_check_status(int(total_votes), msg)
+
             itx.client.dispatch(
                 "newsfeed_map_edit",
                 itx,
@@ -474,6 +499,15 @@ class ModCommands(commands.Cog):
             itx.client.dispatch(
                 "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
             )
+
+    async def _regex_replace_votes(self, msg, view):
+        regex = r"Total Votes: (\d+) / \d+"
+        search = re.search(regex, msg.content)
+        total_votes = search.group(1)
+        content = re.sub(
+            regex, f"Total Votes: {total_votes} / {view.required_votes}", msg.content
+        )
+        return content, total_votes
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)

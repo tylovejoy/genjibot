@@ -13,6 +13,7 @@ from matplotlib import ticker
 import database
 import utils
 import views
+from utils import PLAYTEST
 
 if TYPE_CHECKING:
     import core
@@ -155,6 +156,11 @@ class PlaytestVoting(discord.ui.View):
             _ModOnlyOptions.TOGGLE_FINALIZE_BUTTON.value: self.toggle_finalize_button,
         }
 
+    def change_difficulty(self, difficulty: int):
+        _difficulty = utils.convert_num_to_difficulty(difficulty)
+        self.base_diff = _difficulty
+        self.required_votes = self._required_votes()
+
     def _required_votes(self) -> int:
         if "Hell" in self.base_diff:
             requirement = 1
@@ -229,12 +235,21 @@ class PlaytestVoting(discord.ui.View):
         count, image = await self.get_plot_data(itx)
 
         await itx.message.edit(
-            content=f"Total Votes: {count}",
+            content=f"Total Votes: {count} / {self.required_votes}",
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
             view=self,
         )
-
+        row = await itx.client.database.get_row(
+            "SELECT thread_id FROM playtest WHERE message_id = $1 AND is_author",
+            itx.message.id,
+        )
+        if row:
+            await itx.guild.get_channel(PLAYTEST).get_partial_message(
+                row.thread_id
+            ).edit(
+                content=f"Total Votes: {count} / {self.required_votes}",
+            )
         await self.check_status(itx, count)
 
     async def get_plot_data(self, itx: discord.Interaction[core.Genji]):
@@ -369,6 +384,15 @@ class PlaytestVoting(discord.ui.View):
         b.seek(0)
         return discord.File(b, filename="vote_chart.png")
 
+    async def mod_check_status(self, count: int, message: discord.Message):
+        if count >= self.required_votes:
+            self.ready_up_button.disabled = False
+            await message.edit(view=self)
+            await self.data.creator.send(
+                f"**{self.data.map_code}** has received enough completions and votes. "
+                f"Go to the thread and *Finalize* the submission!"
+            )
+
     async def check_status(self, itx: discord.Interaction[core.Genji], count: int):
         if count >= self.required_votes:
             self.ready_up_button.disabled = False
@@ -386,8 +410,6 @@ class PlaytestVoting(discord.ui.View):
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
         try:
-            print(votes_db_rows)
-
             await self.increment_playtest_count(itx, votes_db_rows)
         except Exception as e:
             print(e)
@@ -412,8 +434,6 @@ class PlaytestVoting(discord.ui.View):
             ON CONFLICT (user_id) DO UPDATE SET amount = playtest_count.amount + 1;
         """
 
-        for aaaa in votes_db_rows:
-            print(aaaa)
         await itx.client.database.set_many(
             query,
             [(x.user_id,) for x in votes_db_rows if x.user_id != self.data.creator.id],
@@ -677,6 +697,7 @@ class PlaytestVoting(discord.ui.View):
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
         await self.increment_playtest_count(itx, votes_db_rows)
         await self.delete_playtest_db_entry()
+        itx.client.playtest_views.pop(itx.message.id)
 
     async def force_deny(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
@@ -700,6 +721,7 @@ class PlaytestVoting(discord.ui.View):
             await self.send_denial_to_author(author)
         await self.delete_playtest_db_entry()
         itx.client.cache.maps.remove_one(self.data.map_code)
+        itx.client.playtest_views.pop(itx.message.id)
 
     async def delete_playtest_post(self, thread_id: int):
         await self.client.get_channel(utils.PLAYTEST).get_partial_message(
@@ -722,6 +744,7 @@ class PlaytestVoting(discord.ui.View):
         if not view.value:
             return
 
+        itx.client.playtest_views.pop(itx.message.id)
         await self.approve_map(itx)
 
     async def start_process_over(self, itx: discord.Interaction[core.Genji]):

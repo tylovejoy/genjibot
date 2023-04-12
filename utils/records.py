@@ -215,14 +215,12 @@ def all_levels_records_embed(
             description = (
                 f"┣ `Name` {record.nickname}\n"
                 f"┗ `Record` [{record.record}]"
-                # f"┗ `Record` [{pretty_record(record.record)}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n"
             )
         else:
             description = (
                 f"┣ `Name` {record.nickname}\n"
-                # f"┣ `Record` [{pretty_record(record.record)}]"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n "
@@ -264,12 +262,14 @@ def pr_records_embed(
             medals = (0, 0, 0)
         if not record.video:
             description += (
+                f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n┃\n"
             )
         else:
             description += (
+                f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot})"
                 f"{icon_generator(record, medals)}\n "

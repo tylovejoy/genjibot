@@ -93,13 +93,15 @@ class BotEvents(commands.Cog):
                     difficulty=utils.convert_num_to_difficulty(x.value),
                 )
                 with contextlib.suppress(AttributeError):
+                    view = views.PlaytestVoting(
+                        data,
+                        self.bot,
+                    )
                     self.bot.add_view(
-                        views.PlaytestVoting(
-                            data,
-                            self.bot,
-                        ),
+                        view,
                         message_id=x.message_id,
                     )
+                    self.bot.playtest_views[x.message_id] = view
             queue = [
                 x async for x in self.bot.database.get("SELECT * FROM polls_info;")
             ]

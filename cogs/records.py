@@ -161,7 +161,6 @@ class Records(commands.Cog):
                     )
                     await overwrite_view.wait()
                     if not overwrite_view.value:
-                        print("Overwrite view returning (records.py)")
                         return
 
             if not search.video and (time >= search.record) and not video:
@@ -176,8 +175,11 @@ class Records(commands.Cog):
 
         user_facing_screenshot = await screenshot.to_file(filename="image.png")
 
+        query = """SELECT avg(difficulty) as difficulty FROM map_ratings WHERE map_code = $1"""
+        row = await itx.client.database.get_row(query, map_code)
         embed = utils.record_embed(
             {
+                "difficulty": row.difficulty,
                 "map_code": map_code,
                 "record": time,
                 "video": video,
@@ -272,10 +274,13 @@ class Records(commands.Cog):
                r.map_code,
                r.channel_id,
                r.message_id,
-               m.map_name
+               m.map_name,
+               avg(difficulty) as difficulty
         FROM records r
             LEFT JOIN users u on r.user_id = u.user_id
             LEFT JOIN maps m on m.map_code = r.map_code
+            LEFT JOIN map_ratings mr on m.map_code = mr.map_code
+            GROUP BY u.nickname, record, screenshot, video, verified, r.map_code, r.channel_id, r.message_id, m.map_name
         ) as ranks
         LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE ranks.map_code = $1 
@@ -354,10 +359,12 @@ class Records(commands.Cog):
         query = f"""
         WITH map AS (SELECT m.map_code,
                     m.map_name,
-                    string_agg(distinct (nickname), ', ') as creators
+                    string_agg(distinct (nickname), ', ') as creators,
+                    avg(difficulty) as difficulty
              FROM maps m
                       LEFT JOIN map_creators mc on m.map_code = mc.map_code
                       LEFT JOIN users u on mc.user_id = u.user_id
+                      LEFT JOIN map_ratings mr on m.map_code = mr.map_code
              GROUP BY m.map_code, m.map_name),
         ranks AS (SELECT u.nickname,
                         r.user_id,
@@ -370,6 +377,7 @@ class Records(commands.Cog):
                         r.message_id,
                         map.map_name,
                         map.creators,
+                        difficulty,
                         RANK() OVER (
                             PARTITION BY r.map_code
                             ORDER BY record
@@ -393,7 +401,8 @@ class Records(commands.Cog):
             rank_num,
             gold,
             silver,
-            bronze
+            bronze,
+            difficulty
         FROM ranks
                  LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE user_id = $1 

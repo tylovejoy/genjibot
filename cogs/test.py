@@ -143,24 +143,6 @@ class Test(commands.Cog):
         else:
             await ctx.send()
 
-    @app_commands.command(name="oogabooga")
-    @app_commands.guilds(discord.Object(id=868981788968640554))
-    async def _test_server_test_command(
-        self, itx: discord.Interaction[core.Genji], attachment: discord.Attachment
-    ):
-        partial = functools.partial(self._poop)
-        view = views.ConfirmBaseView(itx, partial)
-        file = await attachment.to_file(filename="image.png")
-        embed = utils.GenjiEmbed(
-            title="eskjfnsdkf",
-            description="lkdfjgd\nksjdf\ndklfjg",
-            image="attachment://image.png",
-        )
-        await view.start(embed=embed, attachment=file)
-
-    async def _poop(self):
-        print("WOW")
-
 
 async def setup(bot: core.Genji):
     await bot.add_cog(Test(bot))

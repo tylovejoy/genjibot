@@ -5,6 +5,8 @@ import typing
 
 import discord
 
+import utils
+
 from .constants import COMPLETION_PLACEHOLDER
 
 
@@ -91,11 +93,14 @@ def record_embed(data: dict[str, typing.Any]):
 
     if not data.get("video", None):
         description = (
-            f"┣ `   Code ` {data['map_code']}\n" f"┗ ` Record ` {data['record']}\n"
+            f"┣ `   Code ` {data['map_code']}\n"
+            f"┣ `   Diff ` {utils.convert_num_to_difficulty(data['difficulty'])}\n"
+            f"┗ ` Record ` {data['record']}\n"
         )
     else:
         description = (
             f"┣ `   Code ` {data['map_code']}\n"
+            f"┣ `   Diff ` {utils.convert_num_to_difficulty(data['difficulty'])}\n"
             f"┣ ` Record ` {data['record']}\n"
             f"┗ `  Video ` [Link]({data['video']})\n"
         )
