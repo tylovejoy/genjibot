@@ -263,11 +263,11 @@ class Records(commands.Cog):
                        lr.message_id,
                        m.map_name,
                        medal,
-                       avg(difficulty) as difficulty
+                       AVG(difficulty) AS difficulty
                 FROM legacy_records lr
-                    LEFT JOIN users u on lr.user_id = u.user_id
-                    LEFT JOIN maps m on m.map_code = lr.map_code
-                    LEFT JOIN map_ratings mr on m.map_code = mr.map_code
+                    LEFT JOIN users u ON lr.user_id = u.user_id
+                    LEFT JOIN maps m ON m.map_code = lr.map_code
+                    LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
                 WHERE lr.map_code = $1
                 GROUP BY u.nickname, record, screenshot, video, lr.map_code, lr.channel_id, lr.message_id, m.map_name, medal
                 ORDER BY record;

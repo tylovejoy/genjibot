@@ -1068,22 +1068,24 @@ class ModCommands(commands.Cog):
     @staticmethod
     async def _get_legacy_medal_records(itx, map_code):
         query = """
-            WITH all_records AS (SELECT 
-            verified = TRUE AND record <= gold                       AS gold,
-            verified = TRUE AND record <= silver AND record > gold   AS silver,
-            verified = TRUE AND record <= bronze AND record > silver AS bronze,
-            r.map_code,
-            user_id,
-            screenshot,
-            record,
-            video,
-            message_id,
-            channel_id
-            FROM records r
-            LEFT JOIN map_medals mm on r.map_code = mm.map_code
-            WHERE r.map_code = $1
-            ORDER BY record)
-            SELECT * FROM all_records WHERE gold or silver or bronze
+            WITH all_records AS (
+                SELECT 
+                    verified = TRUE AND record <= gold                       AS gold,
+                    verified = TRUE AND record <= silver AND record > gold   AS silver,
+                    verified = TRUE AND record <= bronze AND record > silver AS bronze,
+                    r.map_code,
+                    user_id,
+                    screenshot,
+                    record,
+                    video,
+                    message_id,
+                    channel_id
+                FROM records r
+                    LEFT JOIN map_medals mm ON r.map_code = mm.map_code
+                WHERE r.map_code = $1
+                ORDER BY record
+            )
+            SELECT * FROM all_records WHERE gold OR silver OR bronze
         """
         return [record async for record in itx.client.database.get(query, map_code)]
 
