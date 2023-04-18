@@ -87,15 +87,13 @@ async def transform_user(
     guild = client.get_guild(utils.GUILD_ID)
     try:
         value = int(value)
-        member = guild.get_member(value)
-        if member:
+        if member := guild.get_member(value):
             return member
         return utils.FakeUser(value, client.cache.users[value])
     except ValueError:
-        member = discord.utils.find(
+        if member := discord.utils.find(
             lambda u: cogs.case_ignore_compare(u.name, value), guild.members
-        )
-        if member:
+        ):
             return member
         for user in client.cache.users:
             if cogs.case_ignore_compare(value, user.nickname):
@@ -117,7 +115,7 @@ class URLTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         value = value.strip()
         if not value.startswith("https://") and not value.startswith("http://"):
-            value = "https://" + value
+            value = f"https://{value}"
         try:
             async with itx.client.session.get(value) as resp:
                 if resp.status != 200:
@@ -161,21 +159,15 @@ def pretty_record(record: decimal.Decimal | float) -> str:
     negative = "-" if record < 0 else ""
     dt = datetime.datetime.min + datetime.timedelta(seconds=abs(record))
     hour_remove = 0
+    if dt.hour == 0:
+        if dt.minute == 0:
+            hour_remove = 6
+            if dt.second < 10:
+                hour_remove += 1
+
+        else:
+            hour_remove = 4 if dt.minute < 10 else 3
     seconds_remove = -4
-
-    if dt.hour == 0 and dt.minute == 0:
-        hour_remove = 6
-        if dt.second < 10:
-            hour_remove += 1
-
-    elif dt.hour == 0:
-        hour_remove = 3
-        if dt.minute < 10:
-            hour_remove = 4
-
-    if dt.microsecond == 0:
-        seconds_remove = -4
-
     return negative + dt.strftime("%H:%M:%S.%f")[hour_remove:seconds_remove]
 
 
@@ -218,21 +210,11 @@ def all_levels_records_embed(
             medals = tuple(map(float, medals))
         else:
             medals = (0, 0, 0)
-        if not record.video:
-            description = (
-                f"┣ `Name` {record.nickname}\n"
-                f"┗ `Record` [{record.record}]"
-                f"({record.screenshot}) "
-                f"{icon_generator(record, medals)}\n"
-            )
-        else:
-            description = (
-                f"┣ `Name` {record.nickname}\n"
-                f"┣ `Record` [{record.record}]"
-                f"({record.screenshot}) "
-                f"{icon_generator(record, medals)}\n "
-                f"┗ `Video` [Link]({record.video})\n"
-            )
+        description = (
+            f"┣ `Name` {record.nickname}\n┣ `Record` [{record.record}]({record.screenshot}) {icon_generator(record, medals)}\n ┗ `Video` [Link]({record.video})\n"
+            if record.video
+            else f"┣ `Name` {record.nickname}\n┗ `Record` [{record.record}]({record.screenshot}) {icon_generator(record, medals)}\n"
+        )
         embed.add_field(
             name=f"{utils.PLACEMENTS.get(i + 1, '')} {make_ordinal(i + 1)}",
             # if single
@@ -267,21 +249,11 @@ def pr_records_embed(
             medals = tuple(map(float, medals))
         else:
             medals = (0, 0, 0)
-        if not record.video:
-            description += (
-                f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n"
-                f"┣ `Record` [{record.record}]"
-                f"({record.screenshot}) "
-                f"{icon_generator(record, medals)}\n┃\n"
-            )
-        else:
-            description += (
-                f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n"
-                f"┣ `Record` [{record.record}]"
-                f"({record.screenshot})"
-                f"{icon_generator(record, medals)}\n "
-                f"┣ `Video` [Link]({record.video})\n┃\n"
-            )
+        description += (
+            f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n┣ `Record` [{record.record}]({record.screenshot}){icon_generator(record, medals)}\n ┣ `Video` [Link]({record.video})\n┃\n"
+            if record.video
+            else f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n┣ `Record` [{record.record}]({record.screenshot}) {icon_generator(record, medals)}\n┃\n"
+        )
         embed.add_field(
             name=f"{cur_code}",
             value="┗".join(description[:-3].rsplit("┣", 1)),
@@ -305,7 +277,7 @@ def make_ordinal(n: int) -> str:
         make_ordinal(122) => '122nd'
         make_ordinal(213) => '213th'
     """
-    n = int(n)
+    n = n
     suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
     if 11 <= (n % 100) <= 13:
         suffix = "th"

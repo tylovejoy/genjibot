@@ -65,7 +65,7 @@ async def update_affected_users(
     itx: discord.Interaction[core.Genji],
     map_code: str,
 ):
-    users = [
+    if users := [
         x.user_id
         async for x in itx.client.database.get(
             """
@@ -73,8 +73,7 @@ async def update_affected_users(
             """,
             map_code,
         )
-    ]
-    if users:
+    ]:
         for x in users:
             if user := itx.guild.get_member(x):
                 await utils.auto_role(itx.client, user)
@@ -146,10 +145,9 @@ async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, in
     for i, diff in enumerate(utils.DIFFICULTIES[1:]):  # Ignore Beginner
         if diff not in amounts or amounts[diff][0] < _RANK_THRESHOLD[i]:
             break
-        if amounts[diff][0] >= _RANK_THRESHOLD[i]:
-            rank += 1
-            if amounts[diff][1] >= _RANK_THRESHOLD[i] and rank_plus + 1 == rank:
-                rank_plus += 1
+        rank += 1
+        if amounts[diff][1] >= _RANK_THRESHOLD[i] and rank_plus + 1 == rank:
+            rank_plus += 1
     return rank, rank_plus
 
 
@@ -189,11 +187,12 @@ async def get_completions_data(
                  INNER JOIN map_data md ON r.range @> md.difficulty
         GROUP BY name;
     """
-    amounts = {
-        x.difficulty: tuple(map(int, (x.completions, x.gold, x.silver, x.bronze)))
+    return {
+        x.difficulty: tuple(
+            map(int, (x.completions, x.gold, x.silver, x.bronze))
+        )
         async for x in client.database.get(query, user)
     }
-    return amounts
 
 
 class FakeUser:
@@ -211,4 +210,4 @@ class FakeAvatar:
 def wrap_string_with_percent(string: str):
     if not string:
         return
-    return "%" + string + "%"
+    return f"%{string}%"

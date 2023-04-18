@@ -65,7 +65,7 @@ class Records(commands.Cog):
         if not user:
             user = itx.user
 
-        if isinstance(user, discord.Member) or isinstance(user, utils.FakeUser):
+        if isinstance(user, (discord.Member, utils.FakeUser)):
             user = user.id
         else:
             user = int(user)
@@ -132,7 +132,7 @@ class Records(commands.Cog):
         if not time or await self.check_playtest(map_code):
             time = utils.COMPLETION_PLACEHOLDER
 
-        search = [
+        if search := [
             x
             async for x in itx.client.database.get(
                 "SELECT record, screenshot, video, verified, m.map_name "
@@ -141,15 +141,13 @@ class Records(commands.Cog):
                 map_code,
                 itx.user.id,
             )
-        ]
-
-        if search:
+        ]:
             search = search[0]
 
             if search.video:
                 if time >= search.record:
                     raise utils.RecordNotFasterError
-                if time < search.record and not video:
+                if not video:
                     overwrite_view = views.RecordVideoConfirmCompletion(itx)
                     await itx.edit_original_response(
                         content=(
@@ -228,7 +226,9 @@ class Records(commands.Cog):
             channel_msg.id,
             channel_msg.channel.id,
             verification_msg.id,
-            None if not getattr(view, "quality", None) else int(view.quality.values[0]),
+            int(view.quality.values[0])
+            if getattr(view, "quality", None)
+            else None,
         )
         await user_msg.delete()
 
@@ -253,7 +253,7 @@ class Records(commands.Cog):
         if map_code not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
-        query = f"""
+        query = """
                 SELECT u.nickname, 
                        record, 
                        screenshot,
@@ -313,7 +313,7 @@ class Records(commands.Cog):
         if map_code not in itx.client.cache.maps.keys:
             raise utils.InvalidMapCodeError
 
-        query = f"""
+        query = """
         SELECT * FROM (
         SELECT u.nickname, 
                record, 
@@ -400,12 +400,12 @@ class Records(commands.Cog):
         if not user:
             user = itx.user
 
-        if isinstance(user, discord.Member) or isinstance(user, utils.FakeUser):
+        if isinstance(user, (discord.Member, utils.FakeUser)):
             user = user.id
         else:
             user = int(user)
 
-        query = f"""
+        query = """
         WITH map AS (SELECT m.map_code,
                     m.map_name,
                     string_agg(distinct (nickname), ', ') as creators,
