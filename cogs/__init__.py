@@ -162,7 +162,13 @@ async def map_submission_second_step(
 ):
     if not mod:
         embed.title = "Calling all Playtesters!"
-        playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(embed=embed)
+        view = views.PlaytestVoting(
+            data,
+            itx.client,
+        )
+        playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(
+            content=f"Total Votes: 0 / {view.required_votes}", embed=embed
+        )
         embed = utils.GenjiEmbed(
             title="Difficulty Ratings",
             description="You can change your vote, but you cannot cast multiple!\n\n",
@@ -170,10 +176,7 @@ async def map_submission_second_step(
         thread = await playtest_message.create_thread(
             name=f"Discuss/rate {data.map_code} here."
         )
-        view = views.PlaytestVoting(
-            data,
-            itx.client,
-        )
+
         thread_msg = await thread.send(
             f"Discuss, play, rate, etc.",
             view=view,

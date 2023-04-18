@@ -68,13 +68,13 @@ class UserTransformer(app_commands.Transformer):
 class CreatorTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> int:
         user = await transform_user(itx.client, value)
-        if user.id not in itx.client.cache.users.creator_ids:
+        if not user or user.id not in itx.client.cache.users.creator_ids:
             raise utils.UserNotFoundError
         else:
             return user.id
 
 
-class AllUserTranformer(app_commands.Transformer):
+class AllUserTransformer(app_commands.Transformer):
     async def transform(
         self, itx: discord.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:

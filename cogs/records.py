@@ -51,7 +51,7 @@ class Records(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         user: app_commands.Transform[
-            int | discord.Member | utils.FakeUser, utils.AllUserTranformer
+            int | discord.Member | utils.FakeUser, utils.AllUserTransformer
         ]
         | None = None,
     ):
@@ -310,7 +310,7 @@ class Records(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         user: app_commands.Transform[
-            int | discord.Member | utils.FakeUser, utils.AllUserTranformer
+            int | discord.Member | utils.FakeUser, utils.AllUserTransformer
         ]
         | None = None,
         filters: typing.Literal["All", "World Record", "Completions", "Records"]

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import discord
 import matplotlib.pyplot as plt
+from discord import ButtonStyle
 from matplotlib import ticker
 
 import database
@@ -230,6 +231,7 @@ class PlaytestVoting(discord.ui.View):
         )
 
         thread: discord.Thread = itx.channel
+        await thread.edit(archived=False, locked=False)
         await thread.add_user(itx.user)
 
         count, image = await self.get_plot_data(itx)
@@ -385,7 +387,10 @@ class PlaytestVoting(discord.ui.View):
         return discord.File(b, filename="vote_chart.png")
 
     async def mod_check_status(self, count: int, message: discord.Message):
-        if count >= self.required_votes:
+        if (
+            count >= self.required_votes
+            and self.ready_up_button.style == ButtonStyle.red
+        ):
             self.ready_up_button.disabled = False
             await message.edit(view=self)
             await self.data.creator.send(
@@ -394,7 +399,10 @@ class PlaytestVoting(discord.ui.View):
             )
 
     async def check_status(self, itx: discord.Interaction[core.Genji], count: int):
-        if count >= self.required_votes:
+        if (
+            count >= self.required_votes
+            and self.ready_up_button.style == ButtonStyle.red
+        ):
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
             await self.data.creator.send(
