@@ -12,6 +12,8 @@ import cogs
 import utils
 import utils.maps
 import views
+from database import DotRecord
+from utils import NEWSFEED
 
 if typing.TYPE_CHECKING:
     import core
@@ -974,7 +976,102 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
-        ...
+        view = views.Confirm(itx)
+        await itx.response.send_message(
+            f"# Are you sure you want to convert current records on {map_code} to legacy?\n"
+            f"This will:\n"
+            f"- Move records with medals to `legacy_completions`\n"
+            f"- Convert all time records into _completions_\n"
+            f"- Remove medals\n\n",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+
+        records = await self._get_legacy_medal_records(itx, map_code)
+        record_tuples = self._format_legacy_records_for_insertion(records)
+        await self._insert_legacy_records(record_tuples)
+        await self._update_records_to_completions(map_code)
+        await self._remove_medal_entries(map_code)
+
+        embed = utils.GenjiEmbed(
+            title=f"{map_code} has been changed:",
+            description=(
+                "# Records have been converted to completions due to breaking changes.\n"
+                "- View records that received medals using the `/legacy_completions` command"
+            ),
+            color=discord.Color.red(),
+        )
+        await itx.guild.get_channel(NEWSFEED).send(embed=embed)
+
+    async def _remove_medal_entries(self, map_code):
+        query = """
+            DELETE FROM map_medals WHERE map_code = $1
+        """
+        await self.bot.database.set(query, map_code)
+
+    async def _update_records_to_completions(self, map_code: str):
+        query = """
+            UPDATE records 
+            SET video = NULL, verified = FALSE, record = 99999999.99
+            WHERE map_code = $1
+        """
+        await self.bot.database.set(query, map_code)
+
+    async def _insert_legacy_records(self, records: list[tuple]):
+        query = """
+            INSERT INTO legacy_records (map_code, user_id, record, screenshot, video, message_id, channel_id, medal) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        """
+        await self.bot.database.set_many(query, records)
+
+    @staticmethod
+    def _format_legacy_records_for_insertion(records: list[DotRecord]):
+        res = []
+        for record in records:
+            if record.gold:
+                medal = "Gold"
+            elif record.silver:
+                medal = "Silver"
+            else:
+                medal = "Bronze"
+
+            res.append(
+                (
+                    record.map_code,
+                    record.user_id,
+                    record.record,
+                    record.screenshot,
+                    record.video,
+                    record.message_id,
+                    record.channel_id,
+                    medal,
+                )
+            )
+        return res
+
+    @staticmethod
+    async def _get_legacy_medal_records(itx, map_code):
+        query = """
+            WITH all_records AS (SELECT 
+            verified = TRUE AND record <= gold                       AS gold,
+            verified = TRUE AND record <= silver AND record > gold   AS silver,
+            verified = TRUE AND record <= bronze AND record > silver AS bronze,
+            r.map_code,
+            user_id,
+            screenshot,
+            record,
+            video,
+            message_id,
+            channel_id
+            FROM records r
+            LEFT JOIN map_medals mm on r.map_code = mm.map_code
+            WHERE r.map_code = $1
+            ORDER BY record)
+            SELECT * FROM all_records WHERE gold or silver or bronze
+        """
+        return [record async for record in itx.client.database.get(query, map_code)]
 
 
 async def setup(bot: core.Genji):
