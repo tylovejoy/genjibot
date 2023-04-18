@@ -239,6 +239,55 @@ class Records(commands.Cog):
             )
         )
 
+    @app_commands.command()
+    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.autocomplete(
+        map_code=cogs.map_codes_autocomplete,
+    )
+    async def legacy_completions(
+        self,
+        itx: discord.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
+    ) -> None:
+        await itx.response.defer(ephemeral=True)
+        if map_code not in itx.client.cache.maps.keys:
+            raise utils.InvalidMapCodeError
+
+        query = f"""
+                SELECT u.nickname, 
+                       record, 
+                       screenshot,
+                       video, 
+                       lr.map_code,
+                       lr.channel_id,
+                       lr.message_id,
+                       m.map_name,
+                       medal,
+                       AVG(difficulty) AS difficulty
+                FROM legacy_records lr
+                    LEFT JOIN users u ON lr.user_id = u.user_id
+                    LEFT JOIN maps m ON m.map_code = lr.map_code
+                    LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+                WHERE lr.map_code = $1
+                GROUP BY u.nickname, record, screenshot, video, lr.map_code, lr.channel_id, lr.message_id, m.map_name, medal
+                ORDER BY record;
+                """
+
+        records: list[database.DotRecord | None] = [
+            x async for x in itx.client.database.get(query, map_code)
+        ]
+        if not records:
+            raise utils.NoRecordsFoundError
+
+        embeds = utils.all_levels_records_embed(
+            records,
+            f"Legacy Leaderboard - {map_code}",
+            legacy=True,
+        )
+
+        view = views.Paginator(embeds, itx.user)
+        await view.start(itx)
+
     @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     @app_commands.autocomplete(
