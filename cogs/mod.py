@@ -976,11 +976,20 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
     ):
+        await itx.response.defer(ephemeral=True)
+
+        if await self._check_if_queued(map_code):
+            await itx.edit_original_response(
+                content="A submission for this map is in the verification queue. "
+                "Please verify/reject that prior to using this command."
+            )
+            return
+
         view = views.Confirm(itx)
-        await itx.response.send_message(
-            f"# Are you sure you want to convert current records on {map_code} to legacy?\n"
+        await itx.edit_original_response(
+            content=f"# Are you sure you want to convert current records on {map_code} to legacy?\n"
             f"This will:\n"
-            f"- Move records with medals to `legacy_completions`\n"
+            f"- Move records with medals to `/legacy_completions`\n"
             f"- Convert all time records into _completions_\n"
             f"- Remove medals\n\n",
             view=view,
@@ -1004,6 +1013,11 @@ class ModCommands(commands.Cog):
             color=discord.Color.red(),
         )
         await itx.guild.get_channel(NEWSFEED).send(embed=embed)
+
+    async def _check_if_queued(self, map_code: str):
+        query = """SELECT EXISTS (SELECT * FROM records_queue WHERE map_code = $1)"""
+        row = await self.bot.database.get_row(query, map_code)
+        return row.exists
 
     async def _remove_medal_entries(self, map_code):
         query = """
