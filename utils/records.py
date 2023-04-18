@@ -200,13 +200,20 @@ def icon_generator(
 def all_levels_records_embed(
     records: list[database.DotRecord],
     title: str,
+    legacy: bool = False,
 ) -> list[Embed | GenjiEmbed]:
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
         if float(record.record) == utils.COMPLETION_PLACEHOLDER:
             record.record = "Completion"
-        if record.gold:
+        if legacy:
+            medals = (
+                9999999 if record.medal == "Gold" else -9999999,
+                9999999 if record.medal == "Silver" else -9999999,
+                9999999 if record.medal == "Bronze" else -9999999,
+            )
+        elif record.gold:
             medals = (record.gold, record.silver, record.bronze)
             medals = tuple(map(float, medals))
         else:
