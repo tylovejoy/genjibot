@@ -157,22 +157,28 @@ async def get_completions_data(
     client: core.Genji, user: int
 ) -> dict[str, tuple[int, int, int, int]]:
     query = """
-        WITH ranges ("range", "name") AS (VALUES ('[0.59,2.35)'::numrange, 'Easy'),
+        WITH 
+        unioned_records AS (
+        SELECT map_code, user_id, record, screenshot, video, verified,         message_id, channel_id, null as medal FROM records 
+        UNION ALL 
+        SELECT map_code, user_id, record, screenshot, video, True as verified, message_id, channel_id, medal FROM legacy_records),
+        ranges ("range", "name") AS (VALUES ('[0.0,2.35)'::numrange, 'Easy'),
                                          ('[2.35,4.12)'::numrange, 'Medium'),
                                          ('[4.12,5.88)'::numrange, 'Hard'),
                                          ('[5.88,7.65)'::numrange, 'Very Hard'),
                                          ('[7.65,9.41)'::numrange, 'Extreme'),
                                          ('[9.41,10.0]'::numrange, 'Hell')),
              map_data AS (SELECT AVG(mr.difficulty)                   AS difficulty,
-                                 VERIFIED=TRUE AND record <= gold                       AS gold,
-                                 VERIFIED=TRUE AND record <= silver AND record > gold   AS silver,
-                                 VERIFIED=TRUE AND record <= bronze AND record > silver AS bronze
-                          FROM records r
+                                 VERIFIED=TRUE AND (record <= gold OR medal LIKE 'Gold')                    AS gold,
+                                 VERIFIED=TRUE AND (record <= silver AND record > gold OR medal LIKE 'silver')   AS silver,
+                                 VERIFIED=TRUE AND (record <= bronze AND record > silver OR medal LIKE 'Bronze') AS bronze
+                          FROM unioned_records r 
                                    LEFT JOIN maps m         ON r.map_code = m.map_code
                                    LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
                                    LEFT JOIN map_medals mm  ON r.map_code = mm.map_code
+                                   
                           WHERE r.user_id = $1 AND m.official = TRUE AND m.archived = FALSE
-                          GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED)
+                          GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED, medal)
         SELECT COUNT(name)                        AS completions,
                name                               AS difficulty,
                count(CASE WHEN gold THEN 1 END)   AS gold,
