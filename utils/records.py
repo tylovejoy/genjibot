@@ -68,13 +68,13 @@ class UserTransformer(app_commands.Transformer):
 class CreatorTransformer(app_commands.Transformer):
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> int:
         user = await transform_user(itx.client, value)
-        if user.id not in itx.client.cache.users.creator_ids:
+        if not user or user.id not in itx.client.cache.users.creator_ids:
             raise utils.UserNotFoundError
         else:
             return user.id
 
 
-class AllUserTranformer(app_commands.Transformer):
+class AllUserTransformer(app_commands.Transformer):
     async def transform(
         self, itx: discord.Interaction[core.Genji], value: str
     ) -> utils.FakeUser | discord.Member:
@@ -200,13 +200,20 @@ def icon_generator(
 def all_levels_records_embed(
     records: list[database.DotRecord],
     title: str,
+    legacy: bool = False,
 ) -> list[Embed | GenjiEmbed]:
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
         if float(record.record) == utils.COMPLETION_PLACEHOLDER:
             record.record = "Completion"
-        if record.gold:
+        if legacy:
+            medals = (
+                9999999 if record.medal == "Gold" else -9999999,
+                9999999 if record.medal == "Silver" else -9999999,
+                9999999 if record.medal == "Bronze" else -9999999,
+            )
+        elif record.gold:
             medals = (record.gold, record.silver, record.bronze)
             medals = tuple(map(float, medals))
         else:
@@ -215,14 +222,12 @@ def all_levels_records_embed(
             description = (
                 f"┣ `Name` {record.nickname}\n"
                 f"┗ `Record` [{record.record}]"
-                # f"┗ `Record` [{pretty_record(record.record)}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n"
             )
         else:
             description = (
                 f"┣ `Name` {record.nickname}\n"
-                # f"┣ `Record` [{pretty_record(record.record)}]"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n "
@@ -264,12 +269,14 @@ def pr_records_embed(
             medals = (0, 0, 0)
         if not record.video:
             description += (
+                f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n┃\n"
             )
         else:
             description += (
+                f"┣ `Difficulty` {utils.convert_num_to_difficulty(record.difficulty)}\n"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot})"
                 f"{icon_generator(record, medals)}\n "

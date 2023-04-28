@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import typing
 
 import discord
@@ -11,6 +12,8 @@ import cogs
 import utils
 import utils.maps
 import views
+from database import DotRecord
+from utils import NEWSFEED
 
 if typing.TYPE_CHECKING:
     import core
@@ -45,7 +48,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        creator: app_commands.Transform[int, utils.CreatorTransformer],
+        creator: app_commands.Transform[int, utils.UserTransformer],
     ) -> None:
         """
         Add a creator to a map.
@@ -55,7 +58,7 @@ class ModCommands(commands.Cog):
             map_code: Overwatch share code
             creator: User
         """
-        await cogs.add_creator_(creator, itx, map_code, checks=True)
+        await cogs.add_creator_(creator, itx, map_code)
 
     @map.command(name="remove-creator")
     @app_commands.autocomplete(
@@ -66,7 +69,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        creator: app_commands.Transform[int, utils.CreatorTransformer],
+        creator: app_commands.Transform[int, utils.UserTransformer],
     ) -> None:
         """
         Remove a creator from a map.
@@ -149,7 +152,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         user: app_commands.Transform[
-            utils.FakeUser | discord.Member, utils.AllUserTranformer
+            utils.FakeUser | discord.Member, utils.AllUserTransformer
         ],
         map_code: app_commands.Transform[str, utils.MapCodeSubmitTransformer],
         map_name: app_commands.Transform[str, utils.MapNameTransformer],
@@ -459,8 +462,35 @@ class ModCommands(commands.Cog):
             map_code,
         )
         if playtest := await itx.client.database.get_row(
-            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
+            "SELECT thread_id, original_msg, message_id FROM playtest WHERE map_code=$1",
+            map_code,
         ):
+            await itx.client.database.set(
+                "UPDATE playtest SET value = $1 WHERE message_id = $2 AND is_author = TRUE",
+                difficulty,
+                playtest.message_id,
+            )
+            view = self.bot.playtest_views[playtest.message_id]
+            cur_required_votes = view.required_votes
+            view.change_difficulty(difficulty)
+            new_required_votes = view.required_votes
+            if cur_required_votes != new_required_votes:
+                msg = (
+                    await itx.guild.get_channel(utils.PLAYTEST)
+                    .get_partial_message(playtest.thread_id)
+                    .fetch()
+                )
+                content, _ = await self._regex_replace_votes(msg, view)
+                await msg.edit(content=content)
+                msg = (
+                    await itx.guild.get_thread(playtest.thread_id)
+                    .get_partial_message(playtest.message_id)
+                    .fetch()
+                )
+                content, total_votes = await self._regex_replace_votes(msg, view)
+                await msg.edit(content=content)
+                await view.mod_check_status(int(total_votes), msg)
+
             itx.client.dispatch(
                 "newsfeed_map_edit",
                 itx,
@@ -474,6 +504,15 @@ class ModCommands(commands.Cog):
             itx.client.dispatch(
                 "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
             )
+
+    async def _regex_replace_votes(self, msg, view):
+        regex = r"Total Votes: (\d+) / \d+"
+        search = re.search(regex, msg.content)
+        total_votes = search.group(1)
+        content = re.sub(
+            regex, f"Total Votes: {total_votes} / {view.required_votes}", msg.content
+        )
+        return content, total_votes
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -927,6 +966,128 @@ class ModCommands(commands.Cog):
             )
         else:
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map": map_name})
+
+    @map.command()
+    @app_commands.autocomplete(
+        map_code=cogs.map_codes_autocomplete,
+    )
+    async def convert_legacy(
+        self,
+        itx: discord.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+    ):
+        await itx.response.defer(ephemeral=True)
+
+        if await self._check_if_queued(map_code):
+            await itx.edit_original_response(
+                content="A submission for this map is in the verification queue. "
+                "Please verify/reject that prior to using this command."
+            )
+            return
+
+        view = views.Confirm(itx)
+        await itx.edit_original_response(
+            content=f"# Are you sure you want to convert current records on {map_code} to legacy?\n"
+            f"This will:\n"
+            f"- Move records with medals to `/legacy_completions`\n"
+            f"- Convert all time records into _completions_\n"
+            f"- Remove medals\n\n",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+
+        records = await self._get_legacy_medal_records(itx, map_code)
+        record_tuples = self._format_legacy_records_for_insertion(records)
+        await self._insert_legacy_records(record_tuples)
+        await self._update_records_to_completions(map_code)
+        await self._remove_medal_entries(map_code)
+
+        embed = utils.GenjiEmbed(
+            title=f"{map_code} has been changed:",
+            description=(
+                "# Records have been converted to completions due to breaking changes.\n"
+                "- View records that received medals using the `/legacy_completions` command"
+            ),
+            color=discord.Color.red(),
+        )
+        await itx.guild.get_channel(NEWSFEED).send(embed=embed)
+
+    async def _check_if_queued(self, map_code: str):
+        query = """SELECT EXISTS (SELECT * FROM records_queue WHERE map_code = $1)"""
+        row = await self.bot.database.get_row(query, map_code)
+        return row.exists
+
+    async def _remove_medal_entries(self, map_code):
+        query = """
+            DELETE FROM map_medals WHERE map_code = $1
+        """
+        await self.bot.database.set(query, map_code)
+
+    async def _update_records_to_completions(self, map_code: str):
+        query = """
+            UPDATE records 
+            SET video = NULL, verified = FALSE, record = 99999999.99
+            WHERE map_code = $1
+        """
+        await self.bot.database.set(query, map_code)
+
+    async def _insert_legacy_records(self, records: list[tuple]):
+        query = """
+            INSERT INTO legacy_records (map_code, user_id, record, screenshot, video, message_id, channel_id, medal) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        """
+        await self.bot.database.set_many(query, records)
+
+    @staticmethod
+    def _format_legacy_records_for_insertion(records: list[DotRecord]):
+        res = []
+        for record in records:
+            if record.gold:
+                medal = "Gold"
+            elif record.silver:
+                medal = "Silver"
+            else:
+                medal = "Bronze"
+
+            res.append(
+                (
+                    record.map_code,
+                    record.user_id,
+                    record.record,
+                    record.screenshot,
+                    record.video,
+                    record.message_id,
+                    record.channel_id,
+                    medal,
+                )
+            )
+        return res
+
+    @staticmethod
+    async def _get_legacy_medal_records(itx, map_code):
+        query = """
+            WITH all_records AS (
+                SELECT 
+                    verified = TRUE AND record <= gold                       AS gold,
+                    verified = TRUE AND record <= silver AND record > gold   AS silver,
+                    verified = TRUE AND record <= bronze AND record > silver AS bronze,
+                    r.map_code,
+                    user_id,
+                    screenshot,
+                    record,
+                    video,
+                    message_id,
+                    channel_id
+                FROM records r
+                    LEFT JOIN map_medals mm ON r.map_code = mm.map_code
+                WHERE r.map_code = $1
+                ORDER BY record
+            )
+            SELECT * FROM all_records WHERE gold OR silver OR bronze
+        """
+        return [record async for record in itx.client.database.get(query, map_code)]
 
 
 async def setup(bot: core.Genji):

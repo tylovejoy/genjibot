@@ -8,11 +8,13 @@ from typing import TYPE_CHECKING
 
 import discord
 import matplotlib.pyplot as plt
+from discord import ButtonStyle
 from matplotlib import ticker
 
 import database
 import utils
 import views
+from utils import PLAYTEST
 
 if TYPE_CHECKING:
     import core
@@ -114,6 +116,7 @@ class MechanicsSelect(MapSubmitSelection):
         super().__init__(
             options=options,
             placeholder="Map mechanic(s)?",
+            min_values=0,
             max_values=len(options),
         )
 
@@ -123,6 +126,7 @@ class RestrictionsSelect(MapSubmitSelection):
         super().__init__(
             options=options,
             placeholder="Map restriction(s)?",
+            min_values=0,
             max_values=len(options),
         )
 
@@ -152,6 +156,11 @@ class PlaytestVoting(discord.ui.View):
             _ModOnlyOptions.REMOVE_VOTES.value: self.remove_votes_option,
             _ModOnlyOptions.TOGGLE_FINALIZE_BUTTON.value: self.toggle_finalize_button,
         }
+
+    def change_difficulty(self, difficulty: int):
+        _difficulty = utils.convert_num_to_difficulty(difficulty)
+        self.base_diff = _difficulty
+        self.required_votes = self._required_votes()
 
     def _required_votes(self) -> int:
         if "Hell" in self.base_diff:
@@ -222,17 +231,27 @@ class PlaytestVoting(discord.ui.View):
         )
 
         thread: discord.Thread = itx.channel
+        await thread.edit(archived=False, locked=False)
         await thread.add_user(itx.user)
 
         count, image = await self.get_plot_data(itx)
 
         await itx.message.edit(
-            content=f"Total Votes: {count}",
+            content=f"Total Votes: {count} / {self.required_votes}",
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
             view=self,
         )
-
+        row = await itx.client.database.get_row(
+            "SELECT thread_id FROM playtest WHERE message_id = $1 AND is_author",
+            itx.message.id,
+        )
+        if row:
+            await itx.guild.get_channel(PLAYTEST).get_partial_message(
+                row.thread_id
+            ).edit(
+                content=f"Total Votes: {count} / {self.required_votes}",
+            )
         await self.check_status(itx, count)
 
     async def get_plot_data(self, itx: discord.Interaction[core.Genji]):
@@ -367,8 +386,23 @@ class PlaytestVoting(discord.ui.View):
         b.seek(0)
         return discord.File(b, filename="vote_chart.png")
 
+    async def mod_check_status(self, count: int, message: discord.Message):
+        if (
+            count >= self.required_votes
+            and self.ready_up_button.style == ButtonStyle.red
+        ):
+            self.ready_up_button.disabled = False
+            await message.edit(view=self)
+            await self.data.creator.send(
+                f"**{self.data.map_code}** has received enough completions and votes. "
+                f"Go to the thread and *Finalize* the submission!"
+            )
+
     async def check_status(self, itx: discord.Interaction[core.Genji], count: int):
-        if count >= self.required_votes:
+        if (
+            count >= self.required_votes
+            and self.ready_up_button.style == ButtonStyle.red
+        ):
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
             await self.data.creator.send(
@@ -383,21 +417,35 @@ class PlaytestVoting(discord.ui.View):
         author = itx.guild.get_member(self.data.creator.id)
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
+        try:
+            await self.increment_playtest_count(itx, votes_db_rows)
+        except Exception as e:
+            print(e)
 
-        query = """SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"""
+        query = (
+            "SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"
+        )
         row = await itx.client.database.get_row(
             query, self.data.creator.id, self.data.map_code
         )
-        print(row)
-        print(row.verification_id)
         if row.verification_id:
-            print("deleting message")
-            print(utils.VERIFICATION_QUEUE, row.verification_id, sep="/")
             await itx.guild.get_channel(utils.VERIFICATION_QUEUE).get_partial_message(
                 row.verification_id
             ).delete()
 
         await self.delete_playtest_db_entry()
+
+    async def increment_playtest_count(self, itx, votes_db_rows):
+        query = """
+            INSERT INTO playtest_count (user_id, amount)
+            VALUES ($1, 1)
+            ON CONFLICT (user_id) DO UPDATE SET amount = playtest_count.amount + 1;
+        """
+
+        await itx.client.database.set_many(
+            query,
+            [(x.user_id,) for x in votes_db_rows if x.user_id != self.data.creator.id],
+        )
 
     async def get_author_db_row(self) -> database.DotRecord:
         return await self.client.database.get_row(
@@ -441,7 +489,6 @@ class PlaytestVoting(discord.ui.View):
         await self.set_map_ratings(votes)
         thread = itx.guild.get_channel(utils.PLAYTEST)
         await thread.fetch_message(votes[0].thread_id)
-
         itx.client.dispatch(
             "newsfeed_new_map",
             itx,
@@ -618,7 +665,7 @@ class PlaytestVoting(discord.ui.View):
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
         if not await self.check_sensei(itx):
-            await itx.followup.send("You cannot use this.", ephemeral=True)
+            # await itx.followup.send("You cannot use this.", ephemeral=True)
             return
         await itx.message.edit(view=self)
         await self.mod_options[select.values[0]](itx)
@@ -656,7 +703,9 @@ class PlaytestVoting(discord.ui.View):
         author = itx.guild.get_member(self.data.creator.id)
 
         await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
+        await self.increment_playtest_count(itx, votes_db_rows)
         await self.delete_playtest_db_entry()
+        itx.client.playtest_views.pop(itx.message.id)
 
     async def force_deny(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
@@ -680,6 +729,7 @@ class PlaytestVoting(discord.ui.View):
             await self.send_denial_to_author(author)
         await self.delete_playtest_db_entry()
         itx.client.cache.maps.remove_one(self.data.map_code)
+        itx.client.playtest_views.pop(itx.message.id)
 
     async def delete_playtest_post(self, thread_id: int):
         await self.client.get_channel(utils.PLAYTEST).get_partial_message(
@@ -702,6 +752,7 @@ class PlaytestVoting(discord.ui.View):
         if not view.value:
             return
 
+        itx.client.playtest_views.pop(itx.message.id)
         await self.approve_map(itx)
 
     async def start_process_over(self, itx: discord.Interaction[core.Genji]):

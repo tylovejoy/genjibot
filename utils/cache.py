@@ -102,7 +102,7 @@ class TagsData(ChoiceOptionStrCache):
 
 
 class MapData(Cache, ChoiceMixin):
-    def __init__(self, map_code: str, user_ids: set[int], archived: bool):
+    def __init__(self, map_code: str, user_ids: list[int], archived: bool):
         self.map_code = map_code
         self.user_ids = user_ids
         self.archived = archived
@@ -121,7 +121,7 @@ class MapData(Cache, ChoiceMixin):
         """Add a creator to the list of creators."""
         if user_id in self.user_ids:
             raise AlreadyExists
-        self.user_ids.add(user_id)
+        self.user_ids.append(user_id)
 
     def remove_creator(self, user_id: int):
         """Remove a creator from the list of creators"""

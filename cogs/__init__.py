@@ -162,7 +162,13 @@ async def map_submission_second_step(
 ):
     if not mod:
         embed.title = "Calling all Playtesters!"
-        playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(embed=embed)
+        view = views.PlaytestVoting(
+            data,
+            itx.client,
+        )
+        playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(
+            content=f"Total Votes: 0 / {view.required_votes}", embed=embed
+        )
         embed = utils.GenjiEmbed(
             title="Difficulty Ratings",
             description="You can change your vote, but you cannot cast multiple!\n\n",
@@ -173,12 +179,10 @@ async def map_submission_second_step(
 
         thread_msg = await thread.send(
             f"Discuss, play, rate, etc.",
-            view=views.PlaytestVoting(
-                data,
-                itx.client,
-            ),
+            view=view,
             embed=embed,
         )
+        itx.client.playtest_views[thread_msg.id] = view
         await thread.send(
             f"{itx.user.mention}, you can receive feedback on your map here. "
             f"I'm pinging you so you are able to join this thread automatically!"
@@ -189,7 +193,7 @@ async def map_submission_second_step(
     itx.client.cache.maps.add_one(
         utils.MapData(
             map_code=data.map_code,
-            user_ids={data.creator.id},
+            user_ids=[data.creator.id],
             archived=False,
         )
     )
@@ -198,16 +202,7 @@ async def map_submission_second_step(
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        # embed.title = "New Map!"
-        # embed.set_footer(
-        #     text=(
-        #         "For notification of newly added maps only. "
-        #         "Data may be wrong or out of date. "
-        #         "Use the /map-search command for the latest info."
-        #     )
-        # )
-        # new_map_message = await itx.guild.get_channel(utils.NEW_MAPS).send(embed=embed)
-        itx.client.dispatch("newsfeed_new_map", itx, itx.user, data)
+        itx.client.dispatch("newsfeed_new_map", itx, data.creator, data)
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
 
@@ -216,12 +211,9 @@ async def add_creator_(
     creator: int,
     itx: discord.Interaction[core.Genji],
     map_code: str,
-    checks: bool = False,
 ):
     await itx.response.defer(ephemeral=True)
-    if not checks or itx.user.id not in itx.client.cache.maps.keys:
-        raise utils.NoPermissionsError
-    if creator in itx.client.cache.maps.keys:
+    if creator in itx.client.cache.maps[map_code].user_ids:
         raise utils.CreatorAlreadyExists
     await itx.client.database.set(
         "INSERT INTO map_creators (map_code, user_id) VALUES ($1, $2)",
@@ -229,6 +221,7 @@ async def add_creator_(
         creator,
     )
     itx.client.cache.maps[map_code].add_creator(creator)
+    itx.client.cache.users[creator].is_creator = True
     await itx.edit_original_response(
         content=(
             f"Adding **{itx.client.cache.users[creator].nickname}** "
@@ -239,19 +232,17 @@ async def add_creator_(
 
 async def remove_creator_(creator, itx, map_code, checks: bool = False):
     await itx.response.defer(ephemeral=True)
-    if not checks or itx.user.id not in itx.client.map_cache[map_code]["user_ids"]:
-        raise utils.NoPermissionsError
-    if creator not in itx.client.map_cache[map_code]["user_ids"]:
+    if creator not in itx.client.cache.maps[map_code].user_ids:
         raise utils.CreatorDoesntExist
     await itx.client.database.set(
         "DELETE FROM map_creators WHERE map_code = $1 AND user_id = $2;",
         map_code,
         creator,
     )
-    itx.client.map_cache[map_code]["user_ids"].remove(creator)
+    itx.client.cache.maps[map_code].remove_creator(creator)
     await itx.edit_original_response(
         content=(
-            f"Removing **{itx.client.all_users[creator]['nickname']}** "
+            f"Removing **{itx.client.cache.users[creator].nickname}** "
             f"from list of creators for map code **{map_code}**."
         )
     )

@@ -10,6 +10,7 @@ import cogs
 import database
 import utils
 import views
+from utils import wrap_string_with_percent
 
 if typing.TYPE_CHECKING:
     import core
@@ -123,7 +124,9 @@ class Maps(commands.Cog):
         mechanics=cogs.map_mechanics_autocomplete,
         map_code=cogs.map_codes_autocomplete,
     )
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(
+        discord.Object(id=utils.GUILD_ID), discord.Object(id=868981788968640554)
+    )
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
@@ -136,6 +139,7 @@ class Maps(commands.Cog):
         minimum_rating: app_commands.Choice[int] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
+        playtest_only: bool = False,
     ) -> None:
         """
         Search for maps based on various filters.
@@ -150,6 +154,7 @@ class Maps(commands.Cog):
             mechanics: Mechanics filter
             minimum_rating: Show maps above a specific quality rating
             completed: Show completed maps, non completed maps or all
+            playtest_only: Show only playtest maps
         """
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
@@ -167,39 +172,52 @@ class Maps(commands.Cog):
             "Not Completed": False,
             "Completed": True,
         }
-
         async for _map in itx.client.database.get(
             """
-                WITH ALL_MAPS AS (
-                SELECT MAP_NAME,
-                       ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
-                       M.MAP_CODE,
-                       "desc",
-                       OFFICIAL,
-                       ARCHIVED,
-                       ARRAY_AGG(DISTINCT URL)                                     AS GUIDE,
-                       ARRAY_TO_STRING(ARRAY_AGG(DISTINCT MECH.MECHANIC), ', ')    AS MECHANICS,
-                       ARRAY_TO_STRING(ARRAY_AGG(DISTINCT REST.RESTRICTION), ', ') AS RESTRICTIONS,
-                       CHECKPOINTS,
-                       STRING_AGG(DISTINCT (NICKNAME), ', ')                       AS CREATORS,
-                       COALESCE(AVG(DIFFICULTY), 0)                                AS DIFFICULTY,
-                       COALESCE(AVG(QUALITY), 0)                                   AS QUALITY,
-                       ARRAY_AGG(DISTINCT MC.USER_ID)                              AS CREATOR_IDS,
-                       GOLD,
-                       SILVER,
-                       BRONZE
-                FROM MAPS                           M
-                       LEFT JOIN MAP_MECHANICS    MECH ON MECH.MAP_CODE = M.MAP_CODE
+               WITH 
+               required as (SELECT CASE
+                 WHEN playtest.value >= 9.41 THEN 1
+                 WHEN playtest.value >= 7.65 THEN 2
+                 WHEN playtest.value >= 5.88 THEN 3
+                 ELSE 5
+                 END AS required_votes, playtest.value, map_code FROM playtest WHERE is_author = True),
+               
+               playtest_avgs AS 
+               (SELECT p.map_code, COUNT(p.value) as "count", required_votes 
+               FROM playtest p LEFT JOIN required rv ON p.map_code=rv.map_code WHERE is_author = FALSE GROUP BY p.map_code, required_votes),
+               
+               
+               
+               ALL_MAPS AS (
+               SELECT MAP_NAME,
+                     ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
+                     M.MAP_CODE,
+                     "desc",
+                     OFFICIAL,
+                     ARCHIVED,
+                     ARRAY_AGG(DISTINCT URL)                                     AS GUIDE,
+                     ARRAY_TO_STRING(ARRAY_AGG(DISTINCT MECH.MECHANIC), ', ')    AS MECHANICS,
+                     ARRAY_TO_STRING(ARRAY_AGG(DISTINCT REST.RESTRICTION), ', ') AS RESTRICTIONS,
+                     CHECKPOINTS,
+                     STRING_AGG(DISTINCT (NICKNAME), ', ')                       AS CREATORS,
+                     COALESCE(AVG(DIFFICULTY), 0)                                AS DIFFICULTY,
+                     COALESCE(AVG(QUALITY), 0)                                   AS QUALITY,
+                     ARRAY_AGG(DISTINCT MC.USER_ID)                              AS CREATOR_IDS,
+                     GOLD,
+                     SILVER,
+                     BRONZE
+              FROM MAPS M
+                       LEFT JOIN MAP_MECHANICS MECH ON MECH.MAP_CODE = M.MAP_CODE
                        LEFT JOIN MAP_RESTRICTIONS REST ON REST.MAP_CODE = M.MAP_CODE
-                       LEFT JOIN MAP_CREATORS     MC ON M.MAP_CODE = MC.MAP_CODE
-                       LEFT JOIN USERS            U ON MC.USER_ID = U.USER_ID
-                       LEFT JOIN MAP_RATINGS      MR ON M.MAP_CODE = MR.MAP_CODE
-                       LEFT JOIN GUIDES           G ON M.MAP_CODE = G.MAP_CODE
-                       LEFT JOIN MAP_MEDALS       MM ON M.MAP_CODE = MM.MAP_CODE
-                GROUP BY CHECKPOINTS, MAP_NAME,
+                       LEFT JOIN MAP_CREATORS MC ON M.MAP_CODE = MC.MAP_CODE
+                       LEFT JOIN USERS U ON MC.USER_ID = U.USER_ID
+                       LEFT JOIN MAP_RATINGS MR ON M.MAP_CODE = MR.MAP_CODE
+                       LEFT JOIN GUIDES G ON M.MAP_CODE = G.MAP_CODE
+                       LEFT JOIN MAP_MEDALS MM ON M.MAP_CODE = MM.MAP_CODE
+              GROUP BY CHECKPOINTS, MAP_NAME,
                        M.MAP_CODE, "desc", OFFICIAL, MAP_TYPE, GOLD, SILVER, BRONZE, ARCHIVED),
-                    
-                COMPLETIONS AS (SELECT MAP_CODE, RECORD, VERIFIED FROM RECORDS WHERE USER_ID = $10)
+
+                     COMPLETIONS AS (SELECT MAP_CODE, RECORD, VERIFIED FROM RECORDS WHERE USER_ID = $10)
                 
                 SELECT AM.MAP_NAME,
                        MAP_TYPE,
@@ -218,43 +236,49 @@ class Maps(commands.Cog):
                        AM.GOLD,
                        AM.SILVER,
                        AM.BRONZE,
+                       p.thread_id,
+                       pa.count,
+                       pa.required_votes,
                        C.MAP_CODE IS NOT NULL AS COMPLETED,
                        CASE
-                           WHEN VERIFIED=TRUE AND C.RECORD <= AM.GOLD THEN 'Gold'
-                           WHEN VERIFIED=TRUE AND C.RECORD <= AM.SILVER THEN 'Silver'
-                           WHEN VERIFIED=TRUE AND C.RECORD <= AM.BRONZE THEN 'Bronze'
+                           WHEN VERIFIED = TRUE AND C.RECORD <= AM.GOLD THEN 'Gold'
+                           WHEN VERIFIED = TRUE AND C.RECORD <= AM.SILVER THEN 'Silver'
+                           WHEN VERIFIED = TRUE AND C.RECORD <= AM.BRONZE THEN 'Bronze'
                            ELSE ''
-                       END AS medal_type
-                FROM ALL_MAPS                  AM
-                       LEFT JOIN COMPLETIONS C ON AM.MAP_CODE = C.MAP_CODE
-                WHERE (OFFICIAL = TRUE)
-                       AND (ARCHIVED = FALSE)
-                       AND ($1::text IS NULL OR AM.MAP_CODE = $1)
-                       AND ($2::text IS NULL OR MAP_TYPE LIKE $2)
-                       AND ($3::text IS NULL OR MAP_NAME = $3)
-                       AND ($4::text IS NULL OR MECHANICS LIKE $4)
-                       AND ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (DIFFICULTY >= $5::numeric(10, 2)
-                       AND DIFFICULTY < $6::numeric(10, 2)))
-                       AND ($7::int IS NULL OR QUALITY >= $7)
-                       AND ($8::bigint IS NULL OR $8 = ANY (CREATOR_IDS))
+                           END                AS medal_type
+                FROM ALL_MAPS AM
+                         LEFT JOIN COMPLETIONS C ON AM.MAP_CODE = C.MAP_CODE
+                         LEFT JOIN playtest p ON AM.map_code = p.map_code AND p.is_author IS TRUE
+                         LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
+                WHERE ($11::bool IS FALSE or OFFICIAL = FALSE)
+                  AND (ARCHIVED = FALSE)
+                  AND ($1::text IS NULL OR AM.MAP_CODE = $1)
+                  AND ($2::text IS NULL OR MAP_TYPE LIKE $2)
+                  AND ($3::text IS NULL OR MAP_NAME = $3)
+                  AND ($4::text IS NULL OR MECHANICS LIKE $4)
+                  AND ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (DIFFICULTY >= $5::numeric(10, 2)
+                    AND DIFFICULTY < $6::numeric(10, 2)))
+                  AND ($7::int IS NULL OR QUALITY >= $7)
+                  AND ($8::bigint IS NULL OR $8 = ANY (CREATOR_IDS))
                 GROUP BY AM.MAP_NAME, MAP_TYPE, AM.MAP_CODE, AM."desc", AM.OFFICIAL, AM.ARCHIVED, GUIDE, MECHANICS,
                          RESTRICTIONS, AM.CHECKPOINTS, CREATORS, DIFFICULTY, QUALITY, CREATOR_IDS, AM.GOLD, AM.SILVER,
-                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD, VERIFIED
+                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD, VERIFIED, p.thread_id, pa.count, pa.required_votes
                 
                 HAVING ($9::BOOL IS NULL OR C.MAP_CODE IS NOT NULL = $9)
                 
                 ORDER BY DIFFICULTY, QUALITY DESC;
             """,
             map_code,
-            map_type,
+            wrap_string_with_percent(map_type),
             map_name,
-            mechanics,
+            wrap_string_with_percent(mechanics),
             low_range,
             high_range,
             int(getattr(minimum_rating, "value", 0)),
             creator,
             view_filter[completed],
             itx.user.id,
+            playtest_only,
         ):
             maps.append(_map)
         if not maps:
@@ -275,6 +299,7 @@ class Maps(commands.Cog):
             guide_txt = ""
             medals_txt = ""
             completed = ""
+            playtest_str = ""
             if None not in _map.guide:
                 guides = [f"[{j}]({guide})" for j, guide in enumerate(_map.guide, 1)]
                 guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
@@ -289,11 +314,16 @@ class Maps(commands.Cog):
                 completed = "🗸 Completed"
                 if _map.medal_type:
                     completed += " | 🗸 " + _map.medal_type
-
+            if _map.thread_id:
+                playtest_str = (
+                    f"\n‼️**IN PLAYTESTING, SUBJECT TO CHANGE**‼️\n"
+                    f"Votes: {_map.count} / {_map.required_votes}\n"
+                    f"[Click here to go to the playtest thread](https://discord.com/channels/842778964673953812/{_map.thread_id})\n"
+                )
             embed.add_description_field(
                 name=f"{_map.map_code} {completed}",
                 value=(
-                    f"┣ `Rating` {utils.create_stars(_map.quality)}\n"
+                    playtest_str + f"┣ `Rating` {utils.create_stars(_map.quality)}\n"
                     f"┣ `Creator` {discord.utils.escape_markdown(_map.creators)}\n"
                     f"┣ `Map` {_map.map_name}\n"
                     f"┣ `Difficulty` {utils.convert_num_to_difficulty(_map.difficulty)}\n"
