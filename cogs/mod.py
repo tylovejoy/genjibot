@@ -842,7 +842,7 @@ class ModCommands(commands.Cog):
                 new_map_code,
                 map_code,
             )
-            itx.client.cache.maps[map_code].update_map_code(new_map_code)
+
             itx.client.dispatch(
                 "newsfeed_map_edit",
                 itx,
@@ -855,6 +855,7 @@ class ModCommands(commands.Cog):
             itx.client.dispatch(
                 "newsfeed_map_edit", itx, map_code, {"Code": new_map_code}
             )
+        itx.client.cache.maps[map_code].update_map_code(new_map_code)
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
