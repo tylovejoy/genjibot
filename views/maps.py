@@ -665,7 +665,7 @@ class PlaytestVoting(discord.ui.View):
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
         if not await self.check_sensei(itx):
-            await itx.followup.send("You cannot use this.", ephemeral=True)
+            # await itx.followup.send("You cannot use this.", ephemeral=True)
             return
         await itx.message.edit(view=self)
         await self.mod_options[select.values[0]](itx)

@@ -221,6 +221,7 @@ async def add_creator_(
         creator,
     )
     itx.client.cache.maps[map_code].add_creator(creator)
+    itx.client.cache.users[creator].is_creator = True
     await itx.edit_original_response(
         content=(
             f"Adding **{itx.client.cache.users[creator].nickname}** "

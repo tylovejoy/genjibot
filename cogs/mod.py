@@ -48,7 +48,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        creator: app_commands.Transform[int, utils.CreatorTransformer],
+        creator: app_commands.Transform[int, utils.UserTransformer],
     ) -> None:
         """
         Add a creator to a map.
@@ -69,7 +69,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        creator: app_commands.Transform[int, utils.CreatorTransformer],
+        creator: app_commands.Transform[int, utils.UserTransformer],
     ) -> None:
         """
         Remove a creator from a map.
