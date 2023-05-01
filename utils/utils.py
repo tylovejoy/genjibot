@@ -154,9 +154,16 @@ async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, in
 
 
 async def get_completions_data(
-    client: core.Genji, user: int
+    client: core.Genji, user: int, include_beginner: bool = False
 ) -> dict[str, tuple[int, int, int, int]]:
-    query = """
+    if include_beginner:
+        clause = (
+            "('[0.0,0.59)'::numrange, 'Beginner'), ('[0.59,2.35)'::numrange, 'Easy'),"
+        )
+    else:
+        clause = "('[0.0,2.35)'::numrange, 'Easy'),"
+
+    query = f"""
         WITH unioned_records AS (
             SELECT  map_code,
                     user_id,
@@ -181,7 +188,8 @@ async def get_completions_data(
                     FROM legacy_records
         ),
         ranges ("range", "name") AS (
-             VALUES  ('[0.0,2.35)'::numrange, 'Easy'),
+             VALUES  {clause}
+                     
                      ('[2.35,4.12)'::numrange, 'Medium'),
                      ('[4.12,5.88)'::numrange, 'Hard'),
                      ('[5.88,7.65)'::numrange, 'Very Hard'),

@@ -79,6 +79,8 @@ class BotEvents(commands.Cog):
 
             queue = await utils.get_map_info(self.bot)
             for x in queue:
+                if x is None:
+                    continue
                 data = utils.MapSubmission(
                     creator=await utils.transform_user(self.bot, x.creator_ids[0]),
                     map_code=x.map_code,
