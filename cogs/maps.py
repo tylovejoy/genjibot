@@ -183,11 +183,8 @@ class Maps(commands.Cog):
                  END AS required_votes, playtest.value, map_code FROM playtest WHERE is_author = True),
                
                playtest_avgs AS 
-               (SELECT p.map_code, COUNT(p.value) as "count", required_votes 
-               FROM playtest p LEFT JOIN required rv ON p.map_code=rv.map_code WHERE is_author = FALSE GROUP BY p.map_code, required_votes),
-               
-               
-               
+               (SELECT p.map_code, COUNT(p.value) - 1 as "count", required_votes 
+               FROM playtest p RIGHT JOIN required rv ON p.map_code=rv.map_code GROUP BY p.map_code, required_votes),               
                ALL_MAPS AS (
                SELECT MAP_NAME,
                      ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
