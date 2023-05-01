@@ -281,7 +281,8 @@ class ModCommands(commands.Cog):
             "UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member
         )
         await itx.response.send_message(
-            f"Changing {old} ({member}) nickname to {nickname}"
+            f"Changing {old} ({member}) nickname to {nickname}",
+            ephemeral=True,
         )
 
     @mod.command(name="create-fake-member")

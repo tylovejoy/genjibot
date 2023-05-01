@@ -139,7 +139,7 @@ class Maps(commands.Cog):
         minimum_rating: app_commands.Choice[int] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
-        playtest_only: bool = False,
+        only_playtest: bool = False,
     ) -> None:
         """
         Search for maps based on various filters.
@@ -154,7 +154,7 @@ class Maps(commands.Cog):
             mechanics: Mechanics filter
             minimum_rating: Show maps above a specific quality rating
             completed: Show completed maps, non completed maps or all
-            playtest_only: Show only playtest maps
+            only_playtest: Show only playtest maps
         """
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
@@ -184,7 +184,9 @@ class Maps(commands.Cog):
                
                playtest_avgs AS 
                (SELECT p.map_code, COUNT(p.value) - 1 as "count", required_votes 
+
                FROM playtest p RIGHT JOIN required rv ON p.map_code=rv.map_code GROUP BY p.map_code, required_votes),               
+
                ALL_MAPS AS (
                SELECT MAP_NAME,
                      ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
@@ -247,7 +249,7 @@ class Maps(commands.Cog):
                          LEFT JOIN COMPLETIONS C ON AM.MAP_CODE = C.MAP_CODE
                          LEFT JOIN playtest p ON AM.map_code = p.map_code AND p.is_author IS TRUE
                          LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
-                WHERE ($11::bool IS FALSE or OFFICIAL = FALSE)
+                WHERE (OFFICIAL = $11::bool)
                   AND (ARCHIVED = FALSE)
                   AND ($1::text IS NULL OR AM.MAP_CODE = $1)
                   AND ($2::text IS NULL OR MAP_TYPE LIKE $2)
@@ -275,7 +277,7 @@ class Maps(commands.Cog):
             creator,
             view_filter[completed],
             itx.user.id,
-            playtest_only,
+            not only_playtest,
         ):
             maps.append(_map)
         if not maps:
