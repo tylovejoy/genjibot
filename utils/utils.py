@@ -81,7 +81,7 @@ async def update_affected_users(
 
 
 async def auto_role(client: core.Genji, user: discord.Member):
-    rank, rank_plus = await rank_finder(client, user)
+    rank, rank_plus, silver, bronze = await rank_finder(client, user)
     rank_roles = list(
         map(
             lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
@@ -95,11 +95,30 @@ async def auto_role(client: core.Genji, user: discord.Member):
         )
     )
 
-    added = list(filter(lambda x: x not in user.roles, rank_roles[:rank])) + list(
-        filter(lambda x: x not in user.roles, rank_plus_roles[:rank_plus])
+    rank_silver_roles = list(
+        map(
+            lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
+            utils.Roles.silver_plus()[1:],
+        )
     )
-    removed = list(filter(lambda x: x in user.roles, rank_roles[rank:])) + list(
-        filter(lambda x: x in user.roles, rank_plus_roles[rank_plus:])
+    rank_bronze_roles = list(
+        map(
+            lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
+            utils.Roles.bronze_plus()[1:],
+        )
+    )
+
+    added = (
+        list(filter(lambda x: x not in user.roles, rank_roles[:rank]))
+        + list(filter(lambda x: x not in user.roles, rank_plus_roles[:rank_plus]))
+        + list(filter(lambda x: x not in user.roles, rank_silver_roles[:silver]))
+        + list(filter(lambda x: x not in user.roles, rank_bronze_roles[:bronze]))
+    )
+    removed = (
+        list(filter(lambda x: x in user.roles, rank_roles[rank:]))
+        + list(filter(lambda x: x in user.roles, rank_plus_roles[rank_plus:]))
+        + list(filter(lambda x: x in user.roles, rank_silver_roles[silver:]))
+        + list(filter(lambda x: x in user.roles, rank_bronze_roles[bronze:]))
     )
     new_roles = user.roles
     for a in added:
@@ -139,18 +158,27 @@ async def auto_role(client: core.Genji, user: discord.Member):
                 await user.send(response)
 
 
-async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, int]:
+async def rank_finder(
+    client: core.Genji, user: discord.Member
+) -> tuple[int, int, int, int]:
     amounts = await get_completions_data(client, user.id)
     rank = 0
-    rank_plus = 0  # Gold only
+    gold_rank = 0
+    silver_rank = 0
+    bronze_rank = 0
     for i, diff in enumerate(utils.DIFFICULTIES[1:]):  # Ignore Beginner
         if diff not in amounts or amounts[diff][0] < _RANK_THRESHOLD[i]:
             break
         if amounts[diff][0] >= _RANK_THRESHOLD[i]:
             rank += 1
-            if amounts[diff][1] >= _RANK_THRESHOLD[i] and rank_plus + 1 == rank:
-                rank_plus += 1
-    return rank, rank_plus
+            all_ranks = sum((gold_rank, silver_rank, bronze_rank))
+            if amounts[diff][1] >= _RANK_THRESHOLD[i] and all_ranks + 1 == rank:
+                gold_rank += 1
+            elif amounts[diff][2] >= _RANK_THRESHOLD[i] and all_ranks + 1 == rank:
+                silver_rank += 1
+            elif amounts[diff][3] >= _RANK_THRESHOLD[i] and all_ranks + 1 == rank:
+                bronze_rank += 1
+    return rank, gold_rank, silver_rank, bronze_rank
 
 
 async def get_completions_data(
