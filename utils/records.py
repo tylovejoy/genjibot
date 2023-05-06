@@ -183,7 +183,7 @@ def icon_generator(
     record: database.DotRecord, medals: tuple[float, float, float]
 ) -> str:
     icon = ""
-    if record.video:
+    if record.video and record.record != "Completion":
         if record.record < medals[0] != 0:
             icon = utils.FULLY_VERIFIED_GOLD
         elif record.record < medals[1] != 0:
