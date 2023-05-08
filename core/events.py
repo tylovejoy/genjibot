@@ -134,7 +134,7 @@ class BotEvents(commands.Cog):
         self.bot.cache.users.add_one(
             utils.UserData(
                 user_id=member.id,
-                nickname=member.nick,
+                nickname=member.name[:25],
                 flags=utils.SettingFlags.DEFAULT,
                 is_creator=False,
             )
