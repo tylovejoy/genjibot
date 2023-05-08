@@ -51,7 +51,8 @@ _MEDAL_X_POSITIONS = {
 }
 
 RANKS = (
-    "Ninja" "Jumper",
+    "Ninja",
+    "Jumper",
     "Skilled",
     "Pro",
     "Master",

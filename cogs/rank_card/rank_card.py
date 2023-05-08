@@ -48,7 +48,7 @@ class RankCard(commands.Cog):
         maps = await self._get_maps_count(user.id)
         playtests = await self._get_playtests_count(user.id)
         rank_num, _, _, _ = await rank_finder(itx.client, user)
-        rank = RANKS[rank_num - 1]
+        rank = RANKS[rank_num]
         background = await self._get_background_choice(user.id)
         data = {
             "rank": rank,
