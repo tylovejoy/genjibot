@@ -130,16 +130,17 @@ class Maps(commands.Cog):
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
-        map_type: app_commands.Transform[str, utils.MapTypeTransformer] | None = None,
         map_name: app_commands.Transform[str, utils.MapNameTransformer] | None = None,
-        creator: app_commands.Transform[int, utils.CreatorTransformer] | None = None,
         difficulty: app_commands.Choice[str] | None = None,
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
+        creator: app_commands.Transform[int, utils.CreatorTransformer] | None = None,
         mechanics: app_commands.Transform[str, utils.MapMechanicsTransformer]
         | None = None,
-        minimum_rating: app_commands.Choice[int] | None = None,
+        map_type: app_commands.Transform[str, utils.MapTypeTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
         only_playtest: bool = False,
+        only_maps_with_medals: bool = False,
+        minimum_rating: app_commands.Choice[int] | None = None,
     ) -> None:
         """
         Search for maps based on various filters.
@@ -155,6 +156,7 @@ class Maps(commands.Cog):
             minimum_rating: Show maps above a specific quality rating
             completed: Show completed maps, non completed maps or all
             only_playtest: Show only playtest maps
+            only_maps_with_medals: Show only maps that have medals
         """
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
@@ -174,98 +176,107 @@ class Maps(commands.Cog):
         }
         async for _map in itx.client.database.get(
             """
-               WITH 
-               required as (SELECT CASE
-                 WHEN playtest.value >= 9.41 THEN 1
-                 WHEN playtest.value >= 7.65 THEN 2
-                 WHEN playtest.value >= 5.88 THEN 3
-                 ELSE 5
-                 END AS required_votes, playtest.value, map_code FROM playtest WHERE is_author = True),
-               
-               playtest_avgs AS 
-               (SELECT p.map_code, COUNT(p.value) - 1 as "count", required_votes 
-
-               FROM playtest p RIGHT JOIN required rv ON p.map_code=rv.map_code GROUP BY p.map_code, required_votes),               
-
-               ALL_MAPS AS (
-               SELECT MAP_NAME,
-                     ARRAY_TO_STRING((MAP_TYPE), ', ')                           AS MAP_TYPE,
-                     M.MAP_CODE,
-                     "desc",
-                     OFFICIAL,
-                     ARCHIVED,
-                     ARRAY_AGG(DISTINCT URL)                                     AS GUIDE,
-                     ARRAY_TO_STRING(ARRAY_AGG(DISTINCT MECH.MECHANIC), ', ')    AS MECHANICS,
-                     ARRAY_TO_STRING(ARRAY_AGG(DISTINCT REST.RESTRICTION), ', ') AS RESTRICTIONS,
-                     CHECKPOINTS,
-                     STRING_AGG(DISTINCT (NICKNAME), ', ')                       AS CREATORS,
-                     COALESCE(AVG(DIFFICULTY), 0)                                AS DIFFICULTY,
-                     COALESCE(AVG(QUALITY), 0)                                   AS QUALITY,
-                     ARRAY_AGG(DISTINCT MC.USER_ID)                              AS CREATOR_IDS,
-                     GOLD,
-                     SILVER,
-                     BRONZE
-              FROM MAPS M
-                       LEFT JOIN MAP_MECHANICS MECH ON MECH.MAP_CODE = M.MAP_CODE
-                       LEFT JOIN MAP_RESTRICTIONS REST ON REST.MAP_CODE = M.MAP_CODE
-                       LEFT JOIN MAP_CREATORS MC ON M.MAP_CODE = MC.MAP_CODE
-                       LEFT JOIN USERS U ON MC.USER_ID = U.USER_ID
-                       LEFT JOIN MAP_RATINGS MR ON M.MAP_CODE = MR.MAP_CODE
-                       LEFT JOIN GUIDES G ON M.MAP_CODE = G.MAP_CODE
-                       LEFT JOIN MAP_MEDALS MM ON M.MAP_CODE = MM.MAP_CODE
-              GROUP BY CHECKPOINTS, MAP_NAME,
-                       M.MAP_CODE, "desc", OFFICIAL, MAP_TYPE, GOLD, SILVER, BRONZE, ARCHIVED),
-
-                     COMPLETIONS AS (SELECT MAP_CODE, RECORD, VERIFIED FROM RECORDS WHERE USER_ID = $10)
-                
-                SELECT AM.MAP_NAME,
-                       MAP_TYPE,
-                       AM.MAP_CODE,
-                       AM."desc",
-                       AM.OFFICIAL,
-                       AM.ARCHIVED,
-                       GUIDE,
-                       MECHANICS,
-                       RESTRICTIONS,
-                       AM.CHECKPOINTS,
-                       CREATORS,
-                       DIFFICULTY,
-                       QUALITY,
-                       CREATOR_IDS,
-                       AM.GOLD,
-                       AM.SILVER,
-                       AM.BRONZE,
-                       p.thread_id,
-                       pa.count,
-                       pa.required_votes,
-                       C.MAP_CODE IS NOT NULL AS COMPLETED,
-                       CASE
-                           WHEN VERIFIED = TRUE AND C.RECORD <= AM.GOLD THEN 'Gold'
-                           WHEN VERIFIED = TRUE AND C.RECORD <= AM.SILVER THEN 'Silver'
-                           WHEN VERIFIED = TRUE AND C.RECORD <= AM.BRONZE THEN 'Bronze'
-                           ELSE ''
-                           END                AS medal_type
-                FROM ALL_MAPS AM
-                         LEFT JOIN COMPLETIONS C ON AM.MAP_CODE = C.MAP_CODE
-                         LEFT JOIN playtest p ON AM.map_code = p.map_code AND p.is_author IS TRUE
-                         LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
-                WHERE (OFFICIAL = $11::bool)
-                  AND (ARCHIVED = FALSE)
-                  AND ($1::text IS NULL OR AM.MAP_CODE = $1)
-                  AND ($2::text IS NULL OR MAP_TYPE LIKE $2)
-                  AND ($3::text IS NULL OR MAP_NAME = $3)
-                  AND ($4::text IS NULL OR MECHANICS LIKE $4)
-                  AND ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (DIFFICULTY >= $5::numeric(10, 2)
-                    AND DIFFICULTY < $6::numeric(10, 2)))
-                  AND ($7::int IS NULL OR QUALITY >= $7)
-                  AND ($8::bigint IS NULL OR $8 = ANY (CREATOR_IDS))
-                GROUP BY AM.MAP_NAME, MAP_TYPE, AM.MAP_CODE, AM."desc", AM.OFFICIAL, AM.ARCHIVED, GUIDE, MECHANICS,
-                         RESTRICTIONS, AM.CHECKPOINTS, CREATORS, DIFFICULTY, QUALITY, CREATOR_IDS, AM.GOLD, AM.SILVER,
-                         AM.BRONZE, C.MAP_CODE IS NOT NULL, C.RECORD, VERIFIED, p.thread_id, pa.count, pa.required_votes
-                
-                HAVING ($9::BOOL IS NULL OR C.MAP_CODE IS NOT NULL = $9)
-                
-                ORDER BY DIFFICULTY, QUALITY DESC;
+              WITH
+                required      AS (
+                  SELECT
+                    CASE
+                      WHEN playtest.value >= 9.41 THEN 1
+                      WHEN playtest.value >= 7.65 THEN 2
+                      WHEN playtest.value >= 5.88 THEN 3
+                                                  ELSE 5
+                    END AS required_votes, playtest.value, map_code
+                    FROM playtest
+                   WHERE is_author = TRUE
+                ),
+            
+                playtest_avgs AS
+                  (
+                    SELECT p.map_code, count(p.value) - 1 AS count, required_votes
+            
+                      FROM
+                        playtest p
+                          RIGHT JOIN required rv ON p.map_code = rv.map_code
+                     GROUP BY p.map_code, required_votes
+                  ),
+            
+                all_maps      AS (
+                  SELECT
+                    map_name,
+                    array_to_string((map_type), ', ') AS map_type,
+                    m.map_code,
+                    "desc",
+                    official,
+                    archived,
+                    array_agg(DISTINCT url) AS guide,
+                    array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
+                    array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
+                    checkpoints,
+                    string_agg(DISTINCT (nickname), ', ') AS creators,
+                    coalesce(avg(difficulty), 0) AS difficulty,
+                    coalesce(avg(quality), 0) AS quality,
+                    array_agg(DISTINCT mc.user_id) AS creator_ids,
+                    gold,
+                    silver,
+                    bronze
+                    FROM
+                      maps m
+                        LEFT JOIN map_mechanics mech ON mech.map_code = m.map_code
+                        LEFT JOIN map_restrictions rest ON rest.map_code = m.map_code
+                        LEFT JOIN map_creators mc ON m.map_code = mc.map_code
+                        LEFT JOIN users u ON mc.user_id = u.user_id
+                        LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+                        LEFT JOIN guides g ON m.map_code = g.map_code
+                        LEFT JOIN map_medals mm ON m.map_code = mm.map_code
+                   GROUP BY
+                     checkpoints, map_name,
+                     m.map_code, "desc", official, map_type, gold, silver, bronze, archived
+                ),
+            
+                completions   AS (
+                  SELECT map_code, record, verified
+                    FROM records
+                   WHERE user_id = $10
+                )
+            
+            SELECT
+              am.map_name, map_type, am.map_code, am."desc", am.official,
+              am.archived, guide, mechanics, restrictions, am.checkpoints,
+              creators, difficulty, quality, creator_ids, am.gold, am.silver,
+              am.bronze, p.thread_id, pa.count, pa.required_votes,
+              c.map_code IS NOT NULL AS completed,
+              CASE
+                WHEN verified = TRUE AND c.record <= am.gold   THEN 'Gold'
+                WHEN verified = TRUE AND c.record <= am.silver THEN 'Silver'
+                WHEN verified = TRUE AND c.record <= am.bronze THEN 'Bronze'
+                                                               ELSE ''
+              END AS medal_type
+              FROM
+                all_maps am
+                  LEFT JOIN completions c ON am.map_code = c.map_code
+                  LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
+                  LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
+             WHERE
+                 (official = $11::bool)
+             AND (archived = FALSE)
+             AND ($1::text IS NULL OR am.map_code = $1)
+             AND ($2::text IS NULL OR map_type LIKE $2)
+             AND ($3::text IS NULL OR map_name = $3)
+             AND ($4::text IS NULL OR mechanics LIKE $4)
+             AND ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2)
+               AND difficulty < $6::numeric(10, 2)))
+             AND ($7::int IS NULL OR quality >= $7)
+             AND ($8::bigint IS NULL OR $8 = ANY (creator_ids))
+             AND ($12::bool IS FALSE OR (gold IS NOT NULL AND silver IS NOT NULL AND bronze IS NOT NULL))
+             GROUP BY
+               am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
+               restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
+               am.bronze, c.map_code IS NOT NULL, c.record, verified, p.thread_id, pa.count, pa.required_votes
+            
+            HAVING
+              ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
+            
+             ORDER BY
+               difficulty, quality DESC;
             """,
             map_code,
             wrap_string_with_percent(map_type),
@@ -278,6 +289,7 @@ class Maps(commands.Cog):
             view_filter[completed],
             itx.user.id,
             not only_playtest,
+            only_maps_with_medals,
         ):
             maps.append(_map)
         if not maps:
