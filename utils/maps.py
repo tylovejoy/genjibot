@@ -243,6 +243,16 @@ class MapSubmission:
                 self.map_code,
             )
 
+    async def insert_timestamp(self, itx: discord.Interaction[core.Genji], mod: bool):
+        if not mod:
+            await itx.client.database.set(
+                """
+                INSERT INTO map_submission_dates (user_id)
+                VALUES ($1);
+                """,
+                self.creator.id,
+            )
+
     async def insert_all(self, itx: discord.Interaction[core.Genji], mod: bool):
         await self.insert_maps(itx, mod)
         await self.insert_mechanics(itx)
@@ -251,6 +261,7 @@ class MapSubmission:
         await self.insert_map_ratings(itx)
         await self.insert_guide(itx)
         await self.insert_medals(itx)
+        await self.insert_timestamp(itx, mod)
 
 
 async def get_map_info(

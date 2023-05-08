@@ -859,3 +859,12 @@ class PlaytestVoting(discord.ui.View):
             "DELETE FROM records_queue WHERE map_code = $1",
             self.data.map_code,
         )
+
+    async def time_limit_deletion(self):
+        self.stop()
+        record = await self.get_author_db_row()
+        await self.lock_and_archive_thread(record.thread_id)
+        await self.delete_playtest_post(record.thread_id)
+        await self.delete_map_from_db()
+        await self.delete_playtest_db_entry()
+        self.client.cache.maps.remove_one(self.data.map_code)
