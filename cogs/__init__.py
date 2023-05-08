@@ -10,6 +10,7 @@ from discord import app_commands
 
 import utils
 import views
+from utils import MaxMapsInPlaytest, MaxWeeklyMapsInPlaytest
 
 if typing.TYPE_CHECKING:
     import core
@@ -109,6 +110,11 @@ async def submit_map_(
         if not 0 < data.gold < data.silver < data.bronze:
             raise utils.InvalidMedals
 
+    if await _check_max_limit(itx) >= 5:
+        raise MaxMapsInPlaytest
+    if await _check_weekly_limit(itx) >= 2:
+        raise MaxWeeklyMapsInPlaytest
+
     initial_message = (
         f"{data.creator.mention}, "
         f"fill in additional details to complete map submission!"
@@ -121,6 +127,25 @@ async def submit_map_(
     callback = functools.partial(map_submission_first_step, data, itx, mod, view)
     view.partial_callback = callback
     await view.start()
+
+
+async def _check_weekly_limit(itx: discord.Interaction[core.Genji]):
+    query = """
+        SELECT count(*)
+          FROM map_submission_dates
+         WHERE
+           user_id = $1 AND date BETWEEN now() - INTERVAL '1 weeks' AND now();
+    """
+    row = await itx.client.database.get_row(query, itx.user.id)
+    return row.get("count", 0)
+
+
+async def _check_max_limit(itx: discord.Interaction[core.Genji]):
+    query = """
+        SELECT count(*) FROM playtest WHERE is_author = TRUE AND user_id = $1;
+    """
+    row = await itx.client.database.get_row(query, itx.user.id)
+    return row.get("count", 0)
 
 
 async def map_submission_first_step(
