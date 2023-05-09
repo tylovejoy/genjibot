@@ -15,6 +15,8 @@ class Tasks(commands.Cog):
     def __init__(self, bot: core.Genji):
         self.bot = bot
         self.cache.start()
+        self._playtest_expiration_warning.start()
+        self._playtest_expiration.start()
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
     async def _playtest_expiration(self):
