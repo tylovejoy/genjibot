@@ -361,7 +361,7 @@ class Records(commands.Cog):
             int | discord.Member | utils.FakeUser, utils.AllUserTransformer
         ]
         | None = None,
-        filters: typing.Literal["All", "World Record", "Completions", "Records"]
+        filters: typing.Literal["All", "World Records", "Completions", "Records"]
         | None = "All",
     ):
         """
@@ -454,10 +454,10 @@ class Records(commands.Cog):
         FROM ranks
                  LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE user_id = $1 
-        AND ($2::text != 'World Records' OR rank_num = 1 AND record < 99999999)
+        AND ($2::text != 'World Records' OR rank_num = 1 AND record < 99999999 AND verified = TRUE)
         AND ($2::text != 'Records' OR record < 99999999)
         AND ($2::text != 'Completions' OR record > 99999999)
-        ORDER BY ranks.map_code;     
+        ORDER BY difficulty, ranks.map_code;     
         """
         records: list[database.DotRecord | None] = [
             x async for x in itx.client.database.get(query, user, filters)
