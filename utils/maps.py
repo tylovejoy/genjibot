@@ -247,10 +247,11 @@ class MapSubmission:
         if not mod:
             await itx.client.database.set(
                 """
-                INSERT INTO map_submission_dates (user_id)
-                VALUES ($1);
+                INSERT INTO map_submission_dates (user_id, map_code)
+                VALUES ($1, $2);
                 """,
                 self.creator.id,
+                self.map_code,
             )
 
     async def insert_all(self, itx: discord.Interaction[core.Genji], mod: bool):
