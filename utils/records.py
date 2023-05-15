@@ -185,13 +185,25 @@ def icon_generator(
     icon = ""
     if record.video and record.record != "Completion":
         if record.record < medals[0] != 0:
-            icon = utils.FULLY_VERIFIED_GOLD
+            if record.get("rank_num", 0) == 1:
+                icon = utils.GOLD_WR
+            else:
+                icon = utils.FULLY_VERIFIED_GOLD
         elif record.record < medals[1] != 0:
-            icon = utils.FULLY_VERIFIED_SILVER
+            if record.get("rank_num", 0) == 1:
+                icon = utils.SILVER_WR
+            else:
+                icon = utils.FULLY_VERIFIED_SILVER
         elif record.record < medals[2] != 0:
-            icon = utils.FULLY_VERIFIED_BRONZE
+            if record.get("rank_num", 0) == 1:
+                icon = utils.BRONZE_WR
+            else:
+                icon = utils.FULLY_VERIFIED_BRONZE
         else:
-            icon = utils.FULLY_VERIFIED
+            if record.get("rank_num", 0) == 1:
+                icon = utils.NON_MEDAL_WR
+            else:
+                icon = utils.FULLY_VERIFIED
     elif record.record != "Completion":
         icon = utils.PARTIAL_VERIFIED
     return icon
@@ -292,6 +304,20 @@ def pr_records_embed(
             or (i == 0 and len(records) == 1)
             or i == len(records) - 1
         ):
+            embed.add_field(
+                name="Legend",
+                value=(
+                    f"{utils.PARTIAL_VERIFIED} Completion\n"
+                    f"{utils.FULLY_VERIFIED} Verified\n"
+                    f"{utils.NON_MEDAL_WR} No Medal w/ World Record\n\n"
+                    f"{utils.FULLY_VERIFIED_BRONZE} Bronze Medal\n"
+                    f"{utils.BRONZE_WR} Bronze Medal w/ World Record\n\n"
+                    f"{utils.FULLY_VERIFIED_SILVER} Silver Medal\n"
+                    f"{utils.SILVER_WR} Silver Medal w/ World Record\n\n"
+                    f"{utils.FULLY_VERIFIED_GOLD} Gold Medal\n"
+                    f"{utils.GOLD_WR} Gold Medal w/ World Record\n"
+                ),
+            )
             embed_list.append(embed)
             embed = utils.GenjiEmbed(title=title)
     return embed_list
