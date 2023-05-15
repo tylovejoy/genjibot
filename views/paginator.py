@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import discord
@@ -17,7 +18,7 @@ class Paginator(discord.ui.View):
         self,
         embeds: list[discord.Embed | utils.GenjiEmbed | str],
         author: discord.Member | discord.User,
-        timeout=None,
+        timeout=300,
     ) -> None:
         """Init paginator."""
         super().__init__(timeout=timeout)
@@ -30,18 +31,27 @@ class Paginator(discord.ui.View):
             self.back.disabled = True
             self.next.disabled = True
             self.last.disabled = True
+        self.end_time = ""
+        self.original_itx = None
+        if timeout is not None:
+            self.end_time = "This search will time out "
+            self.end_time += discord.utils.format_dt(
+                discord.utils.utcnow() + timedelta(seconds=timeout), "R"
+            )
 
     async def start(self, itx: discord.Interaction[core.Genji]) -> None:
         if isinstance(self.pages[0], str):
             await itx.edit_original_response(
-                content=self.pages[0],
+                content=self.end_time + "\n" + self.pages[0],
                 view=self,
             )
         else:
             await itx.edit_original_response(
+                content=self.end_time,
                 embed=self.pages[0],
                 view=self,
             )
+        self.original_itx = itx
         await self.wait()
 
     # @property
@@ -64,7 +74,10 @@ class Paginator(discord.ui.View):
 
     async def on_timeout(self) -> None:
         """Stop view on timeout."""
-        self.stop()
+        self.clear_items()
+        await self.original_itx.edit_original_response(
+            view=self,
+        )
         return await super().on_timeout()
 
     @discord.ui.button(label="First", emoji="⏮")
@@ -96,7 +109,8 @@ class Paginator(discord.ui.View):
         try:
             if isinstance(self.pages[self._curr_page], str):
                 await itx.response.edit_message(
-                    content=self.pages[self._curr_page], view=self
+                    content=self.end_time + "\n" + self.pages[self._curr_page],
+                    view=self,
                 )
             else:
                 await itx.response.edit_message(
@@ -105,7 +119,8 @@ class Paginator(discord.ui.View):
         except discord.errors.InteractionResponded:
             if isinstance(self.pages[self._curr_page], str):
                 await itx.edit_original_response(
-                    content=self.pages[self._curr_page], view=self
+                    content=self.end_time + "\n" + self.pages[self._curr_page],
+                    view=self,
                 )
             else:
                 await itx.edit_original_response(
