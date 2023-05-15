@@ -141,7 +141,7 @@ class ModCommands(commands.Cog):
             )
         else:
             itx.client.dispatch("newsfeed_medals", itx, map_code, gold, silver, bronze)
-            await utils.update_affected_users(itx, map_code)
+            await utils.update_affected_users(itx.client, map_code)
 
     @map.command(name="submit-map")
     @app_commands.autocomplete(
@@ -555,7 +555,7 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            await utils.update_affected_users(itx, map_code)
+            await utils.update_affected_users(itx.client, map_code)
             itx.client.dispatch(
                 "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
             )

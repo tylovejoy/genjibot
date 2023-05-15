@@ -249,11 +249,10 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_new_map(
         self,
-        itx: discord.Interaction[core.Genji],
         user: discord.Member,
         data: utils.MapSubmission,
     ):
-        nickname = itx.client.cache.users[user.id].nickname
+        nickname = self.bot.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
             title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
             description=(
@@ -261,7 +260,9 @@ class BotEvents(commands.Cog):
             ),
             color=discord.Color.blue(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        await self.bot.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
+            embed=embed
+        )
 
     @commands.Cog.listener()
     async def on_newsfeed_medals(
@@ -368,7 +369,29 @@ class BotEvents(commands.Cog):
             color=discord.Color.red(),
         )
         if thread_id:
-            await itx.guild.get_thread(thread_id).send(embed=embed)
+            thread = itx.guild.get_thread(thread_id)
+            row = await self.bot.database.get_row(
+                """
+                  SELECT
+                    map_name,
+                    m.map_code,
+                    checkpoints,
+                    value AS difficulty
+                    FROM
+                      maps m
+                        LEFT JOIN playtest p ON m.map_code = p.map_code AND p.is_author = TRUE
+                    WHERE m.map_code = $1
+                """,
+                map_code,
+            )
+
+            await thread.edit(
+                name=(
+                    f"{map_code} | {utils.convert_num_to_difficulty(row.difficulty)} "
+                    f"| {row.map_name} | {row.checkpoints} CPs"
+                )
+            )
+            await thread.send(embed=embed)
             original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
                 message_id
             )

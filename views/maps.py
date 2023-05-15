@@ -410,39 +410,39 @@ class PlaytestVoting(discord.ui.View):
                 f"Go to the thread and *Finalize* the submission!"
             )
 
-    async def approve_map(self, itx: discord.Interaction[core.Genji]):
+    async def approve_map(self):
         self.stop()
         record = await self.get_author_db_row()
         await self.lock_and_archive_thread(record.thread_id)
-        author = itx.guild.get_member(self.data.creator.id)
+        author = self.client.get_guild(utils.GUILD_ID).get_member(self.data.creator.id)
         votes_db_rows = await self.get_votes_for_map()
-        await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
+        await self.post_new_map(author, record.original_msg, votes_db_rows)
         try:
-            await self.increment_playtest_count(itx, votes_db_rows)
+            await self.increment_playtest_count(votes_db_rows)
         except Exception as e:
             print(e)
 
         query = (
             "SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"
         )
-        row = await itx.client.database.get_row(
+        row = await self.client.database.get_row(
             query, self.data.creator.id, self.data.map_code
         )
         if row.verification_id:
-            await itx.guild.get_channel(utils.VERIFICATION_QUEUE).get_partial_message(
-                row.verification_id
-            ).delete()
+            await self.client.get_guild(utils.GUILD_ID).get_channel(
+                utils.VERIFICATION_QUEUE
+            ).get_partial_message(row.verification_id).delete()
 
         await self.delete_playtest_db_entry()
 
-    async def increment_playtest_count(self, itx, votes_db_rows):
+    async def increment_playtest_count(self, votes_db_rows):
         query = """
             INSERT INTO playtest_count (user_id, amount)
             VALUES ($1, 1)
             ON CONFLICT (user_id) DO UPDATE SET amount = playtest_count.amount + 1;
         """
 
-        await itx.client.database.set_many(
+        await self.client.database.set_many(
             query,
             [(x.user_id,) for x in votes_db_rows if x.user_id != self.data.creator.id],
         )
@@ -481,26 +481,25 @@ class PlaytestVoting(discord.ui.View):
     async def post_new_map(
         self,
         author: discord.Member,
-        itx: discord.Interaction[core.Genji],
         original_msg: int,
         votes: list[database.DotRecord | None],
     ):
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
-        thread = itx.guild.get_channel(utils.PLAYTEST)
+        thread = self.client.get_guild(utils.GUILD_ID).get_channel(utils.PLAYTEST)
         await thread.fetch_message(votes[0].thread_id)
-        itx.client.dispatch(
+        self.client.dispatch(
             "newsfeed_new_map",
-            itx,
             author,
             self.data,
         )
+
         try:
-            await utils.update_affected_users(itx, self.data.map_code)
+            await utils.update_affected_users(self.client, self.data.map_code)
         except Exception as e:
             print("This needs to be excepted:  1----->", e)
         try:
-            await itx.client.get_channel(utils.PLAYTEST).get_partial_message(
+            await self.client.get_channel(utils.PLAYTEST).get_partial_message(
                 original_msg
             ).delete()
         except Exception as e:
@@ -702,8 +701,8 @@ class PlaytestVoting(discord.ui.View):
         await self.lock_and_archive_thread(record.thread_id)
         author = itx.guild.get_member(self.data.creator.id)
 
-        await self.post_new_map(author, itx, record.original_msg, votes_db_rows)
-        await self.increment_playtest_count(itx, votes_db_rows)
+        await self.post_new_map(author, record.original_msg, votes_db_rows)
+        await self.increment_playtest_count(votes_db_rows)
         await self.delete_playtest_db_entry()
         itx.client.playtest_views.pop(itx.message.id)
 
