@@ -256,9 +256,9 @@ class Maps(commands.Cog):
                   LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
                   LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
              WHERE
-                 (official = $11::bool)
-             AND (archived = FALSE)
-             AND ($1::text IS NULL OR am.map_code = $1)
+             ($1::text IS NULL OR am.map_code = $1)
+             AND ($1::text IS NOT NULL OR ((archived = FALSE)
+             AND (official = $11::bool)
              AND ($2::text IS NULL OR map_type LIKE $2)
              AND ($3::text IS NULL OR map_name = $3)
              AND ($4::text IS NULL OR mechanics LIKE $4)
@@ -266,7 +266,7 @@ class Maps(commands.Cog):
                AND difficulty < $6::numeric(10, 2)))
              AND ($7::int IS NULL OR quality >= $7)
              AND ($8::bigint IS NULL OR $8 = ANY (creator_ids))
-             AND ($12::bool IS FALSE OR (gold IS NOT NULL AND silver IS NOT NULL AND bronze IS NOT NULL))
+             AND ($12::bool IS FALSE OR (gold IS NOT NULL AND silver IS NOT NULL AND bronze IS NOT NULL))))
              GROUP BY
                am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
@@ -297,7 +297,7 @@ class Maps(commands.Cog):
 
         embeds = self.create_map_embeds(maps)
 
-        view = views.Paginator(embeds, itx.user, None)
+        view = views.Paginator(embeds, itx.user)
         await view.start(itx)
 
     @staticmethod
@@ -459,6 +459,49 @@ class Maps(commands.Cog):
             url,
         )
         itx.client.dispatch("newsfeed_guide", itx, itx.user, url, map_code)
+
+    @app_commands.command()
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.choices(
+        quality=[
+            app_commands.Choice(
+                name=utils.ALL_STARS[x - 1],
+                value=x,
+            )
+            for x in range(1, 7)
+        ]
+    )
+    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    async def rate(
+        self,
+        itx: discord.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        quality: app_commands.Choice[int],
+    ):
+        await itx.response.defer(ephemeral=True)
+        row = await itx.client.database.get_row(
+            "SELECT exists(SELECT 1 FROM records WHERE map_code = $1 AND user_id = $2)",
+            map_code,
+            itx.user.id,
+        )
+        if not row.exists:
+            raise utils.NoCompletionFoundError
+
+        view = views.Confirm(itx)
+        await itx.edit_original_response(
+            content=f"You want to rate {map_code} *{quality}* stars. Is this correct?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        await itx.client.database.set(
+            """
+            INSERT INTO map_ratings (user_id, map_code, quality) 
+            VALUES ($1, $2, $3) 
+            ON CONFLICT (user_id, map_code) 
+            DO UPDATE SET quality = excluded.quality"""
+        )
 
 
 async def setup(bot):

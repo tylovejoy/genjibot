@@ -62,12 +62,12 @@ _RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
 
 
 async def update_affected_users(
-    itx: discord.Interaction[core.Genji],
+    client: core.Genji,
     map_code: str,
 ):
     users = [
         x.user_id
-        async for x in itx.client.database.get(
+        async for x in client.database.get(
             """
             SELECT DISTINCT user_id FROM records WHERE map_code=$1;
             """,
@@ -76,8 +76,8 @@ async def update_affected_users(
     ]
     if users:
         for x in users:
-            if user := itx.guild.get_member(x):
-                await utils.auto_role(itx.client, user)
+            if user := client.get_guild(utils.GUILD_ID).get_member(x):
+                await utils.auto_role(client, user)
 
 
 async def auto_role(client: core.Genji, user: discord.Member):

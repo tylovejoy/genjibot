@@ -16,8 +16,8 @@ if typing.TYPE_CHECKING:
 
 
 class BaseParkourException(Exception):
-    def __init__(self):
-        super().__init__(self.__doc__)
+    def __init__(self, additional_info: str = ""):
+        super().__init__(self.__doc__ + "\n" + additional_info)
 
 
 class DatabaseConnectionError(Exception):
@@ -77,12 +77,27 @@ class NoRecordsFoundError(BaseParkourException, app_commands.errors.AppCommandEr
     """No records have been found."""
 
 
+class NoCompletionFoundError(BaseParkourException):
+    """You cannot rate a map without a completion."""
+
+
 class NoPermissionsError(BaseParkourException, app_commands.errors.AppCommandError):
     """You do not have permission to do this action."""
 
 
 class CreatorAlreadyExists(BaseParkourException):
     """Creator already associated with this map."""
+
+
+class MaxMapsInPlaytest(BaseParkourException):
+    """You have reached the maximum total amount (5) of maps in playtest.
+    Try to engage other members to playtest your map in order to get verified and submit more maps.
+    """
+
+
+class MaxWeeklyMapsInPlaytest(BaseParkourException):
+    """You have reached the maximum amount of maps (2) submitted within the last week.
+    Focus on getting your maps verified before submitting more!"""
 
 
 class CreatorDoesntExist(BaseParkourException):

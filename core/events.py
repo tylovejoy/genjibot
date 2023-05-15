@@ -249,11 +249,10 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_new_map(
         self,
-        itx: discord.Interaction[core.Genji],
         user: discord.Member,
         data: utils.MapSubmission,
     ):
-        nickname = itx.client.cache.users[user.id].nickname
+        nickname = self.bot.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(
             title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
             description=(
@@ -261,7 +260,9 @@ class BotEvents(commands.Cog):
             ),
             color=discord.Color.blue(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        await self.bot.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
+            embed=embed
+        )
 
     @commands.Cog.listener()
     async def on_newsfeed_medals(
@@ -298,6 +299,7 @@ class BotEvents(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: str,
         value: str,
+        map_data: dict = None,
     ):
         if value == "archive":
             description = (
@@ -314,9 +316,39 @@ class BotEvents(commands.Cog):
             description=description,
             color=discord.Color.red(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        if value:
+            guide_txt = ""
+            medals_txt = ""
+            if None not in map_data.guide:
+                guides = [
+                    f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)
+                ]
+                guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
+            if map_data.gold:
+                medals_txt = (
+                    f"┣ `Medals` "
+                    f"{utils.FULLY_VERIFIED_GOLD} {map_data.gold} | "
+                    f"{utils.FULLY_VERIFIED_SILVER} {map_data.silver} | "
+                    f"{utils.FULLY_VERIFIED_BRONZE} {map_data.bronze}\n"
+                )
 
-    commands.Cog.listener()
+            embed.add_description_field(
+                name=f"{map_data.map_code}",
+                value=(
+                    f"┣ `Rating` {utils.create_stars(map_data.quality)}\n"
+                    f"┣ `Creator` {discord.utils.escape_markdown(map_data.creators)}\n"
+                    f"┣ `Map` {map_data.map_name}\n"
+                    f"┣ `Difficulty` {utils.convert_num_to_difficulty(map_data.difficulty)}\n"
+                    f"┣ `Mechanics` {map_data.mechanics}\n"
+                    f"┣ `Restrictions` {map_data.restrictions}\n"
+                    f"{guide_txt}"
+                    f"┣ `Type` {map_data.map_type}\n"
+                    f"┣ `Checkpoints` {map_data.checkpoints}\n"
+                    f"{medals_txt}"
+                    f"┗ `Desc` {map_data.desc}"
+                ),
+            )
+        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(
@@ -337,7 +369,29 @@ class BotEvents(commands.Cog):
             color=discord.Color.red(),
         )
         if thread_id:
-            await itx.guild.get_thread(thread_id).send(embed=embed)
+            thread = itx.guild.get_thread(thread_id)
+            row = await self.bot.database.get_row(
+                """
+                  SELECT
+                    map_name,
+                    m.map_code,
+                    checkpoints,
+                    value AS difficulty
+                    FROM
+                      maps m
+                        LEFT JOIN playtest p ON m.map_code = p.map_code AND p.is_author = TRUE
+                    WHERE m.map_code = $1
+                """,
+                map_code,
+            )
+
+            await thread.edit(
+                name=(
+                    f"{map_code} | {utils.convert_num_to_difficulty(row.difficulty)} "
+                    f"| {row.map_name} | {row.checkpoints} CPs"
+                )
+            )
+            await thread.send(embed=embed)
             original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
                 message_id
             )

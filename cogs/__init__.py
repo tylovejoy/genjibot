@@ -4,12 +4,14 @@ import copy
 import functools
 import pkgutil
 import typing
+from datetime import timedelta
 
 import discord
 from discord import app_commands
 
 import utils
 import views
+from utils import MaxMapsInPlaytest, MaxWeeklyMapsInPlaytest
 
 if typing.TYPE_CHECKING:
     import core
@@ -109,6 +111,17 @@ async def submit_map_(
         if not 0 < data.gold < data.silver < data.bronze:
             raise utils.InvalidMedals
 
+    if await _check_max_limit(itx) >= 5:
+        raise MaxMapsInPlaytest()
+    count, date = await _check_weekly_limit(itx)
+    if count >= 2:
+        date = date + timedelta(weeks=1)
+        raise MaxWeeklyMapsInPlaytest(
+            "You will be able to submit again "
+            f"{discord.utils.format_dt(date, 'R')}"
+            f"| {discord.utils.format_dt(date, 'F')}"
+        )
+
     initial_message = (
         f"{data.creator.mention}, "
         f"fill in additional details to complete map submission!"
@@ -121,6 +134,25 @@ async def submit_map_(
     callback = functools.partial(map_submission_first_step, data, itx, mod, view)
     view.partial_callback = callback
     await view.start()
+
+
+async def _check_weekly_limit(itx: discord.Interaction[core.Genji]):
+    query = """
+        SELECT count(*), min(date) as date
+          FROM map_submission_dates
+         WHERE
+           user_id = $1 AND date BETWEEN now() - INTERVAL '1 weeks' AND now();
+    """
+    row = await itx.client.database.get_row(query, itx.user.id)
+    return row.get("count", 0), row.get("date", None)
+
+
+async def _check_max_limit(itx: discord.Interaction[core.Genji]):
+    query = """
+        SELECT count(*) FROM playtest WHERE is_author = TRUE AND user_id = $1;
+    """
+    row = await itx.client.database.get_row(query, itx.user.id)
+    return row.get("count", 0)
 
 
 async def map_submission_first_step(
@@ -174,7 +206,10 @@ async def map_submission_second_step(
             description="You can change your vote, but you cannot cast multiple!\n\n",
         )
         thread = await playtest_message.create_thread(
-            name=f"Discuss/rate {data.map_code} here."
+            name=(
+                f"{data.map_code} | {data.difficulty} | {data.map_name} "
+                f"{data.checkpoint_count} CPs"
+            )
         )
 
         thread_msg = await thread.send(
@@ -202,7 +237,7 @@ async def map_submission_second_step(
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        itx.client.dispatch("newsfeed_new_map", itx, data.creator, data)
+        itx.client.dispatch("newsfeed_new_map", data.creator, data)
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
 
