@@ -3,13 +3,11 @@ from __future__ import annotations
 import enum
 import functools
 import io
-import re
 from typing import TYPE_CHECKING
 
 import discord
 import matplotlib.pyplot as plt
 from discord import ButtonStyle
-from matplotlib import ticker
 
 import database
 import utils
@@ -414,6 +412,13 @@ class PlaytestVoting(discord.ui.View):
         self.stop()
         record = await self.get_author_db_row()
         await self.lock_and_archive_thread(record.thread_id)
+        await self.delete_playtest_thread(record.thread_id)
+        try:
+            await self.delete_playtest_post(record.thread_id)
+        except Exception as e:
+            print(
+                f"{e} || this needs to be caught properly in approve_map views/maps.py"
+            )
         author = self.client.get_guild(utils.GUILD_ID).get_member(self.data.creator.id)
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, record.original_msg, votes_db_rows)
@@ -458,6 +463,9 @@ class PlaytestVoting(discord.ui.View):
         await self.client.get_channel(utils.PLAYTEST).get_thread(thread_id).edit(
             archived=True, locked=True
         )
+
+    async def delete_playtest_thread(self, thread_id: int):
+        await self.client.get_channel(utils.PLAYTEST).get_thread(thread_id).delete()
 
     async def get_votes_for_map(self) -> list[database.DotRecord | None]:
         return [
@@ -752,7 +760,7 @@ class PlaytestVoting(discord.ui.View):
             return
 
         itx.client.playtest_views.pop(itx.message.id)
-        await self.approve_map(itx)
+        await self.approve_map()
 
     async def start_process_over(self, itx: discord.Interaction[core.Genji]):
         view = views.Confirm(itx)
