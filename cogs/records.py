@@ -97,12 +97,22 @@ class Records(commands.Cog):
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
     )
+    @app_commands.choices(
+        quality=[
+            app_commands.Choice(
+                name=utils.ALL_STARS[x - 1],
+                value=x,
+            )
+            for x in range(1, 7)
+        ]
+    )
     async def submit_record(
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
         screenshot: discord.Attachment,
         time: app_commands.Transform[float, utils.RecordTransformer],
+        quality: app_commands.Choice[int],
         video: app_commands.Transform[str, utils.URLTransformer] | None,
     ) -> None:
         """
@@ -227,7 +237,8 @@ class Records(commands.Cog):
             channel_msg.id,
             channel_msg.channel.id,
             verification_msg.id,
-            None if not getattr(view, "quality", None) else int(view.quality.values[0]),
+            quality,
+            # None if not getattr(view, "quality", None) else int(view.quality.values[0]),
         )
         await user_msg.delete()
 

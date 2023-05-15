@@ -460,6 +460,49 @@ class Maps(commands.Cog):
         )
         itx.client.dispatch("newsfeed_guide", itx, itx.user, url, map_code)
 
+    @app_commands.command()
+    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.choices(
+        quality=[
+            app_commands.Choice(
+                name=utils.ALL_STARS[x - 1],
+                value=x,
+            )
+            for x in range(1, 7)
+        ]
+    )
+    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    async def rate(
+        self,
+        itx: discord.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        quality: app_commands.Choice[int],
+    ):
+        await itx.response.defer(ephemeral=True)
+        row = await itx.client.database.get_row(
+            "SELECT exists(SELECT 1 FROM records WHERE map_code = $1 AND user_id = $2)",
+            map_code,
+            itx.user.id,
+        )
+        if not row.exists:
+            raise utils.NoCompletionFoundError
+
+        view = views.Confirm(itx)
+        await itx.edit_original_response(
+            content=f"You want to rate {map_code} *{quality}* stars. Is this correct?",
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        await itx.client.database.set(
+            """
+            INSERT INTO map_ratings (user_id, map_code, quality) 
+            VALUES ($1, $2, $3) 
+            ON CONFLICT (user_id, map_code) 
+            DO UPDATE SET quality = excluded.quality"""
+        )
+
 
 async def setup(bot):
     """Add Cog to Discord bot."""

@@ -77,6 +77,10 @@ class NoRecordsFoundError(BaseParkourException, app_commands.errors.AppCommandEr
     """No records have been found."""
 
 
+class NoCompletionFoundError(BaseParkourException):
+    """You cannot rate a map without a completion."""
+
+
 class NoPermissionsError(BaseParkourException, app_commands.errors.AppCommandError):
     """You do not have permission to do this action."""
 
