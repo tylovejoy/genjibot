@@ -16,8 +16,8 @@ if typing.TYPE_CHECKING:
 
 
 class BaseParkourException(Exception):
-    def __init__(self):
-        super().__init__(self.__doc__)
+    def __init__(self, additional_info: str = ""):
+        super().__init__(self.__doc__ + "\n" + additional_info)
 
 
 class DatabaseConnectionError(Exception):
