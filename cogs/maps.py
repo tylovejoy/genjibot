@@ -489,7 +489,7 @@ class Maps(commands.Cog):
 
         view = views.Confirm(itx)
         await itx.edit_original_response(
-            content=f"You want to rate {map_code} *{quality}* stars. Is this correct?",
+            content=f"You want to rate {map_code} *{quality.value}* stars ({quality.name}). Is this correct?",
             view=view,
         )
         await view.wait()
@@ -500,7 +500,10 @@ class Maps(commands.Cog):
             INSERT INTO map_ratings (user_id, map_code, quality) 
             VALUES ($1, $2, $3) 
             ON CONFLICT (user_id, map_code) 
-            DO UPDATE SET quality = excluded.quality"""
+            DO UPDATE SET quality = excluded.quality""",
+            itx.user.id,
+            map_code,
+            quality.value,
         )
 
 

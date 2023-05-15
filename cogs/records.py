@@ -237,8 +237,7 @@ class Records(commands.Cog):
             channel_msg.id,
             channel_msg.channel.id,
             verification_msg.id,
-            quality,
-            # None if not getattr(view, "quality", None) else int(view.quality.values[0]),
+            quality.value,
         )
         await user_msg.delete()
 
