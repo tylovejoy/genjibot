@@ -256,9 +256,9 @@ class Maps(commands.Cog):
                   LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
                   LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
              WHERE
-                 (official = $11::bool)
-             AND (archived = FALSE)
-             AND ($1::text IS NULL OR am.map_code = $1)
+             ($1::text IS NULL OR am.map_code = $1)
+             AND ($1::text IS NOT NULL OR ((archived = FALSE)
+             AND (official = $11::bool)
              AND ($2::text IS NULL OR map_type LIKE $2)
              AND ($3::text IS NULL OR map_name = $3)
              AND ($4::text IS NULL OR mechanics LIKE $4)
@@ -266,7 +266,7 @@ class Maps(commands.Cog):
                AND difficulty < $6::numeric(10, 2)))
              AND ($7::int IS NULL OR quality >= $7)
              AND ($8::bigint IS NULL OR $8 = ANY (creator_ids))
-             AND ($12::bool IS FALSE OR (gold IS NOT NULL AND silver IS NOT NULL AND bronze IS NOT NULL))
+             AND ($12::bool IS FALSE OR (gold IS NOT NULL AND silver IS NOT NULL AND bronze IS NOT NULL))))
              GROUP BY
                am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
