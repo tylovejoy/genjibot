@@ -19,9 +19,9 @@ class Tasks(commands.Cog):
         self._playtest_expiration_warning.start()
         self._playtest_expiration.start()
 
-        @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
-        async def _playtest_auto_approve(self):
-            query = """
+    @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
+    async def _playtest_auto_approve(self):
+        query = """
       WITH
         playtest_vote_counts       AS (
           SELECT count(*) - 1 AS votes, map_code
@@ -47,11 +47,11 @@ class Tasks(commands.Cog):
         author_playtest ap
           LEFT JOIN map_submission_dates msd ON ap.user_id = msd.user_id AND msd.map_code = ap.map_code
      WHERE
-       date < now()
+       date < now() - INTERVAL '4 weeks'
             """
-            async for row in self.bot.database.get(query):
-                await self.bot.playtest_views[row.message_id].approve_map()
-                self.bot.playtest_views.pop(row.message_id)
+        async for row in self.bot.database.get(query):
+            await self.bot.playtest_views[row.message_id].approve_map()
+            self.bot.playtest_views.pop(row.message_id)
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
     async def _playtest_expiration(self):
