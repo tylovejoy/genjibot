@@ -297,7 +297,7 @@ class Maps(commands.Cog):
 
         embeds = self.create_map_embeds(maps)
 
-        view = views.Paginator(embeds, itx.user, None)
+        view = views.Paginator(embeds, itx.user)
         await view.start(itx)
 
     @staticmethod

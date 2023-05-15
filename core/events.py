@@ -298,6 +298,7 @@ class BotEvents(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: str,
         value: str,
+        map_data: dict = None,
     ):
         if value == "archive":
             description = (
@@ -314,9 +315,39 @@ class BotEvents(commands.Cog):
             description=description,
             color=discord.Color.red(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        if value:
+            guide_txt = ""
+            medals_txt = ""
+            if None not in map_data.guide:
+                guides = [
+                    f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)
+                ]
+                guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
+            if map_data.gold:
+                medals_txt = (
+                    f"┣ `Medals` "
+                    f"{utils.FULLY_VERIFIED_GOLD} {map_data.gold} | "
+                    f"{utils.FULLY_VERIFIED_SILVER} {map_data.silver} | "
+                    f"{utils.FULLY_VERIFIED_BRONZE} {map_data.bronze}\n"
+                )
 
-    commands.Cog.listener()
+            embed.add_description_field(
+                name=f"{map_data.map_code}",
+                value=(
+                    f"┣ `Rating` {utils.create_stars(map_data.quality)}\n"
+                    f"┣ `Creator` {discord.utils.escape_markdown(map_data.creators)}\n"
+                    f"┣ `Map` {map_data.map_name}\n"
+                    f"┣ `Difficulty` {utils.convert_num_to_difficulty(map_data.difficulty)}\n"
+                    f"┣ `Mechanics` {map_data.mechanics}\n"
+                    f"┣ `Restrictions` {map_data.restrictions}\n"
+                    f"{guide_txt}"
+                    f"┣ `Type` {map_data.map_type}\n"
+                    f"┣ `Checkpoints` {map_data.checkpoints}\n"
+                    f"{medals_txt}"
+                    f"┗ `Desc` {map_data.desc}"
+                ),
+            )
+        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(
