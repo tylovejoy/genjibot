@@ -11,7 +11,7 @@ from discord import app_commands
 
 import utils
 import views
-from utils import MaxMapsInPlaytest, MaxWeeklyMapsInPlaytest
+from utils import MaxMapsInPlaytest, MaxWeeklyMapsInPlaytest, new_map_newsfeed
 
 if typing.TYPE_CHECKING:
     import core
@@ -237,7 +237,8 @@ async def map_submission_second_step(
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        itx.client.dispatch("newsfeed_new_map", data.creator, data)
+        await new_map_newsfeed(itx.client, data.creator.id, data)
+        # itx.client.dispatch("newsfeed_new_map", data.creator, data)
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
 

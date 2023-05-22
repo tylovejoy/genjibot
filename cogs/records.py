@@ -124,6 +124,7 @@ class Records(commands.Cog):
             time: Time in seconds/milliseconds
             screenshot: Screenshot of completion
             video: Video of play through. REQUIRED FOR FULL VERIFICATION!
+            quality: Quality of the map
         """
         await itx.response.defer(ephemeral=True)
 
@@ -142,6 +143,15 @@ class Records(commands.Cog):
         if not time or await self.check_playtest(map_code):
             time = utils.COMPLETION_PLACEHOLDER
 
+        if (
+            await itx.client.database.get_row(
+                "SELECT exists(SELECT 1 FROM map_creators WHERE map_code = $1 AND user_id = $2)",
+                map_code,
+                itx.user.id,
+            )
+        ).get("exists", None):
+            quality.value = None
+
         search = [
             x
             async for x in itx.client.database.get(
@@ -152,6 +162,14 @@ class Records(commands.Cog):
                 itx.user.id,
             )
         ]
+
+        extra_content = ""
+        if time == utils.COMPLETION_PLACEHOLDER and video:
+            extra_content = (
+                "\n\n**You are submitting a video with a completion. The video will be removed automatically. "
+                "If you wish to use you video as a guide please use the `/guide add` command instead.**"
+            )
+            video = None
 
         if search:
             search = search[0]
@@ -186,6 +204,7 @@ class Records(commands.Cog):
 
         query = """SELECT avg(difficulty) as difficulty FROM map_ratings WHERE map_code = $1"""
         row = await itx.client.database.get_row(query, map_code)
+
         embed = utils.record_embed(
             {
                 "difficulty": row.difficulty,
@@ -197,7 +216,7 @@ class Records(commands.Cog):
             }
         )
         user_msg = await itx.edit_original_response(
-            content=f"{itx.user.mention}, is this correct?",
+            content=f"{itx.user.mention}, is this correct? (Quality: {quality.name if not None else 'N/A'}{extra_content}",
             embed=embed,
             view=view,
             attachments=[user_facing_screenshot],

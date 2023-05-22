@@ -12,7 +12,7 @@ from discord import ButtonStyle
 import database
 import utils
 import views
-from utils import PLAYTEST
+from utils import PLAYTEST, new_map_newsfeed
 
 if TYPE_CHECKING:
     import core
@@ -411,14 +411,7 @@ class PlaytestVoting(discord.ui.View):
     async def approve_map(self):
         self.stop()
         record = await self.get_author_db_row()
-        await self.lock_and_archive_thread(record.thread_id)
         await self.delete_playtest_thread(record.thread_id)
-        try:
-            await self.delete_playtest_post(record.thread_id)
-        except Exception as e:
-            print(
-                f"{e} || this needs to be caught properly in approve_map views/maps.py"
-            )
         author = self.client.get_guild(utils.GUILD_ID).get_member(self.data.creator.id)
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, record.original_msg, votes_db_rows)
@@ -496,11 +489,12 @@ class PlaytestVoting(discord.ui.View):
         await self.set_map_ratings(votes)
         thread = self.client.get_guild(utils.GUILD_ID).get_channel(utils.PLAYTEST)
         await thread.fetch_message(votes[0].thread_id)
-        self.client.dispatch(
-            "newsfeed_new_map",
-            author,
-            self.data,
-        )
+        # self.client.dispatch(
+        #     "newsfeed_new_map",
+        #     author,
+        #     self.data,
+        # )
+        await new_map_newsfeed(self.client, author.id, self.data)
 
         try:
             await utils.update_affected_users(self.client, self.data.map_code)
