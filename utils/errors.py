@@ -81,6 +81,10 @@ class NoCompletionFoundError(BaseParkourException):
     """You cannot rate a map without a completion."""
 
 
+class CannotRateOwnMap(BaseParkourException):
+    """You cannot rate your own map."""
+
+
 class NoPermissionsError(BaseParkourException, app_commands.errors.AppCommandError):
     """You do not have permission to do this action."""
 

@@ -479,6 +479,15 @@ class Maps(commands.Cog):
         quality: app_commands.Choice[int],
     ):
         await itx.response.defer(ephemeral=True)
+        if (
+            await itx.client.database.get_row(
+                "SELECT exists(SELECT 1 FROM map_creators WHERE map_code = $1 AND user_id = $2)",
+                map_code,
+                itx.user.id,
+            )
+        ).get("exists", None):
+            raise utils.CannotRateOwnMap
+
         row = await itx.client.database.get_row(
             "SELECT exists(SELECT 1 FROM records WHERE map_code = $1 AND user_id = $2)",
             map_code,
