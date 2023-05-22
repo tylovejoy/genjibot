@@ -273,13 +273,13 @@ class PlaytestVoting(discord.ui.View):
     async def set_select_vote_value(
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
-        vote_value = int(select.values[0]) * 11 / 17
+        vote_value = (int(select.values[0]) + 1) * 10 / 17
         await self.update_playtest_vote(itx, vote_value)
 
     async def _set_select_vote_value_creator(
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
-        vote_value = int(select.values[0]) * 11 / 17
+        vote_value = (int(select.values[0]) + 1) * 10 / 17
         await self._update_user_vote(itx, vote_value, self.data.creator.id)
 
     async def update_playtest_vote(
