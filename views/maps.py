@@ -152,7 +152,7 @@ class PlaytestVoting(discord.ui.View):
             _ModOnlyOptions.START_OVER.value: self.start_process_over,
             _ModOnlyOptions.REMOVE_COMPLETIONS.value: self.remove_votes_option,
             _ModOnlyOptions.REMOVE_VOTES.value: self.remove_votes_option,
-            _ModOnlyOptions.TOGGLE_FINALIZE_BUTTON.value: self.toggle_finalize_button,
+            _ModOnlyOptions.TOGGLE_FINALIZE_BUTTON.value: self._pre_toggle_finalize_button,
         }
 
     def change_difficulty(self, difficulty: int):
@@ -820,7 +820,7 @@ class PlaytestVoting(discord.ui.View):
         )
         await self.remove_records()
 
-    async def toggle_finalize_button(self, itx: discord.Interaction[core.Genji]):
+    async def _pre_toggle_finalize_button(self, itx: discord.Interaction[core.Genji]):
         if await self.check_creator(itx):
             await itx.response.send_message(
                 "You cannot use this if you are the creator.", ephemeral=True
@@ -835,11 +835,15 @@ class PlaytestVoting(discord.ui.View):
         await view.wait()
         if not view.value:
             return
+        await self.toggle_finalize_button(itx.channel, itx.message)
 
+    async def toggle_finalize_button(
+        self, channel: discord.Thread, message: discord.Message
+    ):
         self.ready_up_button.disabled = not self.ready_up_button.disabled
-        await itx.message.edit(view=self)
+        await message.edit(view=self)
         if not self.ready_up_button.disabled:
-            await itx.channel.send(
+            await channel.send(
                 f"{self.data.creator.mention}, "
                 f"the Finalize Submission button has been enabled by a Sensei."
             )

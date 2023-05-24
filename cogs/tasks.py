@@ -50,8 +50,11 @@ class Tasks(commands.Cog):
        date < now() - INTERVAL '4 weeks'
             """
         async for row in self.bot.database.get(query):
-            await self.bot.playtest_views[row.message_id].approve_map()
-            self.bot.playtest_views.pop(row.message_id)
+            thread = self.bot.get_guild(utils.GUILD_ID).get_thread(row.thread_id)
+            message = thread.get_partial_message(row.message_id)
+            await self.bot.playtest_views[row.message_id].toggle_finalize_button(
+                thread, message
+            )
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
     async def _playtest_expiration(self):
