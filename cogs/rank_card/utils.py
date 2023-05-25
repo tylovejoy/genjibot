@@ -1,3 +1,6 @@
+import os
+
+import imagetext_py as ipy
 from PIL import Image, ImageDraw, ImageFont
 from PIL.ImageFont import FreeTypeFont
 
@@ -59,6 +62,9 @@ RANKS = (
     "Grandmaster",
     "God",
 )
+
+ipy.FontDB.LoadFromDir("./assets")
+font = ipy.FontDB.Query("notosans china1 china2 japanese korean")
 
 
 class RankCardBuilder:
@@ -192,16 +198,32 @@ class RankCardBuilder:
         )
 
     def _draw_name(self):
-        text = f"{self._data['name']}"
-        position = self._get_center_x_position(
-            _NAME_WIDTH, _NAME_X_POSITION, text, self._large_font
-        )
-        self._draw.text(
-            (position, _NAME_Y_POSITION + (_NAME_HEIGHT // 4)),
-            text,
-            font=self._large_font,
-            fill=(255, 255, 255),
-        )
+        with ipy.Writer(self._rank_card) as w:
+            text = f"{self._data['name']}"
+            position = self._get_center_x_position(
+                _NAME_WIDTH, _NAME_X_POSITION, text, self._large_font
+            )
+            w.draw_text_wrapped(
+                text=text,
+                x=position,
+                y=_NAME_Y_POSITION + (_NAME_HEIGHT // 4) - 8,
+                ax=0,
+                ay=0,
+                width=500,
+                size=30,
+                font=font,
+                fill=ipy.Paint.Color((255, 255, 255, 255)),
+                # align=TextAlign.Center,
+                stroke_color=ipy.Paint.Rainbow((0.0, 0.0), (256.0, 256.0)),
+                draw_emojis=True,
+            )
+        #
+        # self._draw.text(
+        #     (position, _NAME_Y_POSITION + (_NAME_HEIGHT // 4)),
+        #     text,
+        #     font=self._large_font,
+        #     fill=(255, 255, 255),
+        # )
 
     def _get_center_x_position(
         self, width: int, initial_pos: int, text: str, font: FreeTypeFont

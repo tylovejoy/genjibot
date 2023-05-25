@@ -5,3 +5,4 @@ jishaku
 thefuzz
 python-Levenshtein
 matplotlib
+imagetext-py
