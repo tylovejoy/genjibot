@@ -139,7 +139,7 @@ class UserData(Cache, ChoiceMixin):
         self, user_id: int, nickname: str, flags: SettingFlags, is_creator: bool
     ):
         self.user_id = user_id
-        self.nickname = nickname
+        self.nickname = discord.utils.escape_markdown(nickname)
         self.flags = flags
         self.is_creator = is_creator
         super().__init__()
@@ -150,7 +150,7 @@ class UserData(Cache, ChoiceMixin):
 
     def update_nickname(self, nickname: str):
         """Update a User nickname."""
-        self.nickname = nickname
+        self.nickname = discord.utils.escape_markdown(nickname)
         self.refresh()
 
     def update_user_id(self, user_id: int):
