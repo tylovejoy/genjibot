@@ -235,7 +235,7 @@ class ModCommands(commands.Cog):
         embed = utils.GenjiEmbed(
             title="Delete Record",
             description=(
-                f"`Name` {record.nickname}\n"
+                f"`Name` {discord.utils.escape_markdown(record.nickname)}\n"
                 f"`Code` {record.map_code}\n"
                 f"`Record` {record.record}\n"
                 # f"`Level` {record.level_name}\n"
