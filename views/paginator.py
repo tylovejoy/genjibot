@@ -18,7 +18,7 @@ class Paginator(discord.ui.View):
         self,
         embeds: list[discord.Embed | utils.GenjiEmbed | str],
         author: discord.Member | discord.User,
-        timeout=300,
+        timeout=600,
     ) -> None:
         """Init paginator."""
         super().__init__(timeout=timeout)
@@ -33,11 +33,16 @@ class Paginator(discord.ui.View):
             self.last.disabled = True
         self.end_time = ""
         self.original_itx = None
+        self._timeout = timeout
         if timeout is not None:
-            self.end_time = "This search will time out "
-            self.end_time += discord.utils.format_dt(
-                discord.utils.utcnow() + timedelta(seconds=timeout), "R"
-            )
+            self._update_end_time()
+
+    def _update_end_time(self):
+        time = discord.utils.format_dt(
+            discord.utils.utcnow() + timedelta(seconds=self._timeout), "R"
+        )
+        self.timeout = self._timeout
+        self.end_time = "This search will time out " + time
 
     async def start(self, itx: discord.Interaction[core.Genji]) -> None:
         if isinstance(self.pages[0], str):
@@ -106,6 +111,7 @@ class Paginator(discord.ui.View):
 
     async def change_page(self, itx: discord.Interaction[core.Genji]) -> None:
         self.page_number.label = f"{self._curr_page + 1}/{len(self.pages)}"
+        self._update_end_time()
         try:
             if isinstance(self.pages[self._curr_page], str):
                 await itx.response.edit_message(
