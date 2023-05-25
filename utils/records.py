@@ -232,14 +232,14 @@ def all_levels_records_embed(
             medals = (0, 0, 0)
         if not record.video:
             description = (
-                f"┣ `Name` {record.nickname}\n"
+                f"┣ `Name` {discord.utils.escape_markdown(record.nickname)}\n"
                 f"┗ `Record` [{record.record}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n"
             )
         else:
             description = (
-                f"┣ `Name` {record.nickname}\n"
+                f"┣ `Name` {discord.utils.escape_markdown(record.nickname)}\n"
                 f"┣ `Record` [{record.record}]"
                 f"({record.screenshot}) "
                 f"{icon_generator(record, medals)}\n "
