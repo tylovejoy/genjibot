@@ -120,7 +120,7 @@ class Paginator(discord.ui.View):
                 )
             else:
                 await itx.response.edit_message(
-                    embed=self.pages[self._curr_page], view=self
+                    content=self.end_time, embed=self.pages[self._curr_page], view=self
                 )
         except discord.errors.InteractionResponded:
             if isinstance(self.pages[self._curr_page], str):
@@ -130,7 +130,7 @@ class Paginator(discord.ui.View):
                 )
             else:
                 await itx.edit_original_response(
-                    embed=self.pages[self._curr_page], view=self
+                    content=self.end_time, embed=self.pages[self._curr_page], view=self
                 )
 
     @discord.ui.button(label="...")
