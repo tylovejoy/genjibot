@@ -4,6 +4,7 @@ import contextlib
 import re
 import typing
 
+import asyncpg
 import discord
 from discord.ext import commands
 
@@ -126,19 +127,21 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         # Add user to DB
-        await self.bot.database.set(
-            "INSERT INTO users VALUES ($1, $2, true);",
-            member.id,
-            member.name[:25],
-        )
-        self.bot.cache.users.add_one(
-            utils.UserData(
-                user_id=member.id,
-                nickname=member.name[:25],
-                flags=utils.SettingFlags.DEFAULT,
-                is_creator=False,
+        with contextlib.suppress(asyncpg.UniqueViolationError):
+            await self.bot.database.set(
+                "INSERT INTO users VALUES ($1, $2, true);",
+                member.id,
+                member.name[:25],
             )
-        )
+        if not self.bot.cache.users[member.id]:
+            self.bot.cache.users.add_one(
+                utils.UserData(
+                    user_id=member.id,
+                    nickname=member.name[:25],
+                    flags=utils.SettingFlags.DEFAULT,
+                    is_creator=False,
+                )
+            )
 
         self.bot.logger.debug(f"Adding user to DB/cache: {member.name}: {member.id}")
         res = [
