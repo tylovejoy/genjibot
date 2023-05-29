@@ -30,7 +30,6 @@ class Genji(commands.Bot):
             "?",
             intents=self._generate_intents(),
             help_command=None,
-            tree_cls=core.GenjiCommandTree,
         )
         self.session = session
         self.database = db
