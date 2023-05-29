@@ -420,7 +420,7 @@ class PlaytestVoting(discord.ui.View):
         except Exception as e:
             print(e)
 
-        query = "SELECT verification_id FROM playtest WHERE is_author = TRUE AND map_code = $2;"
+        query = "SELECT verification_id FROM playtest WHERE is_author = TRUE AND map_code = $1;"
         row = await self.client.database.get_row(query, self.data.map_code)
         if row.verification_id:
             await self.client.get_guild(utils.GUILD_ID).get_channel(
