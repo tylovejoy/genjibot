@@ -420,12 +420,8 @@ class PlaytestVoting(discord.ui.View):
         except Exception as e:
             print(e)
 
-        query = (
-            "SELECT verification_id FROM playtest WHERE user_id = $1 AND map_code = $2;"
-        )
-        row = await self.client.database.get_row(
-            query, self.data.creator.id, self.data.map_code
-        )
+        query = "SELECT verification_id FROM playtest WHERE is_author = TRUE AND map_code = $2;"
+        row = await self.client.database.get_row(query, self.data.map_code)
         if row.verification_id:
             await self.client.get_guild(utils.GUILD_ID).get_channel(
                 utils.VERIFICATION_QUEUE
@@ -447,9 +443,9 @@ class PlaytestVoting(discord.ui.View):
 
     async def get_author_db_row(self) -> database.DotRecord:
         return await self.client.database.get_row(
-            "SELECT * FROM playtest WHERE map_code=$1 AND user_id=$2;",
+            "SELECT * FROM playtest WHERE map_code=$1 AND is_author = TRUE",
             self.data.map_code,
-            self.data.creator.id,
+            # self.data.creator.id,
         )
 
     async def lock_and_archive_thread(self, thread_id: int):
