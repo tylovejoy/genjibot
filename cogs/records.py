@@ -216,7 +216,7 @@ class Records(commands.Cog):
             }
         )
         user_msg = await itx.edit_original_response(
-            content=f"{itx.user.mention}, is this correct? (Quality: {quality.name if not None else 'N/A'}{extra_content}",
+            content=f"{itx.user.mention}, is this correct? (Quality: {quality.name if not None else 'N/A'}) {extra_content}",
             embed=embed,
             view=view,
             attachments=[user_facing_screenshot],
