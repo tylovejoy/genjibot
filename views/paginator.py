@@ -80,9 +80,17 @@ class Paginator(discord.ui.View):
     async def on_timeout(self) -> None:
         """Stop view on timeout."""
         self.clear_items()
-        await self.original_itx.edit_original_response(
-            view=self,
-        )
+        if isinstance(self.pages[self._curr_page], str):
+            await self.original_itx.edit_original_response(
+                content=self.pages[self._curr_page],
+                view=self,
+            )
+        else:
+            await self.original_itx.edit_original_response(
+                content=None,
+                embed=self.pages[self._curr_page],
+                view=self,
+            )
         return await super().on_timeout()
 
     @discord.ui.button(label="First", emoji="⏮")
@@ -111,7 +119,7 @@ class Paginator(discord.ui.View):
 
     async def change_page(self, itx: discord.Interaction[core.Genji]) -> None:
         self.page_number.label = f"{self._curr_page + 1}/{len(self.pages)}"
-        self._update_end_time()
+        # self._update_end_time()
         try:
             if isinstance(self.pages[self._curr_page], str):
                 await itx.response.edit_message(
