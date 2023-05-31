@@ -125,13 +125,16 @@ SELECT ap.map_code, ap.user_id, thread_id, message_id
         async for row in self.bot.database.get(query):
             creator = guild.get_member(row.user_id)
             if creator:
-                message = (
-                    f"Hey there, {creator.mention}!\n\n"
-                    f"Friendly reminder that your map **{row.map_code}** will be scheduled for deletion in "
-                    f"**1 week** since there are no completions or votes.\n"
-                )
-                await guild.get_thread(row.thread_id).send(message)
-            map_codes.append(row.map_code)
+                mention = creator.mention
+            else:
+                mention = self.bot.cache.users[row.user_id].nickname
+            message = (
+                f"Hey there, {mention}!\n\n"
+                f"Friendly reminder that your map **{row.map_code}** will be scheduled for deletion in "
+                f"**1 week** since there are no votes.\n"
+            )
+            await guild.get_thread(row.thread_id).send(message)
+            map_codes.append((row.map_code,))
         await self.bot.database.set_many(
             "UPDATE map_submission_dates SET alerted = TRUE WHERE map_code = $1",
             map_codes,
