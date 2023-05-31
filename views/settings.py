@@ -24,7 +24,7 @@ DISABLED_EMOJI = "🔕"
 
 class SettingsView(discord.ui.View):
     def __init__(self, original_itx: discord.Interaction[core.Genji], flags: int):
-        super().__init__(timeout=None)
+        super().__init__(timeout=3600)
         self.itx = original_itx
         self.flags = utils.SettingFlags(flags)
         self.verification = NotificationButton(

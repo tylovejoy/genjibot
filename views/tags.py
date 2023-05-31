@@ -27,7 +27,7 @@ NUMBER_EMOJI = {
 
 class TagFuzzView(discord.ui.View):
     def __init__(self, itx: discord.Interaction[core.Genji], options: list[str]):
-        super().__init__(timeout=None)
+        super().__init__(timeout=3600)
         self.itx = itx
         self.matches.options = [
             discord.SelectOption(label=x, value=x, emoji=NUMBER_EMOJI[i + 1])

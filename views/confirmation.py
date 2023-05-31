@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import datetime
-import typing
 from typing import TYPE_CHECKING
 
 import discord
@@ -34,9 +34,10 @@ class ConfirmButton(discord.ui.Button):
         self.view.value = True
         self.view.clear_items()
         # self.view.stop()
-        await self.view.original_itx.edit_original_response(
-            content=self.view.confirm_msg, view=self.view
-        )
+        with contextlib.suppress(discord.HTTPException):
+            await self.view.original_itx.edit_original_response(
+                content=self.view.confirm_msg, view=self.view
+            )
         self.view.stop()
 
 
@@ -140,7 +141,7 @@ class ConfirmCompletion(discord.ui.View):
         confirm_msg="Confirmed.",
         ephemeral=False,
     ):
-        super().__init__(timeout=None)
+        super().__init__(timeout=3600)
         self.rank = rank
         self.original_itx = original_itx
         self.confirm_msg = confirm_msg
@@ -170,7 +171,7 @@ class RecordVideoConfirmCompletion(discord.ui.View):
         original_itx: discord.Interaction[core.Genji],
         confirm_msg="Confirmed.",
     ):
-        super().__init__(timeout=None)
+        super().__init__(timeout=3600)
         self.original_itx = original_itx
         self.confirm_msg = confirm_msg
         self.value = None

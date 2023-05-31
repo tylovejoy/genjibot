@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -80,17 +81,19 @@ class Paginator(discord.ui.View):
     async def on_timeout(self) -> None:
         """Stop view on timeout."""
         self.clear_items()
-        if isinstance(self.pages[self._curr_page], str):
-            await self.original_itx.edit_original_response(
-                content=self.pages[self._curr_page],
-                view=self,
-            )
-        else:
-            await self.original_itx.edit_original_response(
-                content=None,
-                embed=self.pages[self._curr_page],
-                view=self,
-            )
+        with contextlib.suppress(discord.HTTPException):
+            if isinstance(self.pages[self._curr_page], str):
+                await self.original_itx.edit_original_response(
+                    content=self.pages[self._curr_page],
+                    view=self,
+                )
+            else:
+                await self.original_itx.edit_original_response(
+                    content=None,
+                    embed=self.pages[self._curr_page],
+                    view=self,
+                )
+
         return await super().on_timeout()
 
     @discord.ui.button(label="First", emoji="⏮")
