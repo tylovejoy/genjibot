@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import typing
 
 import discord
@@ -109,12 +110,62 @@ class Maps(commands.Cog):
             map_submission,
         )
 
+    @app_commands.command(name="random-map")
+    @app_commands.choices(
+        minimum_rating=utils.ALL_STARS_CHOICES,
+        difficulty=[app_commands.Choice(name=x, value=x) for x in utils.DIFFICULTIES],
+    )
+    @app_commands.guilds(
+        discord.Object(id=utils.GUILD_ID), discord.Object(id=868981788968640554)
+    )
+    async def random_map(
+        self,
+        itx: discord.Interaction[core.Genji],
+        difficulty: app_commands.Choice[str] | None = None,
+        minimum_rating: app_commands.Choice[int] | None = None,
+        include_completed: bool = False,
+    ):
+        await itx.response.defer(ephemeral=True)
+        embed = utils.GenjiEmbed(title="Map Search")
+        embed.set_thumbnail(url=None)
+
+        ranges = utils.TOP_DIFFICULTIES_RANGES.get(
+            getattr(difficulty, "value", None), None
+        )
+        low_range = None if ranges is None else ranges[0]
+        high_range = None if ranges is None else ranges[1]
+
+        view_filter = {
+            True: None,
+            False: False,
+        }
+        maps = await self._base_map_search(
+            itx,
+            None,
+            None,
+            None,
+            None,
+            low_range,
+            high_range,
+            None,
+            int(getattr(minimum_rating, "value", 0)),
+            False,
+            False,
+            view_filter[include_completed],
+        )
+        if not maps:
+            raise utils.NoMapsFoundError
+
+        rand = random.randint(0, len(maps) - 1)
+        maps = [maps[rand]]
+
+        embeds = self.create_map_embeds(maps)
+        view = views.Paginator(embeds, itx.user)
+        await view.start(itx)
+
     @app_commands.command(name="map-search")
     @app_commands.choices(
         minimum_rating=utils.ALL_STARS_CHOICES,
-        # [
-        #     app_commands.Choice(name=str(x), value=x) for x in range(0, 6)
-        # ],
         difficulty=[app_commands.Choice(name=x, value=x) for x in utils.DIFFICULTIES],
     )
     @app_commands.autocomplete(
@@ -161,7 +212,6 @@ class Maps(commands.Cog):
         await itx.response.defer(ephemeral=True)
         embed = utils.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
-        maps: list[database.DotRecord | None] = []
 
         ranges = utils.TOP_DIFFICULTIES_RANGES.get(
             getattr(difficulty, "value", None), None
@@ -174,6 +224,44 @@ class Maps(commands.Cog):
             "Not Completed": False,
             "Completed": True,
         }
+        maps = await self._base_map_search(
+            itx,
+            map_code,
+            map_name,
+            map_type,
+            creator,
+            low_range,
+            high_range,
+            mechanics,
+            int(getattr(minimum_rating, "value", 0)),
+            only_maps_with_medals,
+            only_playtest,
+            view_filter[completed],
+        )
+        if not maps:
+            raise utils.NoMapsFoundError
+
+        embeds = self.create_map_embeds(maps)
+
+        view = views.Paginator(embeds, itx.user)
+        await view.start(itx)
+
+    @staticmethod
+    async def _base_map_search(
+        itx: discord.Interaction[core.Genji],
+        map_code: str | None,
+        map_name: str | None,
+        map_type: str | None,
+        creator: int | None,
+        low_range: float | None,
+        high_range: float | None,
+        mechanics: str | None,
+        minimum_rating: int | None,
+        only_maps_with_medals: bool,
+        only_playtest: bool,
+        view_filter: bool | None,
+    ):
+        maps = []
         async for _map in itx.client.database.get(
             """
               WITH
@@ -284,21 +372,15 @@ class Maps(commands.Cog):
             wrap_string_with_percent(mechanics),
             low_range,
             high_range,
-            int(getattr(minimum_rating, "value", 0)),
+            minimum_rating,
             creator,
-            view_filter[completed],
+            view_filter,
             itx.user.id,
             not only_playtest,
             only_maps_with_medals,
         ):
             maps.append(_map)
-        if not maps:
-            raise utils.NoMapsFoundError
-
-        embeds = self.create_map_embeds(maps)
-
-        view = views.Paginator(embeds, itx.user)
-        await view.start(itx)
+        return maps
 
     @staticmethod
     def create_map_embeds(
