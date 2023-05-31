@@ -31,7 +31,7 @@ class Tasks(commands.Cog):
         playtest_with_votes          AS (
           SELECT map_code
             FROM playtest_vote_counts
-           WHERE votes = 0
+           WHERE votes > 0
         ),
         author_playtest            AS (
           SELECT map_code, user_id, thread_id, message_id
