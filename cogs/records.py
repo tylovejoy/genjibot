@@ -143,6 +143,7 @@ class Records(commands.Cog):
         if not time or await self.check_playtest(map_code):
             time = utils.COMPLETION_PLACEHOLDER
 
+        is_creator = False
         if (
             await itx.client.database.get_row(
                 "SELECT exists(SELECT 1 FROM map_creators WHERE map_code = $1 AND user_id = $2)",
@@ -150,7 +151,7 @@ class Records(commands.Cog):
                 itx.user.id,
             )
         ).get("exists", None):
-            quality.value = None
+            is_creator = True
 
         search = [
             x
@@ -216,7 +217,7 @@ class Records(commands.Cog):
             }
         )
         user_msg = await itx.edit_original_response(
-            content=f"{itx.user.mention}, is this correct? (Quality: {quality.name if not None else 'N/A'}) {extra_content}",
+            content=f"{itx.user.mention}, is this correct? (Quality: {quality.name if not is_creator else 'N/A'}) {extra_content}",
             embed=embed,
             view=view,
             attachments=[user_facing_screenshot],
@@ -256,7 +257,7 @@ class Records(commands.Cog):
             channel_msg.id,
             channel_msg.channel.id,
             verification_msg.id,
-            quality.value,
+            quality.value if is_creator else None,
         )
         await user_msg.delete()
 
