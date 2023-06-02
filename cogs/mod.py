@@ -688,6 +688,7 @@ class ModCommands(commands.Cog):
         select = {
             "mechanics": views.MechanicsSelect(
                 copy.deepcopy(itx.client.cache.map_mechanics.options)
+                + [discord.SelectOption(label="Remove All", value="Remove All")]
             )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
@@ -699,16 +700,21 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
         mechanics = view.mechanics.values
-        mechanics_args = [(map_code, x) for x in mechanics]
         await itx.client.database.set(
             "DELETE FROM map_mechanics WHERE map_code=$1", map_code
         )
-        await itx.client.database.set_many(
-            "INSERT INTO map_mechanics (map_code, mechanic) VALUES ($1, $2)",
-            mechanics_args,
-        )
+        if "Remove All" not in mechanics:
+            mechanics_args = [(map_code, x) for x in mechanics]
+            await itx.client.database.set_many(
+                "INSERT INTO map_mechanics (map_code, mechanic) VALUES ($1, $2)",
+                mechanics_args,
+            )
+            mechanics = ", ".join(mechanics)
+        else:
+            mechanics = "Removed all mechanics"
+
         await itx.edit_original_response(
-            content=f"Updated {map_code} mechanics to {', '.join(mechanics)}."
+            content=f"Updated {map_code} mechanics: {mechanics}."
         )
         # If playtesting
         if playtest := await itx.client.database.get_row(
@@ -718,7 +724,7 @@ class ModCommands(commands.Cog):
                 "newsfeed_map_edit",
                 itx,
                 map_code,
-                {"Mechanics": ", ".join(mechanics)},
+                {"Mechanics": mechanics},
                 playtest.thread_id,
                 playtest.original_msg,
             )
@@ -727,7 +733,7 @@ class ModCommands(commands.Cog):
                 "newsfeed_map_edit",
                 itx,
                 map_code,
-                {"Mechanics": ", ".join(mechanics)},
+                {"Mechanics": mechanics},
             )
 
     @map.command()
@@ -749,6 +755,7 @@ class ModCommands(commands.Cog):
         select = {
             "restrictions": views.RestrictionsSelect(
                 copy.deepcopy(itx.client.cache.map_restrictions.options)
+                + [discord.SelectOption(label="Remove All", value="Remove All")]
             )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
@@ -761,17 +768,22 @@ class ModCommands(commands.Cog):
             return
 
         restrictions = view.restrictions.values
-        restrictions_args = [(map_code, x) for x in restrictions]
+
         await itx.client.database.set(
             "DELETE FROM map_restrictions WHERE map_code=$1", map_code
         )
-        await itx.client.database.set_many(
-            "INSERT INTO map_restrictions (map_code, restriction) VALUES ($1, $2)",
-            restrictions_args,
-        )
+        if "Remove All" not in restrictions:
+            restrictions_args = [(map_code, x) for x in restrictions]
+            await itx.client.database.set_many(
+                "INSERT INTO map_restrictions (map_code, restriction) VALUES ($1, $2)",
+                restrictions_args,
+            )
+            restrictions = ", ".join(restrictions)
+        else:
+            restrictions = "Removed all restrictions"
 
         await itx.edit_original_response(
-            content=f"Updated {map_code} restrictions to {', '.join(restrictions)}."
+            content=f"Updated {map_code} restrictions: {restrictions}."
         )
         # If playtesting
         if playtest := await itx.client.database.get_row(
@@ -781,7 +793,7 @@ class ModCommands(commands.Cog):
                 "newsfeed_map_edit",
                 itx,
                 map_code,
-                {"Restrictions": ", ".join(restrictions)},
+                {"Restrictions": restrictions},
                 playtest.thread_id,
                 playtest.original_msg,
             )
@@ -790,7 +802,7 @@ class ModCommands(commands.Cog):
                 "newsfeed_map_edit",
                 itx,
                 map_code,
-                {"Restrictions": ", ".join(restrictions)},
+                {"Restrictions": restrictions},
             )
 
     @map.command()
