@@ -214,6 +214,7 @@ class PlaytestVoting(discord.ui.View):
     ):
         await itx.response.defer(ephemeral=True)
         if not await self._interaction_check(itx):
+            await itx.message.edit(view=self)
             return
 
         if select.values[0] == "REMOVE":
