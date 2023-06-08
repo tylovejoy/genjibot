@@ -730,9 +730,22 @@ class PlaytestVoting(discord.ui.View):
         itx.client.playtest_views.pop(itx.message.id)
 
     async def delete_playtest_post(self, thread_id: int):
-        await self.client.get_channel(utils.PLAYTEST).get_partial_message(
-            thread_id
-        ).delete()
+        try:
+            thread = self.client.get_guild(utils.GUILD_ID).get_thread(thread_id)
+            message = await self.client.get_channel(utils.PLAYTEST).fetch_message(
+                thread_id
+            )
+            embed = message.embeds[0]
+        except Exception as e:
+            print(e, "Playtest deletion error")
+        try:
+            await thread.send(embed=embed)
+        except Exception as e:
+            print(e, "thread sending error")
+        try:
+            await message.delete()
+        except Exception as e:
+            print(e, "\n\n\nThis is in delete_playtest_post\n\n\n")
 
     async def approve_submission(self, itx: discord.Interaction[core.Genji]):
         if await self.check_creator(itx):
@@ -835,14 +848,20 @@ class PlaytestVoting(discord.ui.View):
         await self.toggle_finalize_button(itx.channel, itx.message)
 
     async def toggle_finalize_button(
-        self, channel: discord.Thread, message: discord.Message
+        self,
+        channel: discord.Thread,
+        message: discord.Message | discord.PartialMessage,
+        bot: bool = False,
     ):
         self.ready_up_button.disabled = not self.ready_up_button.disabled
         await message.edit(view=self)
         if not self.ready_up_button.disabled:
             await channel.send(
                 f"{self.data.creator.mention}, "
-                f"the Finalize Submission button has been enabled by a Sensei."
+                + f"the Finalize Submission button has been enabled by a Sensei."
+                if not bot
+                else f"the Finalize Submission button has been enabled by the auto approval time limit.\n"
+                f"Please, make sure your map is in order before you Finalize."
             )
 
     async def remove_votes(self):
@@ -866,7 +885,7 @@ class PlaytestVoting(discord.ui.View):
         self.stop()
         record = await self.get_author_db_row()
         await self.lock_and_archive_thread(record.thread_id)
-        # await self.delete_playtest_post(record.thread_id)
+        await self.delete_playtest_post(record.thread_id)
         await self.delete_map_from_db()
         await self.delete_playtest_db_entry()
         self.client.cache.maps.remove_one(self.data.map_code)
