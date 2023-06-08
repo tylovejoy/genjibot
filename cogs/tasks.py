@@ -47,14 +47,20 @@ class Tasks(commands.Cog):
         author_playtest ap
           LEFT JOIN map_submission_dates msd ON ap.user_id = msd.user_id AND msd.map_code = ap.map_code
      WHERE
-       date < now() - INTERVAL '4 weeks'
+       date < now() - INTERVAL '4 weeks' and approved = FALSE
             """
+        map_codes = []
         async for row in self.bot.database.get(query):
             thread = self.bot.get_guild(utils.GUILD_ID).get_thread(row.thread_id)
             message = thread.get_partial_message(row.message_id)
             await self.bot.playtest_views[row.message_id].toggle_finalize_button(
-                thread, message
+                thread, message, True
             )
+            map_codes.append(row.map_code)
+        await self.bot.database.set_many(
+            "UPDATE map_submission_dates SET approved = TRUE WHERE map_code = $1",
+            map_codes,
+        )
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
     async def _playtest_expiration(self):
