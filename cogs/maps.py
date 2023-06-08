@@ -407,7 +407,7 @@ class Maps(commands.Cog):
                 completed = "🗸 Completed"
                 if _map.medal_type:
                     completed += " | 🗸 " + _map.medal_type
-            if _map.thread_id:
+            if not _map.official:
                 playtest_str = (
                     f"\n‼️**IN PLAYTESTING, SUBJECT TO CHANGE**‼️\n"
                     f"Votes: {_map.count} / {_map.required_votes}\n"

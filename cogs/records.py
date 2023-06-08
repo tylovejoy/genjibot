@@ -262,11 +262,10 @@ class Records(commands.Cog):
         await user_msg.delete()
 
     async def check_playtest(self, map_code: str):
-        return bool(
-            await self.bot.database.get_row(
-                "SELECT * FROM playtest WHERE map_code = $1", map_code
-            )
+        row = await self.bot.database.get_row(
+            "SELECT official FROM maps WHERE map_code = $1", map_code
         )
+        return not row.official
 
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
