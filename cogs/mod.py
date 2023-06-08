@@ -1094,9 +1094,10 @@ class ModCommands(commands.Cog):
         await self.bot.database.set(query, map_code)
 
     async def _update_records_to_completions(self, map_code: str):
+        # TODO: Change flag ONLY. not video, verified, record
         query = """
             UPDATE records 
-            SET video = NULL, verified = FALSE, record = 99999999.99
+            SET verified = FALSE
             WHERE map_code = $1
         """
         await self.bot.database.set(query, map_code)
@@ -1138,9 +1139,9 @@ class ModCommands(commands.Cog):
         query = """
             WITH all_records AS (
                 SELECT 
-                    verified = TRUE AND record <= gold                       AS gold,
-                    verified = TRUE AND record <= silver AND record > gold   AS silver,
-                    verified = TRUE AND record <= bronze AND record > silver AS bronze,
+                    video IS NOT NULL AND record <= gold                       AS gold,
+                    video IS NOT NULL AND record <= silver AND record > gold   AS silver,
+                    video IS NOT NULL AND record <= bronze AND record > silver AS bronze,
                     r.map_code,
                     user_id,
                     screenshot,

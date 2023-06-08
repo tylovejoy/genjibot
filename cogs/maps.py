@@ -321,7 +321,7 @@ class Maps(commands.Cog):
                 ),
             
                 completions   AS (
-                  SELECT map_code, record, verified
+                  SELECT map_code, record, verified, video
                     FROM records
                    WHERE user_id = $10
                 )
@@ -331,11 +331,11 @@ class Maps(commands.Cog):
               am.archived, guide, mechanics, restrictions, am.checkpoints,
               creators, difficulty, quality, creator_ids, am.gold, am.silver,
               am.bronze, p.thread_id, pa.count, pa.required_votes,
-              c.map_code IS NOT NULL AS completed,
+              c.map_code IS NOT NULL AS completed, video,
               CASE
-                WHEN verified = TRUE AND c.record <= am.gold   THEN 'Gold'
-                WHEN verified = TRUE AND c.record <= am.silver THEN 'Silver'
-                WHEN verified = TRUE AND c.record <= am.bronze THEN 'Bronze'
+                WHEN video IS NOT NULL AND c.record <= am.gold   THEN 'Gold'
+                WHEN video IS NOT NULL AND c.record <= am.silver THEN 'Silver'
+                WHEN video IS NOT NULL AND c.record <= am.bronze THEN 'Bronze'
                                                                ELSE ''
               END AS medal_type
               FROM
@@ -358,7 +358,7 @@ class Maps(commands.Cog):
              GROUP BY
                am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
-               am.bronze, c.map_code IS NOT NULL, c.record, verified, p.thread_id, pa.count, pa.required_votes
+               am.bronze, c.map_code IS NOT NULL, c.record, video, verified, p.thread_id, pa.count, pa.required_votes
             
             HAVING
               ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)

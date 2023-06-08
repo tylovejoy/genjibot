@@ -102,6 +102,7 @@ class VerificationView(discord.ui.View):
                 medals = (0, 0, 0)
 
             data = self.accepted(itx, search, medals)
+            # TODO:
             await itx.client.database.set(
                 """
                 INSERT INTO records (map_code, user_id, record, screenshot, video, verified, message_id, channel_id) 

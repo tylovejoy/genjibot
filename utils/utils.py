@@ -227,16 +227,17 @@ async def get_completions_data(
         map_data AS (
             SELECT DISTINCT ON (m.map_code, r.user_id) 
                 AVG(mr.difficulty)                                            AS difficulty,
-                VERIFIED = TRUE AND (record <= gold OR medal LIKE 'Gold')     AS gold,
-                VERIFIED = TRUE AND
-                (record <= silver AND record > gold OR medal LIKE 'silver')   AS silver,
-                VERIFIED = TRUE AND
+                VERIFIED = TRUE AND video IS NOT NULL AND (record <= gold OR medal LIKE 'Gold')     AS gold,
+                VERIFIED = TRUE AND video IS NOT NULL AND
+                (record <= silver AND record > gold OR medal LIKE 'Silver')   AS silver,
+                VERIFIED = TRUE AND video IS NOT NULL AND
                 (record <= bronze AND record > silver OR medal LIKE 'Bronze') AS bronze
             FROM unioned_records r
                 LEFT JOIN maps m ON r.map_code = m.map_code
                 LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
                 LEFT JOIN map_medals mm ON r.map_code = mm.map_code
             WHERE r.user_id = $1
+                AND verified = TRUE
                 AND m.official = TRUE
                 AND m.archived = FALSE
             GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED, medal, r.user_id

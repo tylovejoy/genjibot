@@ -88,7 +88,7 @@ def set_embed_thumbnail_maps(
 
 
 def record_embed(data: dict[str, typing.Any]):
-    if data.get("record", None) and data["record"] == COMPLETION_PLACEHOLDER:
+    if data.get("completion", None):
         data["record"] = "Completion"
 
     if not data.get("video", None):

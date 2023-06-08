@@ -140,8 +140,7 @@ class Records(commands.Cog):
         if video and not time:
             raise utils.VideoNoRecord
 
-        if not time or await self.check_playtest(map_code):
-            time = utils.COMPLETION_PLACEHOLDER
+        is_completion = not time or await self.check_playtest(map_code)
 
         is_creator = False
         if (
@@ -165,7 +164,7 @@ class Records(commands.Cog):
         ]
 
         extra_content = ""
-        if time == utils.COMPLETION_PLACEHOLDER and video:
+        if is_completion and video:
             extra_content = (
                 "\n\n**You are submitting a video with a completion. The video will be removed automatically. "
                 "If you wish to use you video as a guide please use the `/guide add` command instead.**"
@@ -214,6 +213,7 @@ class Records(commands.Cog):
                 "video": video,
                 "user_name": itx.client.cache.users[itx.user.id].nickname,
                 "user_url": itx.user.display_avatar.url,
+                "completion": is_completion,
             }
         )
         user_msg = await itx.edit_original_response(
@@ -244,9 +244,9 @@ class Records(commands.Cog):
         await verification_msg.edit(view=v_view)
         await itx.client.database.set(
             """
-            INSERT INTO records_queue 
+            INSERT INTO records 
             (map_code, user_id, record, screenshot,
-            video, message_id, channel_id, hidden_id, rating) 
+            video, message_id, channel_id, hidden_id, completion) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             """,
             map_code,
@@ -257,8 +257,19 @@ class Records(commands.Cog):
             channel_msg.id,
             channel_msg.channel.id,
             verification_msg.id,
-            quality.value if is_creator else None,
+            is_completion,
         )
+        if not is_creator:
+            await itx.client.database.set(
+                """
+                INSERT INTO map_ratings 
+                (map_code, user_id, quality) 
+                VALUES ($1, $2, $3)
+                """,
+                map_code,
+                itx.user.id,
+                quality.value,
+            )
         await user_msg.delete()
 
     async def check_playtest(self, map_code: str):
@@ -352,18 +363,20 @@ class Records(commands.Cog):
                r.channel_id,
                r.message_id,
                m.map_name,
+               completion,
                avg(difficulty) as difficulty
         FROM records r
             LEFT JOIN users u on r.user_id = u.user_id
             LEFT JOIN maps m on m.map_code = r.map_code
             LEFT JOIN map_ratings mr on m.map_code = mr.map_code
-            GROUP BY u.nickname, record, screenshot, video, verified, r.map_code, r.channel_id, r.message_id, m.map_name
+            GROUP BY u.nickname, record, screenshot, video, verified, r.map_code, r.channel_id, r.message_id, m.map_name, completion
         ) as ranks
         LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE ranks.map_code = $1 
-        AND ($2::text != 'Fully Verified' OR (verified = TRUE AND record < 99999999))
-        AND ($2::text != 'Verified' OR record < 99999999)
-        AND ($2::text != 'Completions' OR record > 99999999)
+        AND verified = TRUE 
+        AND ($2::text != 'Fully Verified' OR (video IS NOT NULL AND completion = FALSE))
+        AND ($2::text != 'Verified' OR completion = FALSE)
+        AND ($2::text != 'Completions' OR completion = TRUE)
         ORDER BY record;
         """
 
@@ -455,6 +468,7 @@ class Records(commands.Cog):
                         map.map_name,
                         map.creators,
                         difficulty,
+                        completion,
                         RANK() OVER (
                             PARTITION BY r.map_code
                             ORDER BY record
@@ -479,13 +493,14 @@ class Records(commands.Cog):
             gold,
             silver,
             bronze,
-            difficulty
+            difficulty,
+            completion
         FROM ranks
                  LEFT JOIN map_medals mm ON ranks.map_code = mm.map_code
         WHERE user_id = $1 
-        AND ($2::text != 'World Records' OR rank_num = 1 AND record < 99999999 AND verified = TRUE)
-        AND ($2::text != 'Records' OR record < 99999999)
-        AND ($2::text != 'Completions' OR record > 99999999)
+        AND ($2::text != 'World Records' OR rank_num = 1 AND completion = FALSE AND video IS NOT NULL)
+        AND ($2::text != 'Records' OR completion = FALSE)
+        AND ($2::text != 'Completions' OR completion = TRUE)
         ORDER BY difficulty, ranks.map_code;     
         """
         records: list[database.DotRecord | None] = [

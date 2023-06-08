@@ -270,7 +270,7 @@ def pr_records_embed(
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
-        if float(record.record) == utils.COMPLETION_PLACEHOLDER:
+        if record.completion:
             record.record = "Completion"
         cur_code = f"{record.map_name} by {record.creators} ({record.map_code})"
         description = ""
