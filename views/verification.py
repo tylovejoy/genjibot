@@ -58,9 +58,9 @@ class VerificationView(discord.ui.View):
         """Verify a record."""
 
         search = await itx.client.database.get_row(
-            "SELECT * FROM records_queue rq "
+            "SELECT * FROM records rq "
             "LEFT JOIN maps m on rq.map_code = m.map_code "
-            "WHERE hidden_id=$1",
+            "WHERE hidden_id = $1",
             itx.message.id,
         )
         if search.user_id == itx.user.id:
@@ -105,39 +105,11 @@ class VerificationView(discord.ui.View):
             # TODO:
             await itx.client.database.set(
                 """
-                INSERT INTO records (map_code, user_id, record, screenshot, video, verified, message_id, channel_id) 
-                VALUES($1, $2, $3, $4, $5, $6, $7, $8)
-                ON CONFLICT (map_code, user_id) 
-                DO UPDATE SET record=$3, screenshot=$4, video=$5, verified=$6, message_id=$7
-                WHERE records.user_id = EXCLUDED.user_id 
-                AND records.map_code = EXCLUDED.map_code;
+                UPDATE records SET verified = TRUE WHERE map_code = $1 AND user_id = $2;
                 """,
                 search.map_code,
                 search.user_id,
-                search.record
-                if search.record != "Completion"
-                else utils.COMPLETION_PLACEHOLDER,
-                search.screenshot,
-                search.video,
-                bool(search.video),
-                search.message_id,
-                search.channel_id,
             )
-
-            if search.rating:
-                await itx.client.database.set(
-                    """
-                    INSERT INTO map_ratings (map_code, user_id, quality) 
-                    VALUES($1, $2, $3)
-                    ON CONFLICT (map_code, user_id) 
-                    DO UPDATE SET quality=$3
-                    WHERE map_ratings.user_id = EXCLUDED.user_id 
-                    AND map_ratings.map_code = EXCLUDED.map_code;
-                    """,
-                    search.map_code,
-                    search.user_id,
-                    search.rating,
-                )
             if search.official:
                 await utils.auto_role(itx.client, itx.guild.get_member(search.user_id))
         else:
@@ -158,10 +130,7 @@ class VerificationView(discord.ui.View):
                 itx.client.logger.info(e)
         with contextlib.suppress(discord.NotFound):
             await itx.message.delete()
-        await itx.client.database.set(
-            "DELETE FROM records_queue WHERE hidden_id=$1",
-            itx.message.id,
-        )
+
         if verified:
             query = """
                 WITH map AS (SELECT m.map_code,
@@ -192,7 +161,7 @@ class VerificationView(discord.ui.View):
                 FROM ranks
                 WHERE user_id = $1 AND map_code = $2
                 -- AND rank_num = 1 
-                AND verified = TRUE;
+                AND verified = TRUE AND video IS NOT NULL;
             """
             res = await itx.client.database.get_row(
                 query, search.user_id, search.map_code

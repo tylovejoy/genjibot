@@ -286,6 +286,15 @@ class Maps(commands.Cog):
                           RIGHT JOIN required rv ON p.map_code = rv.map_code
                      GROUP BY p.map_code, required_votes
                   ),
+                qualities AS (
+                    SELECT 
+                        r.map_code, avg(quality) as quality
+                    FROM 
+                        map_ratings mr
+                        LEFT JOIN records r ON mr.user_id = r.user_id AND mr.map_code = r.map_code
+                      WHERE verified = TRUE
+                      GROUP BY r.map_code
+                ),
             
                 all_maps      AS (
                   SELECT
@@ -301,7 +310,7 @@ class Maps(commands.Cog):
                     checkpoints,
                     string_agg(DISTINCT (nickname), ', ') AS creators,
                     coalesce(avg(difficulty), 0) AS difficulty,
-                    coalesce(avg(quality), 0) AS quality,
+                    coalesce(q.quality, 0) AS quality,
                     array_agg(DISTINCT mc.user_id) AS creator_ids,
                     gold,
                     silver,
@@ -313,6 +322,7 @@ class Maps(commands.Cog):
                         LEFT JOIN map_creators mc ON m.map_code = mc.map_code
                         LEFT JOIN users u ON mc.user_id = u.user_id
                         LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+                        LEFT JOIN qualities q ON m.map_code = q.map_code
                         LEFT JOIN guides g ON m.map_code = g.map_code
                         LEFT JOIN map_medals mm ON m.map_code = mm.map_code
                    GROUP BY

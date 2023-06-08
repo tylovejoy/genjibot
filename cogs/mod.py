@@ -407,6 +407,15 @@ class ModCommands(commands.Cog):
             row = await itx.client.database.get_row(
                 """
                   WITH
+                  qualities AS (
+                    SELECT 
+                        r.map_code, avg(quality) as quality
+                    FROM 
+                        map_ratings mr
+                        LEFT JOIN records r ON mr.user_id = r.user_id AND mr.map_code = r.map_code
+                      WHERE verified = TRUE
+                      GROUP BY r.map_code
+                ),
                 all_maps AS (
                   SELECT
                     map_name,
@@ -421,7 +430,7 @@ class ModCommands(commands.Cog):
                     checkpoints,
                     string_agg(DISTINCT (nickname), ', ') AS creators,
                     coalesce(avg(difficulty), 0) AS difficulty,
-                    coalesce(avg(quality), 0) AS quality,
+                    coalesce(q.quality, 0) AS quality,
                     array_agg(DISTINCT mc.user_id) AS creator_ids,
                     gold,
                     silver,
@@ -433,6 +442,7 @@ class ModCommands(commands.Cog):
                         LEFT JOIN map_creators mc ON m.map_code = mc.map_code
                         LEFT JOIN users u ON mc.user_id = u.user_id
                         LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+                        LEFT JOIN qualities q ON m.map_code = q.map_code
                         LEFT JOIN guides g ON m.map_code = g.map_code
                         LEFT JOIN map_medals mm ON m.map_code = mm.map_code
                    GROUP BY
@@ -1083,7 +1093,7 @@ class ModCommands(commands.Cog):
         await itx.guild.get_channel(NEWSFEED).send(embed=embed)
 
     async def _check_if_queued(self, map_code: str):
-        query = """SELECT EXISTS (SELECT * FROM records_queue WHERE map_code = $1)"""
+        query = """SELECT EXISTS (SELECT * FROM records WHERE map_code = $1 and verified = FALSE)"""
         row = await self.bot.database.get_row(query, map_code)
         return row.exists
 
@@ -1094,7 +1104,6 @@ class ModCommands(commands.Cog):
         await self.bot.database.set(query, map_code)
 
     async def _update_records_to_completions(self, map_code: str):
-        # TODO: Change flag ONLY. not video, verified, record
         query = """
             UPDATE records 
             SET verified = FALSE

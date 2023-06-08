@@ -262,9 +262,12 @@ class Records(commands.Cog):
         if not is_creator:
             await itx.client.database.set(
                 """
-                INSERT INTO map_ratings 
-                (map_code, user_id, quality) 
-                VALUES ($1, $2, $3)
+                INSERT INTO map_ratings (map_code, user_id, quality) 
+                    VALUES($1, $2, $3)
+                    ON CONFLICT (map_code, user_id) 
+                    DO UPDATE SET quality = $3
+                    WHERE map_ratings.user_id = EXCLUDED.user_id 
+                    AND map_ratings.map_code = EXCLUDED.map_code;
                 """,
                 map_code,
                 itx.user.id,

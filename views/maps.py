@@ -876,10 +876,6 @@ class PlaytestVoting(discord.ui.View):
             "DELETE FROM records WHERE map_code = $1",
             self.data.map_code,
         )
-        await self.client.database.set(
-            "DELETE FROM records_queue WHERE map_code = $1",
-            self.data.map_code,
-        )
 
     async def time_limit_deletion(self):
         self.stop()

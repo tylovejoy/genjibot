@@ -45,7 +45,7 @@ class BotEvents(commands.Cog):
             queue = [
                 x.hidden_id
                 async for x in self.bot.database.get(
-                    "SELECT hidden_id FROM records_queue;",
+                    "SELECT hidden_id FROM records;",
                 )
             ]
             for x in queue:
