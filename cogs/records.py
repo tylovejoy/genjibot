@@ -257,7 +257,7 @@ class Records(commands.Cog):
             channel_msg.id,
             channel_msg.channel.id,
             verification_msg.id,
-            quality.value if is_creator else None,
+            quality.value if not is_creator else None,
         )
         await user_msg.delete()
 
