@@ -143,6 +143,97 @@ class Test(commands.Cog):
         else:
             await ctx.send()
 
+    @commands.command()
+    @commands.cooldown(rate=1, per=100000, type=commands.BucketType.guild)
+    async def download_maps(self, ctx: commands.Context[core.Genji]):
+        f = await ctx.bot.database.copy_from_query(
+            """WITH
+                required      AS (
+                  SELECT
+                    CASE
+                      WHEN playtest.value >= 9.41 THEN 1
+                      WHEN playtest.value >= 7.65 THEN 2
+                      WHEN playtest.value >= 5.88 THEN 3
+                                                  ELSE 5
+                    END AS required_votes, playtest.value, map_code
+                    FROM playtest
+                   WHERE is_author = TRUE
+                ),
+            
+                playtest_avgs AS
+                  (
+                    SELECT p.map_code, count(p.value) - 1 AS count, required_votes
+            
+                      FROM
+                        playtest p
+                          RIGHT JOIN required rv ON p.map_code = rv.map_code
+                     GROUP BY p.map_code, required_votes
+                  ),
+            
+                all_maps      AS (
+                  SELECT
+                    map_name,
+                    array_to_string((map_type), ', ') AS map_type,
+                    m.map_code,
+                    "desc",
+                    official,
+                    archived,
+                    array_agg(DISTINCT url) AS guide,
+                    array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
+                    array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
+                    checkpoints,
+                    string_agg(DISTINCT (nickname), ', ') AS creators,
+                    coalesce(avg(difficulty), 0) AS difficulty,
+                    coalesce(avg(quality), 0) AS quality,
+                    array_agg(DISTINCT mc.user_id) AS creator_ids,
+                    gold,
+                    silver,
+                    bronze
+                    FROM
+                      maps m
+                        LEFT JOIN map_mechanics mech ON mech.map_code = m.map_code
+                        LEFT JOIN map_restrictions rest ON rest.map_code = m.map_code
+                        LEFT JOIN map_creators mc ON m.map_code = mc.map_code
+                        LEFT JOIN users u ON mc.user_id = u.user_id
+                        LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+                        LEFT JOIN guides g ON m.map_code = g.map_code
+                        LEFT JOIN map_medals mm ON m.map_code = mm.map_code
+                   GROUP BY
+                     checkpoints, map_name,
+                     m.map_code, "desc", official, map_type, gold, silver, bronze, archived
+                ),
+            ranges ("range", "name") AS (
+                 VALUES  ('[0,0.59)'::numrange, 'Beginner'),
+                         ('[0.59,2.35)'::numrange, 'Easy'),
+                         ('[2.35,4.12)'::numrange, 'Medium'),
+                         ('[4.12,5.88)'::numrange, 'Hard'),
+                         ('[5.88,7.65)'::numrange, 'Very Hard'),
+                         ('[7.65,9.41)'::numrange, 'Extreme'),
+                         ('[9.41,10.0]'::numrange, 'Hell')
+            )
+            
+            SELECT
+              am.map_name, map_type, am.map_code, am."desc", not am.official as is_playtest,
+              am.archived, guide, mechanics, restrictions, am.checkpoints,
+              creators, r.name as difficulty, quality, am.gold, am.silver, 
+              am.bronze, r.name
+              FROM
+                all_maps am
+                  LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
+                  LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
+                  INNER JOIN ranges r ON r.range @> am.difficulty
+             GROUP BY
+               am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
+               restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
+               am.bronze, p.thread_id, pa.count, pa.required_votes, r.name
+            
+            
+             ORDER BY
+               difficulty, quality DESC"""
+        )
+
+        await ctx.send(file=discord.File(fp=f, filename="test.csv"))
+
 
 async def setup(bot: core.Genji):
     await bot.add_cog(Test(bot))

@@ -1,6 +1,7 @@
 import logging
 import textwrap
 import typing
+from io import BytesIO
 
 import asyncpg
 
@@ -38,6 +39,18 @@ class Database:
     def __init__(self, conn: asyncpg.Pool):
         self.logger: logging.Logger | None = None
         self.pool = conn
+
+    async def copy_from_query(self, query):
+        async with self.pool.acquire() as conn:
+            buf = BytesIO()
+            await conn.copy_from_query(
+                query,
+                output=buf,
+                format="csv",
+                header=True,
+            )
+            buf.seek(0)
+            return buf
 
     async def get(
         self,
