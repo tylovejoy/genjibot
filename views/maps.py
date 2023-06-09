@@ -863,6 +863,11 @@ class PlaytestVoting(discord.ui.View):
                 else f"the Finalize Submission button has been enabled by the auto approval time limit.\n"
                 f"Please, make sure your map is in order before you Finalize."
             )
+        else:
+            await channel.send(
+                f"{self.data.creator.mention}, "
+                + f"the Finalize Submission button has been disabled by a Sensei."
+            )
 
     async def remove_votes(self):
         await self.client.database.set(
