@@ -273,3 +273,11 @@ def wrap_string_with_percent(string: str):
     if not string:
         return
     return "%" + string + "%"
+
+
+def split_nth_iterable(*, current: int, iterable: list[typing.Any], split: int):
+    return (
+        (current != 0 and current % split == 0)
+        or (current == 0 and len(iterable) == 1)
+        or current == len(iterable) - 1
+    )

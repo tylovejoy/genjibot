@@ -5,6 +5,7 @@ import functools
 import io
 from typing import TYPE_CHECKING
 
+import asyncpg
 import discord
 import matplotlib.pyplot as plt
 from discord import ButtonStyle
