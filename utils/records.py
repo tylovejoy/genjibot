@@ -11,18 +11,11 @@ from discord import Embed, app_commands
 import cogs
 import database
 import utils
-from utils import GenjiEmbed
+from utils import GenjiEmbed, split_nth_iterable
 
 if typing.TYPE_CHECKING:
     import core
 
-
-# URL_REGEX = re.compile(
-#     r"^https?:\/\/(?:www\.)?"
-#     r"[-a-zA-Z0-9@:%._\+~#=]{1,256}\."
-#     r"[a-zA-Z0-9()]{1,6}\b"
-#     r"(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$"
-# )
 
 CODE_VERIFICATION = re.compile(r"^[A-Z0-9]{4,6}$")
 
@@ -252,11 +245,7 @@ def all_levels_records_embed(
             value=description,
             inline=False,
         )
-        if (
-            (i != 0 and i % 10 == 0)
-            or (i == 0 and len(records) == 1)
-            or i == len(records) - 1
-        ):
+        if split_nth_iterable(current=i, iterable=records, split=10):
             embed = utils.set_embed_thumbnail_maps(record.map_name, embed)
             embed_list.append(embed)
             embed = utils.GenjiEmbed(title=title)
@@ -299,11 +288,7 @@ def pr_records_embed(
             value="┗".join(description[:-3].rsplit("┣", 1)),
             inline=False,
         )
-        if (
-            (i != 0 and i % 10 == 0)
-            or (i == 0 and len(records) == 1)
-            or i == len(records) - 1
-        ):
+        if split_nth_iterable(current=i, iterable=records, split=10):
             embed.add_field(
                 name="Legend",
                 value=(
