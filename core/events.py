@@ -12,6 +12,7 @@ import core
 import database
 import utils
 import views
+from cogs.info_pages.views import CompletionInfoView, MapInfoView
 
 if typing.TYPE_CHECKING:
     from .genji import Genji
@@ -116,6 +117,12 @@ class BotEvents(commands.Cog):
                     ),
                     message_id=x.message_id,
                 )
+
+            view = CompletionInfoView()
+            self.bot.add_view(view, message_id=0)
+
+            view = MapInfoView()
+            self.bot.add_view(view, message_id=0)
 
             self.bot.logger.debug(f"Added persistent views.")
             self.bot.persistent_views_added = True
