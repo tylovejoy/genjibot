@@ -392,12 +392,12 @@ class BotEvents(commands.Cog):
                         LEFT JOIN playtest p ON m.map_code = p.map_code AND p.is_author = TRUE
                     WHERE m.map_code = $1
                 """,
-                map_code,
+                values.get("Code", None) or map_code,
             )
 
             await thread.edit(
                 name=(
-                    f"{map_code} | {utils.convert_num_to_difficulty(row.difficulty)} "
+                    f"{values.get('Code', None) or map_code} | {utils.convert_num_to_difficulty(row.difficulty)} "
                     f"| {row.map_name} | {row.checkpoints} CPs"
                 )
             )
