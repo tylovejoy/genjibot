@@ -783,11 +783,21 @@ class PlaytestVoting(discord.ui.View):
         await self._unset_ready_button(itx, self.ready_up_button)
         _, image = await self.get_plot_data(itx)
         await itx.message.edit(
-            content="Total Votes: 0",
+            content=f"Total Votes: 0 / {self.required_votes}",
             embed=itx.message.embeds[0].set_image(url="attachment://vote_chart.png"),
             attachments=[image],
             view=self,
         )
+        row = await itx.client.database.get_row(
+            "SELECT thread_id FROM playtest WHERE message_id = $1 AND is_author",
+            itx.message.id,
+        )
+        if row:
+            await itx.guild.get_channel(PLAYTEST).get_partial_message(
+                row.thread_id
+            ).edit(
+                content=f"Total Votes: 0 / {self.required_votes}",
+            )
         await itx.message.channel.send(
             "@here, All records and votes have been removed by a Sensei."
         )
