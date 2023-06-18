@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 TICKET_CHANNEL = 1120029553998450719
+MODMAIL_ROLE = 1120076555293569081
 
 
 def ticket_thread_check():

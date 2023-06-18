@@ -126,14 +126,10 @@ class BotEvents(commands.Cog):
             self.bot.add_view(view, message_id=1118917508934664212)
 
             view = TicketStart()
-            self.bot.add_view(view, message_id=1120035170507042969)
+            self.bot.add_view(view, message_id=1120076353597886565)
 
             self.bot.logger.debug(f"Added persistent views.")
             self.bot.persistent_views_added = True
-
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        ...
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

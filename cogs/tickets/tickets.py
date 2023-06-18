@@ -28,8 +28,12 @@ class TicketSystem(commands.Cog):
             content=(
                 "# Do you require assistance from a Sensei?\n"
                 "### Press the button below for any of the following: \n"
-                "- Map changes\n"
-                "- Playtest issues\n"
+                "- Bugs found regarding:\n"
+                "  - GenjiBot\n"
+                "  - Official Genji Parkour Framework\n"
+                "- Map information changes\n"
+                "  - Official maps\n"
+                "  - Playtest maps\n"
                 "- Other users\n"
                 "- Sensitive information\n\n"
                 "## **Using this system will create a private thread only Senseis can see.**"
@@ -44,4 +48,5 @@ class TicketSystem(commands.Cog):
         ctx: commands.Context[core.Genji],
     ) -> None:
         assert isinstance(ctx.channel, discord.Thread)
+        await ctx.message.add_reaction("<:_:895727516017393665>")
         await ctx.channel.edit(archived=True, locked=True)
