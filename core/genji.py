@@ -114,3 +114,6 @@ class Genji(commands.Bot):
             # guild_typing=True,
         )
         return intents
+
+    async def on_command_error(self, context, exception):
+        ...
