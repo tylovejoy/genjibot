@@ -56,7 +56,7 @@ class Tasks(commands.Cog):
             await self.bot.playtest_views[row.message_id].toggle_finalize_button(
                 thread, message, True
             )
-            map_codes.append(row.map_code)
+            map_codes.append((row.map_code,))
         await self.bot.database.set_many(
             "UPDATE map_submission_dates SET approved = TRUE WHERE map_code = $1",
             map_codes,

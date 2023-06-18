@@ -119,10 +119,10 @@ class BotEvents(commands.Cog):
                 )
 
             view = CompletionInfoView()
-            self.bot.add_view(view, message_id=0)
+            self.bot.add_view(view, message_id=1118917201894850592)
 
             view = MapInfoView()
-            self.bot.add_view(view, message_id=0)
+            self.bot.add_view(view, message_id=1118917508934664212)
 
             self.bot.logger.debug(f"Added persistent views.")
             self.bot.persistent_views_added = True
@@ -329,7 +329,7 @@ class BotEvents(commands.Cog):
         if value:
             guide_txt = ""
             medals_txt = ""
-            if None not in map_data.guide:
+            if map_data.get("guide") and None not in map_data.get("guide"):
                 guides = [
                     f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)
                 ]

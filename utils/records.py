@@ -11,7 +11,6 @@ from discord import Embed, app_commands
 import cogs
 import database
 import utils
-from utils import GenjiEmbed, split_nth_iterable
 
 if typing.TYPE_CHECKING:
     import core
@@ -206,7 +205,7 @@ def all_levels_records_embed(
     records: list[database.DotRecord],
     title: str,
     legacy: bool = False,
-) -> list[Embed | GenjiEmbed]:
+) -> list[Embed | utils.GenjiEmbed]:
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
@@ -245,7 +244,7 @@ def all_levels_records_embed(
             value=description,
             inline=False,
         )
-        if split_nth_iterable(current=i, iterable=records, split=10):
+        if utils.split_nth_iterable(current=i, iterable=records, split=10):
             embed = utils.set_embed_thumbnail_maps(record.map_name, embed)
             embed_list.append(embed)
             embed = utils.GenjiEmbed(title=title)
@@ -255,7 +254,7 @@ def all_levels_records_embed(
 def pr_records_embed(
     records: list[database.DotRecord],
     title: str,
-) -> list[Embed | GenjiEmbed]:
+) -> list[Embed | utils.GenjiEmbed]:
     embed_list = []
     embed = utils.GenjiEmbed(title=title)
     for i, record in enumerate(records):
@@ -288,7 +287,7 @@ def pr_records_embed(
             value="┗".join(description[:-3].rsplit("┣", 1)),
             inline=False,
         )
-        if split_nth_iterable(current=i, iterable=records, split=10):
+        if utils.split_nth_iterable(current=i, iterable=records, split=10):
             embed.add_field(
                 name="Legend",
                 value=(
