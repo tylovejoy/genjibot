@@ -24,7 +24,9 @@ class TicketStart(discord.ui.View):
     async def create_ticket(
         self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ):
-        await itx.response.send_modal(TicketStartModal())
+        modal = TicketStartModal()
+        await itx.response.send_modal(modal)
+        await modal.wait()
 
 
 class TicketStartModal(discord.ui.Modal):
@@ -43,18 +45,28 @@ class TicketStartModal(discord.ui.Modal):
     )
 
     async def on_submit(self, itx: discord.Interaction[core.Genji]):
-        await itx.response.send_message(f"Creating ticket...", ephemeral=True)
+        if self.feedback.value is None:
+            return
+
+        await itx.response.send_message(content=f"Creating ticket...", ephemeral=True)
         channel: discord.TextChannel = itx.client.get_channel(TICKET_CHANNEL)
         thread = await channel.create_thread(
-            name=f"{itx.user.display_name[20:]}",
+            name=f"{itx.user.display_name[:20]}",
             message=None,
             type=None,
             invitable=False,
         )
         await thread.add_user(itx.user)
-        await thread.send(content=self.feedback.value)
+        await thread.send(
+            content=f"If the issue is resolved, please use `?solved`\n\n{self.feedback.value}"
+        )
 
     async def on_error(
         self, itx: discord.Interaction[core.Genji], error: Exception
     ) -> None:
-        await itx.response.send_message("Oops! Something went wrong.", ephemeral=True)
+        if itx.response.is_done():
+            ...
+        else:
+            await itx.response.send_message(
+                "Oops! Something went wrong.", ephemeral=True
+            )
