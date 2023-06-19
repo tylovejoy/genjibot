@@ -17,71 +17,11 @@ if typing.TYPE_CHECKING:
     import core
 
 
-class Maps(commands.Cog):
+class MapSearch(commands.Cog):
     """Maps"""
 
     def __init__(self, bot: core.Genji):
         self.bot = bot
-
-    _map_maker = app_commands.Group(
-        name="map-maker",
-        guild_ids=[utils.GUILD_ID],
-        description="Map maker only commands",
-    )
-
-    _creator = app_commands.Group(
-        name="creator",
-        guild_ids=[utils.GUILD_ID],
-        description="Edit creators",
-        parent=_map_maker,
-    )
-
-    @app_commands.command(name="submit-map")
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    @app_commands.autocomplete(map_name=cogs.map_name_autocomplete)
-    async def submit_map(
-        self,
-        itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeSubmitTransformer],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer],
-        checkpoint_count: app_commands.Range[int, 1, 500],
-        description: str | None = None,
-        guide_url: str | None = None,
-        gold: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        silver: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        bronze: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-    ) -> None:
-        """
-        Submit your map to get playtested.
-
-        Args:
-            itx: Interaction
-            map_code: Overwatch share code
-            map_name: Overwatch map
-            checkpoint_count: Number of checkpoints in the map
-            description: Other optional information for the map
-            guide_url: Guide URL
-            gold: Gold medal time (must be the fastest time)
-            silver: Silver medal time (must be between gold and bronze)
-            bronze: Bronze medal time (must be the slowest time)
-        """
-        medals = None
-        if gold and silver and bronze:
-            medals = (gold, silver, bronze)
-
-        map_submission = utils.MapSubmission(
-            itx.user,
-            map_code,
-            map_name,
-            checkpoint_count,
-            description,
-            medals,
-            guides=[guide_url],
-        )
-        await cogs.submit_map_(
-            itx,
-            map_submission,
-        )
 
     @app_commands.command(name="random-map")
     @app_commands.choices(
@@ -236,7 +176,7 @@ class Maps(commands.Cog):
                     FROM records
                    WHERE user_id = $10
                 )
-            
+
             SELECT
               am.map_name, map_type, am.map_code, am."desc", am.official,
               am.archived, guide, mechanics, restrictions, am.checkpoints,
@@ -270,10 +210,10 @@ class Maps(commands.Cog):
                am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
                am.bronze, c.map_code IS NOT NULL, c.record, verified, p.thread_id, pa.count, pa.required_votes
-            
+
             HAVING
               ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
-            
+
              ORDER BY
                difficulty, quality DESC;
             """,
@@ -309,167 +249,3 @@ class Maps(commands.Cog):
                 embed_list.append(embed)
                 embed = utils.GenjiEmbed(title="Map Search")
         return embed_list
-
-    @staticmethod
-    def display_official(official: bool):
-        return (
-            (
-                "┃<:_:998055526468423700>"
-                "<:_:998055528355860511>"
-                "<:_:998055530440437840>"
-                "<:_:998055532030079078>"
-                "<:_:998055534068510750>"
-                "<:_:998055536346021898>\n"
-                "┃<:_:998055527412142100>"
-                "<:_:998055529219887154>"
-                "<:_:998055531346415656>"
-                "<:_:998055533225455716>"
-                "<:_:998055534999654480>"
-                "<:_:998055537432338532>\n"
-            )
-            if official
-            else ""
-        )
-
-    @app_commands.command(name="guide")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    async def view_guide(
-        self,
-        itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-    ):
-        """
-        View guides that have been submitted for a particular map.
-
-        Args:
-            map_code: Overwatch share code
-            itx: Interaction
-        """
-        await itx.response.defer(ephemeral=False)
-        if map_code not in itx.client.cache.maps.keys:
-            raise utils.InvalidMapCodeError
-
-        guides = [
-            x
-            async for x in itx.client.database.get(
-                "SELECT url FROM guides WHERE map_code=$1",
-                map_code,
-            )
-        ]
-        guides = [x.url for x in guides]
-        if not guides:
-            raise utils.NoGuidesExistError
-
-        view = views.Paginator(guides, itx.user)
-        await view.start(itx)
-
-    @app_commands.command(name="add-guide")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    async def add_guide(
-        self,
-        itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        url: app_commands.Transform[str, utils.URLTransformer],
-    ):
-        """
-        Add a guide for a particular map.
-
-        Args:
-            map_code: Overwatch share code
-            itx: Interaction
-            url: URL for guide
-        """
-        await itx.response.defer(ephemeral=True)
-        if map_code not in itx.client.cache.maps.keys:
-            raise utils.InvalidMapCodeError
-
-        guides = [
-            x
-            async for x in itx.client.database.get(
-                "SELECT url FROM guides WHERE map_code=$1",
-                map_code,
-            )
-        ]
-        guides = [x.url for x in guides]
-
-        if url in guides:
-            raise utils.GuideExistsError
-
-        view = views.Confirm(itx, ephemeral=True)
-        await itx.edit_original_response(
-            content=f"Is this correct?\nMap code: {map_code}\nURL: {url}",
-            view=view,
-        )
-        await view.wait()
-
-        if not view.value:
-            return
-
-        await itx.client.database.set(
-            "INSERT INTO guides (map_code, url) VALUES ($1, $2)",
-            map_code,
-            url,
-        )
-        itx.client.dispatch("newsfeed_guide", itx, itx.user, url, map_code)
-
-    @app_commands.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
-    @app_commands.choices(
-        quality=[
-            app_commands.Choice(
-                name=utils.ALL_STARS[x - 1],
-                value=x,
-            )
-            for x in range(1, 7)
-        ]
-    )
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    async def rate(
-        self,
-        itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        quality: app_commands.Choice[int],
-    ):
-        await itx.response.defer(ephemeral=True)
-        if (
-            await itx.client.database.get_row(
-                "SELECT exists(SELECT 1 FROM map_creators WHERE map_code = $1 AND user_id = $2)",
-                map_code,
-                itx.user.id,
-            )
-        ).get("exists", None):
-            raise utils.CannotRateOwnMap
-
-        row = await itx.client.database.get_row(
-            "SELECT exists(SELECT 1 FROM records WHERE map_code = $1 AND user_id = $2)",
-            map_code,
-            itx.user.id,
-        )
-        if not row.exists:
-            raise utils.NoCompletionFoundError
-
-        view = views.Confirm(itx)
-        await itx.edit_original_response(
-            content=f"You want to rate {map_code} *{quality.value}* stars ({quality.name}). Is this correct?",
-            view=view,
-        )
-        await view.wait()
-        if not view.value:
-            return
-        await itx.client.database.set(
-            """
-            INSERT INTO map_ratings (user_id, map_code, quality) 
-            VALUES ($1, $2, $3) 
-            ON CONFLICT (user_id, map_code) 
-            DO UPDATE SET quality = excluded.quality""",
-            itx.user.id,
-            map_code,
-            quality.value,
-        )
-
-
-async def setup(bot):
-    """Add Cog to Discord bot."""
-    await bot.add_cog(Maps(bot))
