@@ -77,6 +77,8 @@ class MapSubmission:
 
     @staticmethod
     def _remove_nulls(sequence):
+        if sequence is None:
+            return []
         return [x for x in sequence if x is not None]
 
     @property

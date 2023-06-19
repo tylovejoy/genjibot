@@ -12,6 +12,7 @@ import cogs
 import utils
 import utils.maps
 import views
+from cogs.command_groups import map_commands, mod_commands
 from database import DotRecord
 from utils import NEWSFEED
 
@@ -27,19 +28,7 @@ class ModCommands(commands.Cog):
         return True
         # return bool(ctx.author.get_role(utils.STAFF))
 
-    mod = app_commands.Group(
-        name="mod",
-        guild_ids=[utils.GUILD_ID],
-        description="Mod only commands",
-    )
-    map = app_commands.Group(
-        name="map",
-        guild_ids=[utils.GUILD_ID],
-        description="Mod only commands",
-        parent=mod,
-    )
-
-    @map.command(name="add-creator")
+    @map_commands.command(name="add-creator")
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
         creator=cogs.users_autocomplete,
@@ -60,7 +49,7 @@ class ModCommands(commands.Cog):
         """
         await cogs.add_creator_(creator, itx, map_code)
 
-    @map.command(name="remove-creator")
+    @map_commands.command(name="remove-creator")
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
         creator=cogs.users_autocomplete,
@@ -81,7 +70,7 @@ class ModCommands(commands.Cog):
         """
         await cogs.remove_creator_(creator, itx, map_code)
 
-    @map.command(name="edit-medals")
+    @map_commands.command(name="edit-medals")
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
     )
@@ -143,62 +132,7 @@ class ModCommands(commands.Cog):
             itx.client.dispatch("newsfeed_medals", itx, map_code, gold, silver, bronze)
             await utils.update_affected_users(itx.client, map_code)
 
-    @map.command(name="submit-map")
-    @app_commands.autocomplete(
-        user=cogs.users_autocomplete,
-        map_name=cogs.map_name_autocomplete,
-    )
-    async def submit_fake_map(
-        self,
-        itx: discord.Interaction[core.Genji],
-        user: app_commands.Transform[
-            utils.FakeUser | discord.Member, utils.AllUserTransformer
-        ],
-        map_code: app_commands.Transform[str, utils.MapCodeSubmitTransformer],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer],
-        checkpoint_count: app_commands.Range[int, 1, 500],
-        description: str | None = None,
-        guide_url: str | None = None,
-        gold: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        silver: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        bronze: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-    ) -> None:
-        """
-        Submit a map for a specific user to the database This will skip the playtesting phase.
-
-        Args:
-            itx: Interaction
-            user: user
-            map_code: Overwatch share code
-            map_name: Overwatch map
-            checkpoint_count: Number of checkpoints in the map
-            description: Other optional information for the map
-            guide_url: Guide URL
-            gold: Gold medal time (must be the fastest time)
-            silver: Silver medal time (must be between gold and bronze)
-            bronze: Bronze medal time (must be the slowest time)
-        """
-
-        medals = None
-        if gold and silver and bronze:
-            medals = (gold, silver, bronze)
-
-        map_submission = utils.MapSubmission(
-            creator=user,
-            map_code=map_code,
-            map_name=map_name,
-            checkpoint_count=checkpoint_count,
-            description=description,
-            guides=[guide_url],
-            medals=medals,
-        )
-        await cogs.submit_map_(
-            itx,
-            map_submission,
-            mod=True,
-        )
-
-    @mod.command(name="remove-record")
+    @mod_commands.command(name="remove-record")
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
     )
@@ -259,7 +193,7 @@ class ModCommands(commands.Cog):
         await member.send(f"Your record for {map_code} has been deleted by staff.")
         await utils.auto_role(itx.client, member)
 
-    @mod.command(name="change-name")
+    @mod_commands.command(name="change-name")
     @app_commands.autocomplete(member=cogs.users_autocomplete)
     async def change_name(
         self,
@@ -285,7 +219,7 @@ class ModCommands(commands.Cog):
             ephemeral=True,
         )
 
-    @mod.command(name="create-fake-member")
+    @mod_commands.command(name="create-fake-member")
     async def create_fake_member(
         self,
         itx: discord.Interaction[core.Genji],
@@ -328,7 +262,7 @@ class ModCommands(commands.Cog):
             )
         )
 
-    @mod.command(name="link-member")
+    @mod_commands.command(name="link-member")
     @app_commands.autocomplete(fake_user=cogs.users_autocomplete)
     async def link_member(
         self,
@@ -383,7 +317,7 @@ class ModCommands(commands.Cog):
         )
         itx.client.cache.users[fake_id].update_user_id(member.id)
 
-    @map.command()
+    @map_commands.command()
     @app_commands.choices(
         action=[
             app_commands.Choice(name="archive", value="archive"),
@@ -479,7 +413,7 @@ class ModCommands(commands.Cog):
         )
         itx.client.dispatch("newsfeed_archive", itx, map_code, action.value, row)
 
-    @map.command()
+    @map_commands.command()
     @app_commands.choices(value=utils.DIFFICULTIES_CHOICES)
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def difficulty(
@@ -569,7 +503,7 @@ class ModCommands(commands.Cog):
         )
         return content, total_votes
 
-    @map.command()
+    @map_commands.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     @app_commands.choices(value=utils.ALL_STARS_CHOICES)
     async def rating(
@@ -611,7 +545,7 @@ class ModCommands(commands.Cog):
         )
         itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Rating": value.name})
 
-    @map.command(name="map-type")
+    @map_commands.command(name="map-type")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def map_type(
         self,
@@ -669,7 +603,7 @@ class ModCommands(commands.Cog):
                 {"Type": ", ".join(map_types)},
             )
 
-    @map.command()
+    @map_commands.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def mechanics(
         self,
@@ -736,7 +670,7 @@ class ModCommands(commands.Cog):
                 {"Mechanics": mechanics},
             )
 
-    @map.command()
+    @map_commands.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def restrictions(
         self,
@@ -805,7 +739,7 @@ class ModCommands(commands.Cog):
                 {"Restrictions": restrictions},
             )
 
-    @map.command()
+    @map_commands.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def checkpoints(
         self,
@@ -860,7 +794,7 @@ class ModCommands(commands.Cog):
                 "newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count}
             )
 
-    @map.command(name="map-code")
+    @map_commands.command(name="map-code")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def map_code(
         self,
@@ -924,7 +858,7 @@ class ModCommands(commands.Cog):
             )
         itx.client.cache.maps[map_code].update_map_code(new_map_code)
 
-    @map.command()
+    @map_commands.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def description(
         self,
@@ -979,7 +913,7 @@ class ModCommands(commands.Cog):
                 "newsfeed_map_edit", itx, map_code, {"Description": description}
             )
 
-    @map.command(name="map-name")
+    @map_commands.command(name="map-name")
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
         map_name=cogs.map_name_autocomplete,
@@ -1035,7 +969,7 @@ class ModCommands(commands.Cog):
         else:
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Map": map_name})
 
-    @map.command()
+    @map_commands.command()
     @app_commands.autocomplete(
         map_code=cogs.map_codes_autocomplete,
     )
