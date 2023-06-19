@@ -16,6 +16,7 @@ from utils import (
     MapData,
     Roles,
     new_map_newsfeed,
+    BaseMapData,
 )
 from views import PlaytestVoting
 

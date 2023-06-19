@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cogs.maps_.map_search import MapSearch
-from cogs.maps_.misc import MapsMisc
-from cogs.maps_.submission import MapSubmissions
+from cogs.maps.map_search import MapSearch
+from cogs.maps.misc import MapsMisc
+from cogs.maps.submission import MapSubmissions
 
 if TYPE_CHECKING:
     import core

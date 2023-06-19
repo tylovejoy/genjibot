@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from cogs import map_name_autocomplete, users_autocomplete
 from cogs.command_groups import map_commands
-from cogs.maps_.utils.submission import start_map_submission
+from cogs.maps.utils.submission import start_map_submission
 from utils import (
     GUILD_ID,
     MapCodeSubmitTransformer,
@@ -18,6 +18,7 @@ from utils import (
     MapSubmission,
     FakeUser,
     AllUserTransformer,
+    BaseMapData,
 )
 
 if typing.TYPE_CHECKING:
@@ -65,7 +66,7 @@ class MapSubmissions(commands.Cog):
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
 
-        map_submission = MapSubmission(
+        map_data = BaseMapData(
             itx.user,
             map_code,
             map_name,
@@ -74,9 +75,10 @@ class MapSubmissions(commands.Cog):
             medals,
             guides=[guide_url],
         )
+
         await start_map_submission(
             itx,
-            map_submission,
+            map_data,
         )
 
     @map_commands.command(name="submot-map")

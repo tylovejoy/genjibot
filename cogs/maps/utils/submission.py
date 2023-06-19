@@ -5,12 +5,13 @@ from datetime import timedelta
 
 import discord
 
-from cogs.maps_.views.submission import MapSubmissionView
+from cogs.maps.views.submission import MapSubmissionView
 from utils import (
     MapSubmission,
     InvalidMedals,
     MaxMapsInPlaytest,
     MaxWeeklyMapsInPlaytest,
+    BaseMapData,
 )
 
 if typing.TYPE_CHECKING:
