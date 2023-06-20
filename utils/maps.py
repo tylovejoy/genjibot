@@ -43,112 +43,7 @@ class MapRestrictionsTransformer(app_commands.Transformer):
         return value
 
 
-@dataclasses.dataclass
-class MapSubmission:
-    creator: discord.Member | utils.FakeUser
-    map_code: str
-    map_name: str
-    checkpoint_count: int
-    description: str | None
-    medals: tuple[float, float, float] | None
-
-    guides: list[str] | None = None
-    map_types: list[str] | None = None
-    mechanics: list[str] | None = None
-    restrictions: list[str] | None = None
-    difficulty: str | None = None  # base difficulty
-
-    def __str__(self):
-        return utils.Formatter(self.to_dict()).format_map()
-
-    def to_dict(self) -> dict[str, str]:
-        return {
-            "Code": self.map_code,
-            "Map": self.map_name,
-            "Type": self.map_types_str,
-            "Checkpoints": str(self.checkpoint_count),
-            "Difficulty": self.difficulty,
-            "Mechanics": self.mechanics_str,
-            "Restrictions": self.restrictions_str,
-            "Guide": self.guide_str,
-            "Medals": self.medals_str,
-            "Desc": self.description,
-        }
-
-    @staticmethod
-    def _remove_nulls(sequence):
-        if sequence is None:
-            return []
-        return [x for x in sequence if x is not None]
-
-    @property
-    def mechanics_str(self):
-        self.mechanics = self._remove_nulls(self.mechanics)
-        if self.mechanics:
-            return ", ".join(self.mechanics)
-        return None
-
-    @property
-    def restrictions_str(self):
-        self.restrictions = self._remove_nulls(self.restrictions)
-        if self.restrictions:
-            return ", ".join(self.restrictions)
-        return None
-
-    @property
-    def map_types_str(self):
-        self.map_types = self._remove_nulls(self.map_types)
-        if self.map_types:
-            return ", ".join(self.map_types)
-        return None
-
-    @property
-    def gold(self):
-        if self.medals and self.medals[0]:
-            return self.medals[0]
-        return None
-
-    @property
-    def silver(self):
-        if self.medals and self.medals[1]:
-            return self.medals[1]
-        return None
-
-    @property
-    def bronze(self):
-        if self.medals and self.medals[2]:
-            return self.medals[2]
-        return None
-
-    @property
-    def guide_str(self):
-        all_guides = []
-        for count, link in enumerate(self.guides, start=1):
-            if link:
-                all_guides.append(f"[Link {count}]({link})")
-        return ", ".join(all_guides)
-
-    @property
-    def medals_str(self):
-        formatted_medals = []
-
-        if self.gold:
-            formatted_medals.append(f"{utils.FULLY_VERIFIED_GOLD} {self.gold}")
-
-        if self.silver:
-            formatted_medals.append(f"{utils.FULLY_VERIFIED_SILVER} {self.silver}")
-
-        if self.bronze:
-            formatted_medals.append(f"{utils.FULLY_VERIFIED_BRONZE} {self.bronze}")
-
-        if not formatted_medals:
-            return ""
-        return " | ".join(formatted_medals)
-
-    def set_extras(self, **args):
-        for k, v in args.items():
-            setattr(self, k, v)
-
+class MapSubmissionDBMixin:
     async def insert_playtest(
         self,
         itx: discord.Interaction[core.Genji],
@@ -267,6 +162,38 @@ class MapSubmission:
         await self.insert_guide(itx)
         await self.insert_medals(itx)
         await self.insert_timestamp(itx, mod)
+
+
+@dataclasses.dataclass
+class BaseMapData:
+    creator: discord.Member | utils.FakeUser
+    map_code: str
+    map_name: str
+    checkpoint_count: int
+    description: str | None
+    medals: tuple[float, float, float] | None
+    guides: list[str] | None = None
+    map_types: list[str] | None = None
+    mechanics: list[str] | None = None
+    restrictions: list[str] | None = None
+    difficulty: str | None = None  # base difficulty
+    quality: float | None = None
+
+    @property
+    def gold(self):
+        return self.medals[0]
+
+    @property
+    def silver(self):
+        return self.medals[1]
+
+    @property
+    def bronze(self):
+        return self.medals[2]
+
+
+class MapSubmission(BaseMapData, MapSubmissionDBMixin):
+    ...
 
 
 async def get_map_info(
@@ -452,7 +379,7 @@ class MapEmbedData:
     @property
     def _completed(self):
         res = ""
-        if self._data["completed"]:
+        if self._data.get("completed", None):
             res = "🗸 Completed"
             if self._data["medal_type"]:
                 res += " | 🗸 " + self._data["medal_type"]
@@ -461,7 +388,7 @@ class MapEmbedData:
     @property
     def _playtest(self):
         res = ""
-        if not self._data["official"]:
+        if self._data.get("official", None) and not self._data["official"]:
             res = (
                 f"\n‼️**IN PLAYTESTING, SUBJECT TO CHANGE**‼️\n"
                 f"Votes: {self._data['count']} / {self._data['required_votes']}\n"
@@ -474,7 +401,7 @@ class MapEmbedData:
     def _rating(self):
         return (
             f"`Rating` {utils.create_stars(self._data['quality'])}"
-            if self._data["quality"]
+            if self._data.get("quality", None) and self._data["quality"]
             else "Unrated"
         )
 

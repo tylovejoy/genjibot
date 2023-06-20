@@ -260,7 +260,7 @@ async def get_completions_data(
 class FakeUser:
     def __init__(self, id_: int, data: utils.UserData):
         self.id = id_
-        self.nickname = data.nickname
+        self.nick = data.nickname
         self.mention = data.nickname
         self.display_avatar = FakeAvatar()
 
