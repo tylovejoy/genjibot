@@ -5,7 +5,6 @@ import functools
 import io
 from typing import TYPE_CHECKING
 
-import asyncpg
 import discord
 import matplotlib.pyplot as plt
 from discord import ButtonStyle
@@ -13,7 +12,9 @@ from discord import ButtonStyle
 import database
 import utils
 import views
-from utils import PLAYTEST, new_map_newsfeed
+from cogs.maps.utils.utils import MapSubmission, get_map_info
+from utils import PLAYTEST
+from cogs.maps.utils.events import new_map_newsfeed
 
 if TYPE_CHECKING:
     import core
@@ -138,7 +139,7 @@ class PlaytestVoting(discord.ui.View):
 
     def __init__(
         self,
-        data: utils.MapSubmission,
+        data: MapSubmission,
         client: core.Genji,
     ):
         super().__init__(timeout=None)
@@ -545,12 +546,12 @@ class PlaytestVoting(discord.ui.View):
     async def generate_new_embed_text(
         self, itx: discord.Interaction[core.Genji]
     ) -> str:
-        queue = await utils.get_map_info(self.client, itx.message.id)
+        queue = await get_map_info(self.client, itx.message.id)
         if not queue:
             return ""
         data = queue[0]
         return str(
-            utils.MapSubmission(
+            MapSubmission(
                 creator=await utils.transform_user(self.client, data.creator_ids[0]),
                 map_code=data.map_code,
                 map_name=data.map_name,

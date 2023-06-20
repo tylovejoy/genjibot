@@ -13,6 +13,7 @@ import database
 import utils
 import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
+from cogs.maps.utils.utils import get_map_info, MapSubmission
 from cogs.tickets.views import TicketStart
 
 if typing.TYPE_CHECKING:
@@ -80,11 +81,11 @@ class BotEvents(commands.Cog):
                 view=view,
             )
 
-            queue = await utils.get_map_info(self.bot)
+            queue = await get_map_info(self.bot)
             for x in queue:
                 if x is None:
                     continue
-                data = utils.MapSubmission(
+                data = MapSubmission(
                     creator=await utils.transform_user(self.bot, x.creator_ids[0]),
                     map_code=x.map_code,
                     map_name=x.map_name,
@@ -260,7 +261,7 @@ class BotEvents(commands.Cog):
     async def on_newsfeed_new_map(
         self,
         user: discord.Member,
-        data: utils.MapSubmission,
+        data: cogs.maps.utils.utils.MapSubmission,
     ):
         nickname = self.bot.cache.users[user.id].nickname
         embed = utils.GenjiEmbed(

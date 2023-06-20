@@ -7,11 +7,15 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import cogs
 import database
-import utils
 import views
-from utils import MapEmbedData, split_nth_iterable, wrap_string_with_percent
+from cogs.maps.utils.utils import (
+    MapNameTransformer,
+    MapMechanicsTransformer,
+    MapTypeTransformer,
+)
+from utils import split_nth_iterable, wrap_string_with_percent
+from cogs.maps.utils.embed import MapEmbedData
 
 if typing.TYPE_CHECKING:
     import core
@@ -75,11 +79,11 @@ class MapSearch(commands.Cog):
         difficulty=[app_commands.Choice(name=x, value=x) for x in utils.DIFFICULTIES],
     )
     @app_commands.autocomplete(
-        map_name=cogs.map_name_autocomplete,
-        map_type=cogs.map_type_autocomplete,
-        creator=cogs.creator_autocomplete,
-        mechanics=cogs.map_mechanics_autocomplete,
-        map_code=cogs.map_codes_autocomplete,
+        map_name=utils.autocomplete.map_name_autocomplete,
+        map_type=utils.autocomplete.map_type_autocomplete,
+        creator=utils.autocomplete.creator_autocomplete,
+        mechanics=utils.autocomplete.map_mechanics_autocomplete,
+        map_code=utils.autocomplete.map_codes_autocomplete,
     )
     @app_commands.guilds(
         discord.Object(id=utils.GUILD_ID), discord.Object(id=868981788968640554)
@@ -87,13 +91,12 @@ class MapSearch(commands.Cog):
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer] | None = None,
+        map_name: app_commands.Transform[str, MapNameTransformer] | None = None,
         difficulty: app_commands.Choice[str] | None = None,
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
         creator: app_commands.Transform[int, utils.CreatorTransformer] | None = None,
-        mechanics: app_commands.Transform[str, utils.MapMechanicsTransformer]
-        | None = None,
-        map_type: app_commands.Transform[str, utils.MapTypeTransformer] | None = None,
+        mechanics: app_commands.Transform[str, MapMechanicsTransformer] | None = None,
+        map_type: app_commands.Transform[str, MapTypeTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         only_playtest: bool = False,
         only_maps_with_medals: bool = False,

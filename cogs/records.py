@@ -9,6 +9,7 @@ from discord.ext import commands
 import cogs
 import database
 import utils
+import utils.autocomplete
 import views
 
 if typing.TYPE_CHECKING:
@@ -46,7 +47,7 @@ class Records(commands.Cog):
 
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    @app_commands.autocomplete(user=cogs.users_autocomplete)
+    @app_commands.autocomplete(user=utils.autocomplete.users_autocomplete)
     async def summary(
         self,
         itx: discord.Interaction[core.Genji],
@@ -95,7 +96,7 @@ class Records(commands.Cog):
     @app_commands.command(name="submit-completion")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=utils.autocomplete.map_codes_autocomplete,
     )
     @app_commands.choices(
         quality=[
@@ -270,7 +271,7 @@ class Records(commands.Cog):
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=utils.autocomplete.map_codes_autocomplete,
     )
     async def legacy_completions(
         self,
@@ -319,7 +320,7 @@ class Records(commands.Cog):
     @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=utils.autocomplete.map_codes_autocomplete,
     )
     async def view_records(
         self,
@@ -382,7 +383,7 @@ class Records(commands.Cog):
 
     @app_commands.command(name="personal-records")
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    @app_commands.autocomplete(user=cogs.users_autocomplete)
+    @app_commands.autocomplete(user=utils.autocomplete.users_autocomplete)
     async def personal_records_slash(
         self,
         itx: discord.Interaction[core.Genji],

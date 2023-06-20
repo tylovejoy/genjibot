@@ -11,6 +11,7 @@ from discord import Embed, app_commands
 import cogs
 import database
 import utils
+import utils.autocomplete
 
 if typing.TYPE_CHECKING:
     import core
@@ -85,12 +86,13 @@ async def transform_user(
         return utils.FakeUser(value, client.cache.users[value])
     except ValueError:
         member = discord.utils.find(
-            lambda u: cogs.case_ignore_compare(u.name, value), guild.members
+            lambda u: utils.autocomplete.case_ignore_compare(u.name, value),
+            guild.members,
         )
         if member:
             return member
         for user in client.cache.users:
-            if cogs.case_ignore_compare(value, user.nickname):
+            if utils.autocomplete.case_ignore_compare(value, user.nickname):
                 return utils.FakeUser(user.user_id, client.cache.users[user.user_id])
 
 

@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import cogs
 import utils
+import utils.autocomplete
 import views
 
 if typing.TYPE_CHECKING:
@@ -18,7 +19,7 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
     """Tags"""
 
     @app_commands.command()
-    @app_commands.autocomplete(name=cogs.tags_autocomplete)
+    @app_commands.autocomplete(name=utils.autocomplete.tags_autocomplete)
     @app_commands.checks.cooldown(3, 30, key=lambda i: (i.guild_id, i.user.id))
     async def view(
         self,

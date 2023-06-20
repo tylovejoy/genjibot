@@ -8,16 +8,15 @@ import discord
 
 from utils import (
     DIFFICULTIES_EXT,
-    MapSubmission,
     GenjiEmbed,
     set_embed_thumbnail_maps,
     delete_interaction,
     PLAYTEST,
     MapData,
     Roles,
-    new_map_newsfeed,
-    BaseMapData,
 )
+from cogs.maps.utils.utils import MapSubmission
+from cogs.maps.utils.events import new_map_newsfeed
 from views import PlaytestVoting
 
 if TYPE_CHECKING:

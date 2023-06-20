@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import cogs
 import utils
+import utils.autocomplete
 import views
 
 if typing.TYPE_CHECKING:
@@ -21,7 +22,7 @@ class MapsMisc(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="guide")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=utils.autocomplete.map_codes_autocomplete)
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def view_guide(
         self,
@@ -54,7 +55,7 @@ class MapsMisc(commands.Cog):
         await view.start(itx)
 
     @app_commands.command(name="add-guide")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=utils.autocomplete.map_codes_autocomplete)
     @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
     async def add_guide(
         self,
@@ -104,7 +105,7 @@ class MapsMisc(commands.Cog):
         itx.client.dispatch("newsfeed_guide", itx, itx.user, url, map_code)
 
     @app_commands.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=utils.autocomplete.map_codes_autocomplete)
     @app_commands.choices(
         quality=[
             app_commands.Choice(

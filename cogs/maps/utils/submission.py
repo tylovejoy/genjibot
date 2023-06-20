@@ -7,12 +7,11 @@ import discord
 
 from cogs.maps.views.submission import MapSubmissionView
 from utils import (
-    MapSubmission,
     InvalidMedals,
     MaxMapsInPlaytest,
     MaxWeeklyMapsInPlaytest,
-    BaseMapData,
 )
+from cogs.maps.utils.utils import BaseMapData, MapSubmission
 
 if typing.TYPE_CHECKING:
     import core

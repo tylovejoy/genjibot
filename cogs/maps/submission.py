@@ -7,19 +7,17 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from cogs import map_name_autocomplete, users_autocomplete
+from utils.autocomplete import map_name_autocomplete, users_autocomplete
 from cogs.command_groups import map_commands
 from cogs.maps.utils.submission import start_map_submission
 from utils import (
     GUILD_ID,
     MapCodeSubmitTransformer,
-    MapNameTransformer,
     RecordTransformer,
-    MapSubmission,
     FakeUser,
     AllUserTransformer,
-    BaseMapData,
 )
+from cogs.maps.utils.utils import MapNameTransformer, BaseMapData, MapSubmission
 
 if typing.TYPE_CHECKING:
     import core

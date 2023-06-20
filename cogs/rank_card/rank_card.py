@@ -10,6 +10,7 @@ from discord.ext import commands
 
 import cogs
 import utils
+import utils.autocomplete
 from cogs.rank_card.utils import RANKS, RankCardBuilder
 from utils import rank_finder
 
@@ -27,7 +28,7 @@ class RankCard(commands.Cog):
     @app_commands.guilds(
         discord.Object(id=utils.GUILD_ID), discord.Object(id=968951072599187476)
     )
-    @app_commands.autocomplete(user=cogs.users_autocomplete)
+    @app_commands.autocomplete(user=utils.autocomplete.users_autocomplete)
     async def rank_card(
         self,
         itx: discord.Interaction[core.Genji],
