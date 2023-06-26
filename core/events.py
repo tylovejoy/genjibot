@@ -33,8 +33,6 @@ class BotEvents(commands.Cog):
         is ready to receive and process commands.
         It prints a string containing the name of the bot,
         its owner, and which version of discord.py it's using.
-        Args:
-            self: Bot instance
         """
         app_info = await self.bot.application_info()
         self.bot.logger.info(

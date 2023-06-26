@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import functools
 import typing
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
-import utils
-import views
 
 if typing.TYPE_CHECKING:
     import core
