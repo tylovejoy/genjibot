@@ -18,6 +18,7 @@ from utils import PLAYTEST, new_map_newsfeed
 if TYPE_CHECKING:
     import core
 
+NON_BEGINNER = utils.DIFFICULTIES_EXT[1:]
 
 colors = {
     "Beginner": "#B9FFB7",
@@ -133,7 +134,7 @@ class RestrictionsSelect(MapSubmitSelection):
 class PlaytestVoting(discord.ui.View):
     options = [
         discord.SelectOption(label=x, value=str(i))
-        for i, x in enumerate(utils.DIFFICULTIES_EXT)
+        for i, x in enumerate(NON_BEGINNER, start=1)
     ] + [discord.SelectOption(label="Remove My Vote", value=str("REMOVE"))]
 
     def __init__(

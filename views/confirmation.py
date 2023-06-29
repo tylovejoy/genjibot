@@ -348,7 +348,7 @@ class ConfirmDifficultyMixin(ConfirmBaseView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.difficulty = views.DifficultySelect(
-            [discord.SelectOption(label=x, value=x) for x in utils.DIFFICULTIES_EXT]
+            [discord.SelectOption(label=x, value=x) for x in utils.DIFFICULTIES_EXT[1:]]
         )
         self.add_item(self.difficulty)
 
