@@ -906,3 +906,18 @@ class PlaytestVoting(discord.ui.View):
         await self.delete_map_from_db()
         await self.delete_playtest_db_entry()
         self.client.cache.maps.remove_one(self.data.map_code)
+
+
+class GuidesSelect(discord.ui.Select):
+    def __init__(self, options: list[discord.SelectOption]):
+        super().__init__(options=options)
+
+    async def callback(self, itx: discord.Interaction[core.Genji]):
+        await itx.response.defer(ephemeral=True)
+        for x in self.options:
+            if x.value == self.values[0]:
+                x.default = True
+            else:
+                x.default = False
+        self.view.confirm.disabled = False
+        await self.view.original_itx.edit_original_response(view=self.view)

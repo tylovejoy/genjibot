@@ -13,7 +13,8 @@ import utils
 import utils.maps
 import views
 from database import DotRecord
-from utils import NEWSFEED
+from utils import NEWSFEED, convert_to_emoji_number
+from views import GuidesSelect
 
 if typing.TYPE_CHECKING:
     import core
@@ -38,6 +39,61 @@ class ModCommands(commands.Cog):
         description="Mod only commands",
         parent=mod,
     )
+
+    @map.command(name="remove-guide")
+    @app_commands.autocomplete(
+        map_code=cogs.map_codes_autocomplete,
+    )
+    async def remove_guide(
+        self,
+        itx: discord.Interaction[core.Genji],
+        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+    ) -> None:
+        """
+        Remove a guide from a map.
+
+        Args:
+            itx: Interaction
+            map_code: Overwatch share code
+        """
+        await itx.response.defer(ephemeral=True)
+
+        query = "SELECT url FROM guides WHERE map_code = $1;"
+        guides = [x.url async for x in itx.client.database.get(query, map_code)]
+        if not guides:
+            raise utils.NoGuidesExistError
+
+        guides_formatted = [
+            f"{convert_to_emoji_number(i)}. <{g[:100]}>\n"
+            for i, g in enumerate(guides, start=1)
+        ]
+
+        content = (
+            f"# Guides for {map_code}\n"
+            f"### Select the corresponding number to delete the guide.\n"
+            f"{''.join(guides_formatted)}\n"
+        )
+
+        options = [
+            discord.SelectOption(label=convert_to_emoji_number(x + 1), value=str(x))
+            for x in range(len(guides))
+        ]
+        select = GuidesSelect(options)
+        view = views.Confirm(itx, ephemeral=True, preceeding_items={"guides": select})
+
+        await itx.edit_original_response(
+            content=content,
+            view=view,
+        )
+        await view.wait()
+        if not view.value:
+            return
+        url = guides[int(view.guides.values[0])]
+        query = "DELETE FROM guides WHERE map_code = $1 AND url = $2;"
+        await itx.client.database.set(query, map_code, url)
+        await itx.edit_original_response(
+            content=f"# Deleted guide\n## Map code: {map_code}\n## URL: {url}"
+        )
 
     @map.command(name="add-creator")
     @app_commands.autocomplete(
@@ -685,10 +741,20 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
+        preload_options = [
+            row.mechanic
+            async for row in itx.client.database.get(
+                "SELECT mechanic FROM map_mechanics WHERE map_code = $1",
+                map_code,
+            )
+        ]
+        options = copy.deepcopy(itx.client.cache.map_mechanics.options)
+        for option in options:
+            option.default = option.value in preload_options
+
         select = {
             "mechanics": views.MechanicsSelect(
-                copy.deepcopy(itx.client.cache.map_mechanics.options)
-                + [discord.SelectOption(label="Remove All", value="Remove All")]
+                options + [discord.SelectOption(label="Remove All", value="Remove All")]
             )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
@@ -751,11 +817,20 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
+        preload_options = [
+            row.restriction
+            async for row in itx.client.database.get(
+                "SELECT restriction FROM map_restrictions WHERE map_code = $1",
+                map_code,
+            )
+        ]
+        options = copy.deepcopy(itx.client.cache.map_restrictions.options)
+        for option in options:
+            option.default = option.value in preload_options
 
         select = {
             "restrictions": views.RestrictionsSelect(
-                copy.deepcopy(itx.client.cache.map_restrictions.options)
-                + [discord.SelectOption(label="Remove All", value="Remove All")]
+                options + [discord.SelectOption(label="Remove All", value="Remove All")]
             )
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)

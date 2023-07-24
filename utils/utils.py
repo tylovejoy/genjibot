@@ -16,6 +16,20 @@ if typing.TYPE_CHECKING:
     import core
 
 
+_emoji_numbers = {
+    0: "0️⃣",
+    1: "1️⃣",
+    2: "2️⃣",
+    3: "3️⃣",
+    4: "4️⃣",
+    5: "5️⃣",
+    6: "6️⃣",
+    7: "7️⃣",
+    8: "8️⃣",
+    9: "9️⃣",
+}
+
+
 async def delete_interaction(
     itx: discord.Interaction[core.Genji], *, minutes: int | float
 ):
@@ -238,7 +252,7 @@ async def get_completions_data(
                 LEFT JOIN map_medals mm ON r.map_code = mm.map_code
             WHERE r.user_id = $1
                 AND m.official = TRUE
-                AND m.archived = FALSE
+                --AND m.archived = FALSE -- Not sure why archived don't count ?
             GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED, medal, r.user_id
         )
         SELECT COUNT(name)                        AS completions,
@@ -281,3 +295,19 @@ def split_nth_iterable(*, current: int, iterable: list[typing.Any], split: int):
         or (current == 0 and len(iterable) == 1)
         or current == len(iterable) - 1
     )
+
+
+def convert_to_emoji_number(number):
+    # Check if the number is within the range 0-9
+    if number in _emoji_numbers:
+        return _emoji_numbers[number]
+
+    # Convert the number to a string and iterate through each digit
+    emoji_number = ""
+    for digit in str(number):
+        if digit.isdigit():
+            emoji_number += _emoji_numbers[int(digit)]
+        else:
+            emoji_number += digit
+
+    return emoji_number
