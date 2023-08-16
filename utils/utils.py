@@ -196,7 +196,10 @@ async def rank_finder(
 
 
 async def get_completions_data(
-    client: core.Genji, user: int, include_beginner: bool = False
+    client: core.Genji,
+    user: int,
+    include_beginner: bool = False,
+    include_archived: bool = True,
 ) -> dict[str, tuple[int, int, int, int]]:
     if include_beginner:
         clause = (
@@ -230,7 +233,7 @@ async def get_completions_data(
                     FROM legacy_records
         ),
         ranges ("range", "name") AS (
-             VALUES  {clause}
+             VALUES  ('[0.0,0.59)'::numrange, 'Beginner'), ('[0.59,2.35)'::numrange, 'Easy'),
                      
                      ('[2.35,4.12)'::numrange, 'Medium'),
                      ('[4.12,5.88)'::numrange, 'Hard'),
@@ -252,7 +255,7 @@ async def get_completions_data(
                 LEFT JOIN map_medals mm ON r.map_code = mm.map_code
             WHERE r.user_id = $1
                 AND m.official = TRUE
-                --AND m.archived = FALSE -- Not sure why archived don't count ?
+                AND ($2 IS TRUE OR m.archived = FALSE)
             GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED, medal, r.user_id
         )
         SELECT COUNT(name)                        AS completions,

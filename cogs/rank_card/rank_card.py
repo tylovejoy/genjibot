@@ -42,7 +42,7 @@ class RankCard(commands.Cog):
 
         totals = await self._get_map_totals()
         completions = await utils.get_completions_data(
-            itx.client, user.id, include_beginner=True
+            itx.client, user.id, include_beginner=True, include_archived=False
         )
         world_records = await self._get_world_record_count(user.id)
         maps = await self._get_maps_count(user.id)
