@@ -977,7 +977,8 @@ class ModCommands(commands.Cog):
         )
         # If playtesting
         if playtest := await itx.client.database.get_row(
-            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
+            "SELECT thread_id, original_msg, message_id FROM playtest WHERE map_code=$1",
+            map_code,
         ):
             await itx.client.database.set(
                 "UPDATE playtest SET map_code=$1 WHERE map_code=$2",
@@ -993,6 +994,8 @@ class ModCommands(commands.Cog):
                 playtest.thread_id,
                 playtest.original_msg,
             )
+
+            self.bot.playtest_views[playtest.message_id].data.map_code = new_map_code
         else:
             itx.client.dispatch(
                 "newsfeed_map_edit", itx, map_code, {"Code": new_map_code}
