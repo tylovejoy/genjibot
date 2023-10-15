@@ -233,8 +233,7 @@ async def get_completions_data(
                     FROM legacy_records
         ),
         ranges ("range", "name") AS (
-             VALUES  ('[0.0,0.59)'::numrange, 'Beginner'), ('[0.59,2.35)'::numrange, 'Easy'),
-                     
+             VALUES  {clause}
                      ('[2.35,4.12)'::numrange, 'Medium'),
                      ('[4.12,5.88)'::numrange, 'Hard'),
                      ('[5.88,7.65)'::numrange, 'Very Hard'),
@@ -269,7 +268,7 @@ async def get_completions_data(
     """
     amounts = {
         x.difficulty: tuple(map(int, (x.completions, x.gold, x.silver, x.bronze)))
-        async for x in client.database.get(query, user)
+        async for x in client.database.get(query, user, include_archived)
     }
     return amounts
 

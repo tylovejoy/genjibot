@@ -32,9 +32,7 @@ RANKS_INFO = discord.Embed(
     ),
     color=discord.Color.red(),
 )
-RANKS_INFO.set_image(
-    url="http://207.244.249.145/assets/images/rank_chart_landscape.png"
-)
+RANKS_INFO.set_image(url="https://bkan0n.com/assets/images/rank_chart_landscape.png")
 
 MEDALS_INFO = discord.Embed(
     title="Medals Info",
@@ -47,9 +45,7 @@ MEDALS_INFO = discord.Embed(
     ),
     color=discord.Color.red(),
 )
-MEDALS_INFO.set_image(
-    url="http://207.244.249.145/assets/images/rank_chart_landscape.png"
-)
+MEDALS_INFO.set_image(url="https://bkan0n.com/assets/images/rank_chart_landscape.png")
 
 COMPLETION_SUBMISSION_RULES = discord.Embed(
     title="Submission Rules",

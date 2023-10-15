@@ -132,10 +132,9 @@ class RestrictionsSelect(MapSubmitSelection):
 
 
 class PlaytestVoting(discord.ui.View):
-    options = [
-        discord.SelectOption(label=x, value=str(i))
-        for i, x in enumerate(NON_BEGINNER, start=1)
-    ] + [discord.SelectOption(label="Remove My Vote", value=str("REMOVE"))]
+    options = [discord.SelectOption(label=x, value=x) for x in NON_BEGINNER] + [
+        discord.SelectOption(label="Remove My Vote", value=str("REMOVE"))
+    ]
 
     def __init__(
         self,
@@ -152,7 +151,7 @@ class PlaytestVoting(discord.ui.View):
             _ModOnlyOptions.FORCE_DENY.value: self.force_deny,
             _ModOnlyOptions.APPROVE.value: self.approve_submission,
             _ModOnlyOptions.START_OVER.value: self.start_process_over,
-            _ModOnlyOptions.REMOVE_COMPLETIONS.value: self.remove_votes_option,
+            _ModOnlyOptions.REMOVE_COMPLETIONS.value: self.remove_completions_option,
             _ModOnlyOptions.REMOVE_VOTES.value: self.remove_votes_option,
             _ModOnlyOptions.TOGGLE_FINALIZE_BUTTON.value: self._pre_toggle_finalize_button,
         }
@@ -221,13 +220,11 @@ class PlaytestVoting(discord.ui.View):
 
         if select.values[0] == "REMOVE":
             await self.delete_user_vote(itx, itx.user.id)
-            diff_string = select.values[0]
         else:
             await self.set_select_vote_value(itx, select)
-            diff_string = utils.DIFFICULTIES_EXT[int(select.values[0])]
 
         await itx.followup.send(
-            f"You voted: {diff_string}",
+            f"You voted: {select.values[0]}",
             ephemeral=True,
         )
 
@@ -276,13 +273,13 @@ class PlaytestVoting(discord.ui.View):
     async def set_select_vote_value(
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
-        vote_value = (int(select.values[0]) + 1) * 10 / 17
+        vote_value = utils.ALL_DIFFICULTY_RANGES_MIDPOINT[select.values[0]]
         await self.update_playtest_vote(itx, vote_value)
 
     async def _set_select_vote_value_creator(
         self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
     ):
-        vote_value = (int(select.values[0]) + 1) * 10 / 17
+        vote_value = utils.ALL_DIFFICULTY_RANGES_MIDPOINT[select.values[0]]
         await self._update_user_vote(itx, vote_value, self.data.creator.id)
 
     async def update_playtest_vote(
@@ -486,13 +483,7 @@ class PlaytestVoting(discord.ui.View):
     ):
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
-        thread = self.client.get_guild(utils.GUILD_ID).get_channel(utils.PLAYTEST)
-        await thread.fetch_message(votes[0].thread_id)
-        # self.client.dispatch(
-        #     "newsfeed_new_map",
-        #     author,
-        #     self.data,
-        # )
+        self.data.difficulty = await self.get_difficulty(votes)
         await new_map_newsfeed(self.client, author.id, self.data)
 
         try:

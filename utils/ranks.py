@@ -54,11 +54,11 @@ def generate_difficulty_ranges(top_level=False) -> dict[str, tuple[float, float]
 DIFFICULTIES_RANGES = generate_difficulty_ranges()
 TOP_DIFFICULTIES_RANGES = generate_difficulty_ranges(True)
 TOP_DIFFICULTY_RANGES_MIDPOINT = {
-    k: (v[0] + v[1]) / 2 for k, v in TOP_DIFFICULTIES_RANGES.items()
+    k: round((v[0] + v[1]) / 2, 2) for k, v in TOP_DIFFICULTIES_RANGES.items()
 }
 
 ALL_DIFFICULTY_RANGES_MIDPOINT = {
-    k: (v[0] + v[1]) / 2 for k, v in DIFFICULTIES_RANGES.items()
+    k: round((v[0] + v[1]) / 2, 2) for k, v in DIFFICULTIES_RANGES.items()
 }
 
 DIFFICULTIES_CHOICES = [app_commands.Choice(name=x, value=x) for x in DIFFICULTIES_EXT]

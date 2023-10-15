@@ -273,35 +273,6 @@ class BotEvents(commands.Cog):
         )
 
     @commands.Cog.listener()
-    async def on_newsfeed_medals(
-        self,
-        itx: discord.Interaction[core.Genji],
-        map_code: str,
-        gold: float,
-        silver: float,
-        bronze: float,
-        thread_id: int | None = None,
-        message_id: int | None = None,
-    ):
-        embed = utils.GenjiEmbed(
-            title=f"Medals have been added/changed for code {map_code}",
-            description=f"`Gold` {gold}\n"
-            f"`Silver` {silver}\n"
-            f"`Bronze` {bronze}\n",
-            color=discord.Color.red(),
-        )
-
-        if thread_id:
-            await itx.guild.get_thread(thread_id).send(embed=embed)
-            original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
-                message_id
-            )
-            embed = self.edit_medals(original.embeds[0], gold, silver, bronze)
-            await original.edit(embed=embed)
-        else:
-            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
-
-    @commands.Cog.listener()
     async def on_newsfeed_archive(
         self,
         itx: discord.Interaction[core.Genji],
@@ -435,28 +406,6 @@ class BotEvents(commands.Cog):
                 embed.description,
             )
 
-        return embed
-
-    @staticmethod
-    def edit_medals(embed: discord.Embed, gold, silver, bronze) -> discord.Embed:
-        medals_txt = (
-            f"┣ `Medals` "
-            f"{utils.FULLY_VERIFIED_GOLD} {gold} | "
-            f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
-            f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n┗"
-        )
-        if bool(re.search("`Medals`", embed.description)):
-            embed.description = re.sub(
-                r"┣ `Medals` (.+)\n┗",
-                medals_txt,
-                embed.description,
-            )
-        else:
-            embed.description = re.sub(
-                r"┗",
-                medals_txt,
-                embed.description,
-            )
         return embed
 
 

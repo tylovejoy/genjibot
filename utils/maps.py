@@ -163,7 +163,7 @@ class MapSubmission:
             thread_msg_id,
             self.map_code,
             itx.user.id,
-            utils.DIFFICULTIES_RANGES[self.difficulty][0],
+            utils.ALL_DIFFICULTY_RANGES_MIDPOINT[self.difficulty],
             True,
             new_map_id,
         )
@@ -221,7 +221,7 @@ class MapSubmission:
             """,
             self.map_code,
             self.creator.id,
-            utils.DIFFICULTIES_RANGES[self.difficulty][0],
+            utils.ALL_DIFFICULTY_RANGES_MIDPOINT[self.difficulty],
         )
 
     async def insert_guide(self, itx: discord.Interaction[core.Genji]):
@@ -307,7 +307,7 @@ async def get_map_info(
     ]
 
 
-_MAPS_BASE_URL = "http://207.244.249.145/assets/images/map_banners/"
+_MAPS_BASE_URL = "https://bkan0n.com/assets/images/map_banners/"
 
 
 @dataclasses.dataclass
@@ -380,6 +380,9 @@ all_map_constants = [
     MapMetadata("King's Row (Winter)", discord.Color.from_str("#105687")),
     MapMetadata("Busan (Lunar New Year)", discord.Color.from_str("#FF9F00")),
     MapMetadata("Lijiang Tower (Lunar New Year)", discord.Color.from_str("#169900")),
+    MapMetadata("Suravasa", discord.Color.from_str("#81EBE0")),
+    MapMetadata("New Junk City", discord.Color.from_str("#EC9D00")),
+    MapMetadata("Samoa", discord.Color.from_str("#F9FF57")),
 ]
 
 MAP_DATA: dict[str, MapMetadata] = {const.NAME: const for const in all_map_constants}
@@ -413,7 +416,7 @@ async def new_map_newsfeed(
         ),
     )
     embed.set_image(url=getattr(MAP_DATA.get(data.map_name, None), "IMAGE_URL", None))
-    base_thumbnail_url = "http://207.244.249.145/assets/images/genji_ranks/"
+    base_thumbnail_url = "https://bkan0n.com/assets/images/genji_ranks/"
     rank = DIFF_TO_RANK[
         data.difficulty.replace("+", "").replace("-", "").rstrip()
     ].lower()

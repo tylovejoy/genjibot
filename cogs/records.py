@@ -234,13 +234,13 @@ class Records(commands.Cog):
         )
 
         verification_screenshot = await screenshot.to_file(filename="image.png")
+        v_view = views.VerificationView()
         verification_msg = await itx.client.get_channel(utils.VERIFICATION_QUEUE).send(
             content="**ALERT:** VIDEO SUBMISSION" if video else None,
             embed=embed,
             file=verification_screenshot,
         )
 
-        v_view = views.VerificationView()
         await verification_msg.edit(view=v_view)
         await itx.client.database.set(
             """

@@ -169,16 +169,15 @@ class Test(commands.Cog):
                 all_maps      AS (
                   SELECT
                     map_name,
-                    array_to_string((map_type), ', ') AS map_type,
+                    map_type,
                     m.map_code,
-                    "desc",
-                    official,
+                    "desc" as description,
+                    not official as playtesting,
                     archived,
                     array_agg(DISTINCT url) AS guide,
-                    array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
-                    array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
+                    array_agg(DISTINCT mech.mechanic) AS mechanics,
+                    array_agg(DISTINCT rest.restriction) AS restrictions,
                     checkpoints,
-                    string_agg(DISTINCT (nickname), ', ') AS creators,
                     coalesce(avg(difficulty), 0) AS difficulty,
                     coalesce(avg(quality), 0) AS quality,
                     array_agg(DISTINCT mc.user_id) AS creator_ids,
@@ -209,23 +208,22 @@ class Test(commands.Cog):
             )
             
             SELECT
-              am.map_name, map_type, am.map_code, am."desc", not am.official as is_playtest,
-              am.archived, guide, mechanics, restrictions, am.checkpoints,
-              creators, r.name as difficulty, quality, am.gold, am.silver, 
-              am.bronze, r.name
+              am.map_code, 
+              creator_ids 
+              --am.map_name, map_type, am.description, playtesting, am.archived, guide, mechanics, restrictions, am.checkpoints, difficulty, quality, am.gold, am.silver, am.bronze
               FROM
                 all_maps am
                   LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
                   LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
                   INNER JOIN ranges r ON r.range @> am.difficulty
              GROUP BY
-               am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
-               restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
-               am.bronze, p.thread_id, pa.count, pa.required_votes, r.name
+               am.map_code, 
+               creator_ids 
+               --am.map_name, map_type, am.description, am.playtesting, am.archived, guide, mechanics, restrictions, am.checkpoints, creator_ids, difficulty, quality, am.gold, am.silver, am.bronze, p.thread_id, pa.count, pa.required_votes
             
             
-             ORDER BY
-               difficulty, quality DESC"""
+            -- ORDER BY
+             --  difficulty, quality DESC"""
         )
 
         await ctx.send(file=discord.File(fp=f, filename="test.csv"))

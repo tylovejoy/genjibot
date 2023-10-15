@@ -150,7 +150,7 @@ class ModCommands(commands.Cog):
         bronze: app_commands.Transform[float, utils.RecordTransformer],
     ) -> None:
         """
-        Edit all medals for a map.
+        Edit all medals for a map. Set all medals to 0 to remove them.
 
         Args:
             itx: Interaction
@@ -161,34 +161,39 @@ class ModCommands(commands.Cog):
         """
 
         await itx.response.defer(ephemeral=True)
-        if not 0 < gold < silver < bronze:
+        delete = gold == silver == bronze == 0
+
+        if not delete and not 0 < gold < silver < bronze:
             raise utils.InvalidMedals
-        await itx.client.database.set(
-            """            
+
+        if delete:
+            query = "DELETE FROM map_medals WHERE map_code = $1"
+            args = (map_code,)
+            content = f"{map_code} medals have been removed.\n"
+        else:
+            query = """            
             INSERT INTO map_medals (gold, silver, bronze, map_code)
             VALUES ($1, $2, $3, $4) 
             ON CONFLICT (map_code)
             DO UPDATE SET gold = $1, silver = $2, bronze = $3
             WHERE map_medals.map_code = EXCLUDED.map_code
-            """,
-            gold,
-            silver,
-            bronze,
-            map_code,
-        )
-        await itx.edit_original_response(
-            content=f"{map_code} medals have been changed to:\n"
-            f"`Gold` {gold}\n"
-            f"`Silver` {silver}\n"
-            f"`Bronze` {bronze}\n"
-        )
+            """
+            args = (gold, silver, bronze, map_code)
+            content = (
+                f"{map_code} medals have been changed to:\n"
+                f"`Gold` {gold}\n"
+                f"`Silver` {silver}\n"
+                f"`Bronze` {bronze}\n"
+            )
+        await itx.client.database.set(query, *args)
+        await itx.edit_original_response(content=content)
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
         ):
-            itx.client.dispatch(
-                "newsfeed_medals",
+            await self._newsfeed_medals(
                 itx,
                 map_code,
+                delete,
                 gold,
                 silver,
                 bronze,
@@ -196,8 +201,62 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            itx.client.dispatch("newsfeed_medals", itx, map_code, gold, silver, bronze)
+            await self._newsfeed_medals(itx, map_code, delete, gold, silver, bronze)
             await utils.update_affected_users(itx.client, map_code)
+
+    @staticmethod
+    def _edit_medals(embed: discord.Embed, gold, silver, bronze) -> discord.Embed:
+        medals_txt = (
+            f"┣ `Medals` "
+            f"{utils.FULLY_VERIFIED_GOLD} {gold} | "
+            f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
+            f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n┗"
+        )
+        if bool(re.search("`Medals`", embed.description)):
+            embed.description = re.sub(
+                r"┣ `Medals` (.+)\n┗",
+                medals_txt,
+                embed.description,
+            )
+        else:
+            embed.description = re.sub(
+                r"┗",
+                medals_txt,
+                embed.description,
+            )
+        return embed
+
+    async def _newsfeed_medals(
+        self,
+        itx: discord.Interaction[core.Genji],
+        map_code: str,
+        delete: bool,
+        gold: float,
+        silver: float,
+        bronze: float,
+        thread_id: int | None = None,
+        message_id: int | None = None,
+    ):
+        description = "All medals removed."
+        if not delete:
+            description = (
+                f"`Gold` {gold}\n" f"`Silver` {silver}\n" f"`Bronze` {bronze}\n"
+            )
+        embed = utils.GenjiEmbed(
+            title=f"Medals have been added/changed for code {map_code}",
+            description=description,
+            color=discord.Color.red(),
+        )
+
+        if thread_id:
+            await itx.guild.get_thread(thread_id).send(embed=embed)
+            original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
+                message_id
+            )
+            embed = self._edit_medals(original.embeds[0], gold, silver, bronze)
+            await original.edit(embed=embed)
+        else:
+            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
     @map.command(name="submit-map")
     @app_commands.autocomplete(
@@ -554,7 +613,7 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        difficulty = utils.DIFFICULTIES_RANGES[value.value][0]
+        difficulty = utils.ALL_DIFFICULTY_RANGES_MIDPOINT[value.value]
         view = views.Confirm(
             itx,
             f"Updated {map_code} difficulty to {value.value}.",

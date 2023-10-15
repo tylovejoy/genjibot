@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import logging
 import typing
 
@@ -38,6 +39,12 @@ class Genji(commands.Bot):
         self.cache: utils.GenjiCache = utils.GenjiCache()
         self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
+        self.analytics_buffer: list[tuple[str, int, datetime.datetime, dict]] = []
+
+    def log_analytics(
+        self, event: str, user_id: int, timestamp: datetime.datetime, data: dict
+    ):
+        self.analytics_buffer.append((event, user_id, timestamp, data))
 
     async def setup_hook(self) -> None:
         """
