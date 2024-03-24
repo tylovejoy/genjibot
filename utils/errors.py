@@ -140,6 +140,15 @@ class VideoNoRecord(BaseParkourException, app_commands.errors.AppCommandError):
     """If you add a video, you must submit a time record as well. Please submit again with the `record` argument."""
 
 
+class TemporaryMultiBan(BaseParkourException, app_commands.errors.AppCommandError):
+    """Recently an exploit for multiclimb has been going viral.
+    We are forced to take some temporary measures to deal with this situation.
+    For now, we are **NOT** verifying **ANY** completion for maps that allow multiclimbing.
+
+    This means that for now **ONLY maps that have the multi banned will be verified.**
+    """
+
+
 class InvalidFakeUser(BaseParkourException, app_commands.errors.AppCommandError):
     """This fake user does not exist."""
 

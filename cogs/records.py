@@ -153,6 +153,11 @@ class Records(commands.Cog):
         ).get("exists", None):
             is_creator = True
 
+        query = "SELECT EXISTS(SELECT restriction FROM map_restrictions WHERE map_code = $1 AND restriction = 'Multi Climb')"
+        check = await itx.client.database.get_row(query, map_code)
+        if not check.get("exists", True):
+            raise utils.TemporaryMultiBan
+
         search = [
             x
             async for x in itx.client.database.get(
