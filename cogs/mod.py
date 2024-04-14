@@ -188,7 +188,8 @@ class ModCommands(commands.Cog):
         await itx.client.database.set(query, *args)
         await itx.edit_original_response(content=content)
         if playtest := await itx.client.database.get_row(
-            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
+            "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1 AND original_msg IS NOT NULL",
+            map_code,
         ):
             await self._newsfeed_medals(
                 itx,
