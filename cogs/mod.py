@@ -651,13 +651,6 @@ class ModCommands(commands.Cog):
                     .get_partial_message(playtest.thread_id)
                     .fetch()
                 )
-                content, _ = await self._regex_replace_votes(msg, view)
-                await msg.edit(content=content)
-                msg = (
-                    await itx.guild.get_thread(playtest.thread_id)
-                    .get_partial_message(playtest.message_id)
-                    .fetch()
-                )
                 content, total_votes = await self._regex_replace_votes(msg, view)
                 await msg.edit(content=content)
                 await view.mod_check_status(int(total_votes), msg)
