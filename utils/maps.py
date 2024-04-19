@@ -383,6 +383,7 @@ all_map_constants = [
     MapMetadata("Suravasa", discord.Color.from_str("#81EBE0")),
     MapMetadata("New Junk City", discord.Color.from_str("#EC9D00")),
     MapMetadata("Samoa", discord.Color.from_str("#F9FF57")),
+    MapMetadata("Hanaoka", discord.Color.from_str("#EF72A3")),
 ]
 
 MAP_DATA: dict[str, MapMetadata] = {const.NAME: const for const in all_map_constants}
