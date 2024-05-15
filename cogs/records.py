@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import typing
 
 import discord
@@ -153,10 +154,8 @@ class Records(commands.Cog):
         ).get("exists", None):
             is_creator = True
 
-        query = "SELECT EXISTS(SELECT restriction FROM map_restrictions WHERE map_code = $1 AND restriction = 'Multi Climb')"
-        check = await itx.client.database.get_row(query, map_code)
-        if not check.get("exists", True):
-            raise utils.TemporaryMultiBan
+        if int(os.environ["GLOBAL_MULTI_BAN"]) == 1:
+            await self._check_for_global_multi_ban(itx, map_code)
 
         search = [
             x
@@ -265,6 +264,12 @@ class Records(commands.Cog):
             quality.value if not is_creator else None,
         )
         await user_msg.delete()
+
+    async def _check_for_global_multi_ban(self, itx, map_code):
+        query = "SELECT EXISTS(SELECT restriction FROM map_restrictions WHERE map_code = $1 AND restriction = 'Multi Climb')"
+        check = await itx.client.database.get_row(query, map_code)
+        if not check.get("exists", True):
+            raise utils.TemporaryMultiBan
 
     async def check_playtest(self, map_code: str):
         row = await self.bot.database.get_row(

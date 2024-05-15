@@ -403,10 +403,11 @@ class PlaytestVoting(discord.ui.View):
         ):
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
-            await self.data.creator.send(
-                f"**{self.data.map_code}** has received enough completions and votes. "
-                f"Go to the thread and *Finalize* the submission!"
-            )
+            if hasattr(self.data.creator, "send"):
+                await self.data.creator.send(
+                    f"**{self.data.map_code}** has received enough completions and votes. "
+                    f"Go to the thread and *Finalize* the submission!"
+                )
 
     async def approve_map(self):
         self.stop()

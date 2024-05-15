@@ -79,6 +79,12 @@ async def map_mechanics_autocomplete(
     return await _autocomplete(current, itx.client.cache.map_mechanics.choices)
 
 
+async def map_restrictions_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
+    return await _autocomplete(current, itx.client.cache.map_restrictions.choices)
+
+
 async def tags_autocomplete(
     itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:

@@ -139,6 +139,7 @@ class Maps(commands.Cog):
         map_type=cogs.map_type_autocomplete,
         creator=cogs.creator_autocomplete,
         mechanics=cogs.map_mechanics_autocomplete,
+        restrictions=cogs.map_restrictions_autocomplete,
         map_code=cogs.map_codes_autocomplete,
     )
     @app_commands.guilds(
@@ -152,6 +153,8 @@ class Maps(commands.Cog):
         map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
         creator: app_commands.Transform[int, utils.CreatorTransformer] | None = None,
         mechanics: app_commands.Transform[str, utils.MapMechanicsTransformer]
+        | None = None,
+        restrictions: app_commands.Transform[str, utils.MapRestrictionsTransformer]
         | None = None,
         map_type: app_commands.Transform[str, utils.MapTypeTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
@@ -170,6 +173,7 @@ class Maps(commands.Cog):
             map_code: Specific map code
             difficulty: Difficulty filter
             mechanics: Mechanics filter
+            restrictions: Restrictions filter
             minimum_rating: Show maps above a specific quality rating
             completed: Show completed maps, non completed maps or all
             only_playtest: Show only playtest maps
@@ -199,6 +203,7 @@ class Maps(commands.Cog):
             low_range,
             high_range,
             mechanics,
+            restrictions,
             int(getattr(minimum_rating, "value", 0)),
             only_maps_with_medals,
             only_playtest,
@@ -222,6 +227,7 @@ class Maps(commands.Cog):
         low_range: float | None = None,
         high_range: float | None = None,
         mechanics: str | None = None,
+        restrictions: str | None = None,
         minimum_rating: int | None = None,
         only_maps_with_medals: bool = False,
         only_playtest: bool = False,
@@ -261,6 +267,7 @@ class Maps(commands.Cog):
                AND ($2::text IS NULL OR map_type LIKE $2)
                AND ($3::text IS NULL OR map_name = $3)
                AND ($4::text IS NULL OR mechanics LIKE $4)
+               AND ($13::text IS NULL OR restrictions LIKE $13)
                AND ($5::numeric(10, 2) IS NULL OR $6::numeric(10, 2) IS NULL OR (difficulty >= $5::numeric(10, 2)
                  AND difficulty < $6::numeric(10, 2)))
                AND ($7::int IS NULL OR quality >= $7)
@@ -289,6 +296,7 @@ class Maps(commands.Cog):
             itx.user.id,
             not only_playtest,
             only_maps_with_medals,
+            wrap_string_with_percent(restrictions),
         ):
             maps.append(_map)
         return maps
