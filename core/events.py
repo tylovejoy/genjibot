@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import re
 import typing
 
@@ -17,6 +18,8 @@ from cogs.tickets.views import TicketStart
 
 if typing.TYPE_CHECKING:
     from .genji import Genji
+
+log = logging.getLogger(__name__)
 
 ASCII_LOGO = r""""""
 
@@ -35,7 +38,7 @@ class BotEvents(commands.Cog):
         its owner, and which version of discord.py it's using.
         """
         app_info = await self.bot.application_info()
-        self.bot.logger.info(
+        log.info(
             f"{ASCII_LOGO}"
             f"\nLogged in as: {self.bot.user.name}\n"
             f"Using discord.py version: {discord.__version__}\n"
@@ -126,7 +129,7 @@ class BotEvents(commands.Cog):
             view = TicketStart()
             self.bot.add_view(view, message_id=1120076353597886565)
 
-            self.bot.logger.debug(f"Added persistent views.")
+            log.debug(f"Added persistent views.")
             self.bot.persistent_views_added = True
 
     @commands.Cog.listener()
@@ -148,7 +151,7 @@ class BotEvents(commands.Cog):
                 )
             )
 
-        self.bot.logger.debug(f"Adding user to DB/cache: {member.name}: {member.id}")
+        log.debug(f"Adding user to DB/cache: {member.name}: {member.id}")
         res = [
             x
             async for x in self.bot.database.get(
@@ -190,7 +193,7 @@ class BotEvents(commands.Cog):
         #
         # if after.archived and not after.locked:
         #     await after.edit(archived=False)
-        #     self.bot.logger.debug(f"Auto-unarchived thread: {after.id}")
+        #     log.debug(f"Auto-unarchived thread: {after.id}")
         ...
 
     @commands.Cog.listener()

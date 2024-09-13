@@ -384,6 +384,8 @@ all_map_constants = [
     MapMetadata("New Junk City", discord.Color.from_str("#EC9D00")),
     MapMetadata("Samoa", discord.Color.from_str("#F9FF57")),
     MapMetadata("Hanaoka", discord.Color.from_str("#EF72A3")),
+    MapMetadata("Runasapi", discord.Color.from_str("#32AAE1")),
+    MapMetadata("Throne of Anubis", discord.Color.from_str("#D25E00")),
 ]
 
 MAP_DATA: dict[str, MapMetadata] = {const.NAME: const for const in all_map_constants}
@@ -468,7 +470,7 @@ class MapEmbedData:
                 f"\n‼️**IN PLAYTESTING, SUBJECT TO CHANGE**‼️\n"
                 f"Votes: {self._data['count']} / {self._data['required_votes']}\n"
                 f"[Click here to go to the playtest thread]"
-                f"(https://discord.com/channels/842778964673953812/{self._data['thread_id']})"
+                f"(https://discord.com/channels/842778964673953812/{self._data['thread_id']})\n"
             )
         return res
 

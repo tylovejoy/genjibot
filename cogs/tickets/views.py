@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from cogs.tickets.utils import TICKET_CHANNEL, MODMAIL_ROLE
+from .utils import TICKET_CHANNEL, MODMAIL_ROLE
 from utils import STAFF
 
 if TYPE_CHECKING:
@@ -67,7 +67,8 @@ class TicketStartModal(discord.ui.Modal):
                 "### If the issue is resolved, please use `?solved` to close the ticket\n\n"
                 "`------------------`\n"
                 f"{itx.guild.get_role(MODMAIL_ROLE).mention}"
-            )
+            ),
+            view=CloseTicketView(),
         )
 
     async def on_error(
@@ -79,3 +80,17 @@ class TicketStartModal(discord.ui.Modal):
             await itx.response.send_message(
                 "Oops! Something went wrong.", ephemeral=True
             )
+
+
+class CloseTicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="Close Ticket", style=discord.ButtonStyle.red, custom_id="close_ticket"
+    )
+    async def close_ticket(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ):
+        assert isinstance(itx.channel, discord.Thread)
+        await itx.channel.edit(locked=True, archived=True)

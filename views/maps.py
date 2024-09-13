@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import functools
 import io
+import logging
 from typing import TYPE_CHECKING
 
 import asyncpg
@@ -17,6 +18,10 @@ from utils import PLAYTEST, new_map_newsfeed
 
 if TYPE_CHECKING:
     import core
+    from utils import FakeUser
+
+log = logging.getLogger(__name__)
+
 
 NON_BEGINNER = utils.DIFFICULTIES_EXT[1:]
 
@@ -404,16 +409,19 @@ class PlaytestVoting(discord.ui.View):
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
             if hasattr(self.data.creator, "send"):
-                await self.data.creator.send(
-                    f"**{self.data.map_code}** has received enough completions and votes. "
-                    f"Go to the thread and *Finalize* the submission!"
-                )
+                try:
+                    await self.data.creator.send(
+                        f"**{self.data.map_code}** has received enough completions and votes. "
+                        f"Go to the thread and *Finalize* the submission!"
+                    )
+                except discord.errors.Forbidden:
+                    log.info(f"Cannot send messages to user {self.data.creator}")
 
     async def approve_map(self):
         self.stop()
         record = await self.get_author_db_row()
         await self.delete_playtest_thread(record.thread_id)
-        author = self.client.get_guild(utils.GUILD_ID).get_member(self.data.creator.id)
+        author = self.data.creator
         votes_db_rows = await self.get_votes_for_map()
         await self.post_new_map(author, record.original_msg, votes_db_rows)
         try:
@@ -478,7 +486,7 @@ class PlaytestVoting(discord.ui.View):
 
     async def post_new_map(
         self,
-        author: discord.Member,
+        author: discord.Member | FakeUser,
         original_msg: int,
         votes: list[database.DotRecord | None],
     ):
@@ -590,10 +598,12 @@ class PlaytestVoting(discord.ui.View):
     async def ready_up_button(
         self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
     ):
-        await itx.response.defer(ephemeral=True)
         if itx.user.id != self.data.creator.id:
-            await itx.followup.send("You are not allowed to use this button.")
+            await itx.response.send_message(
+                "You are not allowed to use this button.", ephemeral=True
+            )
             return
+        await itx.response.defer(ephemeral=True)
         await self._set_ready_button(itx, button)
         verification_msg = await self.send_verification_embed(itx)
 

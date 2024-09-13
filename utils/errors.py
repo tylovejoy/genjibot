@@ -240,7 +240,7 @@ async def on_app_command_error(
             embed=embed,
         )
 
-        channel = itx.client.get_channel(991795696707584062)
+        channel = itx.client.get_channel(1246119546650235014)
 
         command_name = f"**Command:** `{itx.command.name}`\n"
         channel_name = f"**Channel:** `{itx.channel}`\n"

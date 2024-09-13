@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import typing
 
 import discord
@@ -8,6 +9,8 @@ from discord.ext import commands
 
 if typing.TYPE_CHECKING:
     import core
+
+log = logging.getLogger(__name__)
 
 
 class Test(commands.Cog):
@@ -95,7 +98,7 @@ class Test(commands.Cog):
         ctx: commands.Context[core.Genji],
         level: typing.Literal["debug", "info", "DEBUG", "INFO"],
     ):
-        ctx.bot.logger.setLevel(level.upper())
+        log.setLevel(level.upper())
         await ctx.message.delete()
 
     # @app_commands.command(name="test")

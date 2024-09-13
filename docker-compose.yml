@@ -1,0 +1,16 @@
+services:
+  genjibot:
+    restart: unless-stopped
+    container_name: genji-bot
+    build: .
+    environment:
+      - TOKEN=${TOKEN}
+      - PSQL_PASSWORD=${PSQL_PASSWORD}
+      - PYTHON_ENV=${PYTHON_ENV}
+      - GLOBAL_MULTI_BAN=${GLOBAL_MULTI_BAN}
+    networks:
+      - genji-network
+
+networks:
+  genji-network:
+    external: true

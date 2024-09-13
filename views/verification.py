@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import TYPE_CHECKING
 
 import discord
@@ -12,6 +13,9 @@ if TYPE_CHECKING:
 
 import database
 import utils
+
+
+log = logging.getLogger(__name__)
 
 
 class RejectReasonModal(discord.ui.Modal, title="Rejection Reason"):
@@ -154,7 +158,7 @@ class VerificationView(discord.ui.View):
                     + "\n`- - - - - - - - - - - - - -`"
                 )
             except Exception as e:
-                itx.client.logger.info(e)
+                log.info(e)
         with contextlib.suppress(discord.NotFound):
             await itx.message.delete()
         await itx.client.database.set(

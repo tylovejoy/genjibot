@@ -39,9 +39,7 @@ class GenjiEmbed(discord.Embed):
     def add_description_field(self, name: str, value: str):
         if not self.description:
             self.description = ""
-        self.description += (
-            f"```ansi\n\u001b[1;37m{name}\n```{value}\n"  # \u001b[{format};{color}m
-        )
+        self.description += f"```{name}```{value}\n"  # \u001b[{format};{color}m
 
 
 class ErrorEmbed(GenjiEmbed):

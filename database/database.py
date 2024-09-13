@@ -7,6 +7,8 @@ import asyncpg
 
 import utils
 
+log = logging.getLogger(__name__)
+
 
 class DatabaseConnection:
     """Handles asyncronous context manager for database connection."""
@@ -37,7 +39,6 @@ class Database:
     """Handles all database transactions."""
 
     def __init__(self, conn: asyncpg.Pool):
-        self.logger: logging.Logger | None = None
         self.pool = conn
 
     async def copy_from_query(self, query):
@@ -71,8 +72,8 @@ class Database:
         if self.pool is None:
             raise utils.DatabaseConnectionError()
         query = textwrap.dedent(query)
-        self.logger.debug(query)
-        self.logger.debug(args)
+        log.debug(query)
+        log.debug(args)
 
         async with self.pool.acquire() as conn:
             async with conn.transaction():

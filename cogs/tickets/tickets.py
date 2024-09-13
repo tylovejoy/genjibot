@@ -5,8 +5,8 @@ import typing
 import discord
 from discord.ext import commands
 
-from cogs.tickets.utils import ticket_thread_check
-from cogs.tickets.views import TicketStart
+from .utils import ticket_thread_check
+from .views import TicketStart, CloseTicketView
 
 if typing.TYPE_CHECKING:
     import core
@@ -17,6 +17,9 @@ class TicketSystem(commands.Cog):
 
     def __init__(self, bot: core.Genji):
         self.bot = bot
+
+    async def cog_load(self) -> None:
+        self.bot.add_view(CloseTicketView())
 
     @commands.command()
     @commands.is_owner()
