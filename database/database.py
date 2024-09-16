@@ -131,3 +131,48 @@ class Database:
         async with self.pool.acquire() as conn:
             async with conn.transaction():
                 await conn.executemany(query, *args)
+
+    async def fetch(
+        self,
+        query: str,
+        *args: typing.Any,
+        connection: asyncpg.Connection | asyncpg.Pool | None = None,
+    ) -> list[asyncpg.Record]:
+        _connection = connection or self.pool
+        return await _connection.fetch(query, *args)
+
+    async def fetchval(
+        self,
+        query: str,
+        *args: typing.Any,
+        connection: asyncpg.Connection | asyncpg.Pool | None = None,
+    ) -> typing.Any:
+        _connection = connection or self.pool
+        return await _connection.fetchval(query, *args)
+
+    async def fetchrow(
+        self,
+        query: str,
+        *args: typing.Any,
+        connection: asyncpg.Connection | asyncpg.Pool | None = None,
+    ) -> asyncpg.Record | None:
+        _connection = connection or self.pool
+        return await _connection.fetchrow(query, *args)
+
+    async def execute(
+        self,
+        query: str,
+        *args: typing.Any,
+        connection: asyncpg.Connection | asyncpg.Pool | None = None,
+    ) -> None:
+        _connection = connection or self.pool
+        await _connection.execute(query, *args)
+
+    async def executemany(
+        self,
+        query: str,
+        args: typing.Iterable[typing.Any],
+        connection: asyncpg.Connection | asyncpg.Pool | None = None,
+    ) -> None:
+        _connection = connection or self.pool
+        await _connection.executemany(query, args)
