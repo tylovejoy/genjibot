@@ -59,7 +59,7 @@ async def main() -> None:
     """
     async with aiohttp.ClientSession() as session:
         async with database.DatabaseConnection(
-            f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@genji-db/genji"
+            f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
         ) as connection:
             bot = core.Genji(session=session, db=database.Database(connection))
             async with bot:
