@@ -136,7 +136,7 @@ def time_convert(string: str) -> float:
             )
         case _:
             raise ValueError("Failed to match any cases.")
-    return res
+    return round(res, 2)
 
 
 def pretty_record(record: decimal.Decimal | float) -> str:
@@ -149,7 +149,7 @@ def pretty_record(record: decimal.Decimal | float) -> str:
     Returns:
         A string
     """
-    record = float(record)
+    record = float(round(record, 2))
     negative = "-" if record < 0 else ""
     dt = datetime.datetime.min + datetime.timedelta(seconds=abs(record))
     hour_remove = 0
