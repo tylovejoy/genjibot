@@ -6,6 +6,7 @@ import typing
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord import utils as dutils
 
 import cogs
 import database
@@ -237,10 +238,16 @@ class Records(commands.Cog):
             file=channel_screenshot,
         )
 
+        warned_role = dutils.get(itx.guild.roles, name="Watched")
+        verification_content = "**ALERT:** VIDEO SUBMISSION" if video else None
+        if warned_role in itx.user.roles:
+            if not verification_content:
+                verification_content = ""
+            verification_content += f"\n**ALERT:** This player is {warned_role.mention}"
         verification_screenshot = await screenshot.to_file(filename="image.png")
         v_view = views.VerificationView()
         verification_msg = await itx.client.get_channel(utils.VERIFICATION_QUEUE).send(
-            content="**ALERT:** VIDEO SUBMISSION" if video else None,
+            content=verification_content,
             embed=embed,
             file=verification_screenshot,
         )
