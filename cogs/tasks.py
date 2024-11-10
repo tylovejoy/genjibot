@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import typing
 
 from discord.ext import commands, tasks
@@ -10,14 +11,34 @@ import utils
 if typing.TYPE_CHECKING:
     import core
 
+log = logging.getLogger(__name__)
+
 
 class Tasks(commands.Cog):
     def __init__(self, bot: core.Genji):
         self.bot = bot
         self.cache.start()
+        log.info("Start- Updating global names...")
+        self._update_global_names.start()
         # self._playtest_auto_approve.start()
         # self._playtest_expiration_warning.start()
         # self._playtest_expiration.start()
+
+    @tasks.loop(hours=12)
+    async def _update_global_names(self):
+        await self.bot.wait_until_ready()
+        global_names = [
+            (u.id, u.name) for u in self.bot.users if u.global_name is not None
+        ]
+        query = """
+            INSERT INTO user_global_names (user_id, global_name) 
+            VALUES ($1, $2) 
+            ON CONFLICT (user_id) DO UPDATE 
+            SET global_name = excluded.global_name 
+            WHERE user_global_names.global_name != excluded.global_name
+        """
+        log.info("Updating global names...")
+        await self.bot.database.executemany(query, global_names)
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
     async def _playtest_auto_approve(self):
