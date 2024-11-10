@@ -425,6 +425,19 @@ async def new_map_newsfeed(
     ].lower()
     embed.set_thumbnail(url=f"{base_thumbnail_url}{rank}.png")
     await client.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(embed=embed)
+    data = {
+        "user": {
+            "user_id": user_id,
+            "nickname": nickname,
+        },
+        "map": {
+            "map_code": data.map_name,
+            "difficulty": data.difficulty,
+            "map_name": data.map_name,
+        },
+    }
+    query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+    await client.database.execute(query, "new_map", data)
 
 
 class MapEmbedData:
