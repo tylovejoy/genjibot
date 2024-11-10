@@ -244,7 +244,7 @@ async def map_submission_second_step(
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
         await new_map_newsfeed(itx.client, data.creator.id, data)
-        # itx.client.dispatch("newsfeed_new_map", data.creator, data)
+
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
 
