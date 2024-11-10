@@ -85,29 +85,33 @@ class BotEvents(commands.Cog):
             for x in queue:
                 if x is None:
                     continue
-                data = utils.MapSubmission(
-                    creator=await utils.transform_user(self.bot, x.creator_ids[0]),
-                    map_code=x.map_code,
-                    map_name=x.map_name,
-                    checkpoint_count=x.checkpoints,
-                    description=x.desc,
-                    guides=x.guide,
-                    medals=(x.gold, x.silver, x.bronze),
-                    map_types=x.map_type,
-                    mechanics=x.mechanics,
-                    restrictions=x.restrictions,
-                    difficulty=utils.convert_num_to_difficulty(x.value),
-                )
-                with contextlib.suppress(AttributeError):
-                    view = views.PlaytestVoting(
-                        data,
-                        self.bot,
+                try:
+                    data = utils.MapSubmission(
+                        creator=await utils.transform_user(self.bot, x.creator_ids[0]),
+                        map_code=x.map_code,
+                        map_name=x.map_name,
+                        checkpoint_count=x.checkpoints,
+                        description=x.desc,
+                        guides=x.guide,
+                        medals=(x.gold, x.silver, x.bronze),
+                        map_types=x.map_type,
+                        mechanics=x.mechanics,
+                        restrictions=x.restrictions,
+                        difficulty=utils.convert_num_to_difficulty(x.value),
                     )
-                    self.bot.add_view(
-                        view,
-                        message_id=x.message_id,
-                    )
-                    self.bot.playtest_views[x.message_id] = view
+
+                    with contextlib.suppress(AttributeError):
+                        view = views.PlaytestVoting(
+                            data,
+                            self.bot,
+                        )
+                        self.bot.add_view(
+                            view,
+                            message_id=x.message_id,
+                        )
+                        self.bot.playtest_views[x.message_id] = view
+                except Exception as e:
+                    ...
             queue = [
                 x async for x in self.bot.database.get("SELECT * FROM polls_info;")
             ]
@@ -196,6 +200,24 @@ class BotEvents(commands.Cog):
         #     log.debug(f"Auto-unarchived thread: {after.id}")
         ...
 
+    # async def newsfeed_worker(
+    #     self, data: dict, guild: discord.Guild, db: database.Database
+    # ):
+    #
+    #     query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+    #     await db.execute(query, "record", data)
+    #
+    #     channel = guild.get_channel(utils.NEWSFEED)
+    #     await channel.send(embed=embed)
+
+    async def newsfeed_record(
+        self,
+        guild: discord.Guild,
+        record: database.DotRecord,
+        medals: tuple[float, float, float],
+    ):
+        ...
+
     @commands.Cog.listener()
     async def on_newsfeed_record(
         self,
@@ -226,6 +248,24 @@ class BotEvents(commands.Cog):
             embed.title = f"{record.nickname} got a medal!"
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
 
+        data = {
+            "map": {
+                "map_code": record["map_code"],
+                "map_name": record["map_name"],
+                "creators": record["creators"],
+            },
+            "record": {
+                "record": record["record"],
+                "video": record["video"],
+            },
+            "user": {
+                "user_id": record["user_id"],
+                "nickname": record["nickname"],
+            },
+        }
+        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+        await itx.client.database.execute(query, "record", data)
+
     @commands.Cog.listener()
     async def on_newsfeed_role(
         self, client: core.Genji, user: discord.Member, roles: list[discord.Role]
@@ -239,6 +279,15 @@ class BotEvents(commands.Cog):
         await client.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
             embed=embed
         )
+        data = {
+            "user": {
+                "user_id": user.id,
+                "nickname": nickname,
+                "roles": [role.name for role in roles],
+            },
+        }
+        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+        await client.database.execute(query, "role", data)
 
     @commands.Cog.listener()
     async def on_newsfeed_guide(
@@ -256,24 +305,18 @@ class BotEvents(commands.Cog):
         )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
         await itx.guild.get_channel(utils.NEWSFEED).send(url)
-
-    @commands.Cog.listener()
-    async def on_newsfeed_new_map(
-        self,
-        user: discord.Member,
-        data: utils.MapSubmission,
-    ):
-        nickname = self.bot.cache.users[user.id].nickname
-        embed = utils.GenjiEmbed(
-            title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
-            description=(
-                f"Use the command `/map-search map_code:{data.map_code}` to see the details!"
-            ),
-            color=discord.Color.blue(),
-        )
-        await self.bot.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
-            embed=embed
-        )
+        data = {
+            "user": {
+                "user_id": user.id,
+                "nickname": nickname,
+            },
+            "map": {
+                "map_code": map_code,
+                "url": url,
+            },
+        }
+        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+        await itx.client.database.execute(query, "guide", data)
 
     @commands.Cog.listener()
     async def on_newsfeed_archive(
@@ -331,6 +374,11 @@ class BotEvents(commands.Cog):
                 ),
             )
         await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        data = {
+            "map": map_data,
+        }
+        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+        await itx.client.database.execute(query, value, data)
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(
