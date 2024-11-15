@@ -71,9 +71,7 @@ class RankCardBuilder:
     def __init__(self, data):
         self._data = data
 
-        self._rank_card = Image.open(f"assets/layer0/{self._data['bg']}.png").convert(
-            "RGBA"
-        )
+        self._rank_card = Image.open(f"assets/layer0/{self._data['bg']}.png").convert("RGBA")
         self._draw = ImageDraw.Draw(self._rank_card)
         self._small_font = ImageFont.truetype("assets/Calibri.ttf", 20)
         self._large_font = ImageFont.truetype("assets/Calibri.ttf", 30)
@@ -109,9 +107,7 @@ class RankCardBuilder:
     def _add_completion_labels(self, category: str, completed: int, total: int):
         y_position = _COMPLETION_BAR_Y_POSITIONS[category]
         text = f"{completed}/{total}"
-        position = self._get_center_x_position(
-            _LABEL_WIDTH, _LABEL_X_POSITION, text, self._small_font
-        )
+        position = self._get_center_x_position(_LABEL_WIDTH, _LABEL_X_POSITION, text, self._small_font)
         self._draw.text(
             (position, y_position + _COMPLETION_BAR_HEIGHT // 4),
             text,
@@ -143,9 +139,7 @@ class RankCardBuilder:
     def _add_completion_medals(self, category: str, medal: str):
         y_position = _COMPLETION_BAR_Y_POSITIONS[category]
         text = f"{self._data[category][medal]}"
-        position = self._get_center_x_position(
-            _MEDAL_BOX_WIDTH, _MEDAL_X_POSITIONS[medal], text, self._small_font
-        )
+        position = self._get_center_x_position(_MEDAL_BOX_WIDTH, _MEDAL_X_POSITIONS[medal], text, self._small_font)
 
         self._draw.text(
             (position, y_position + _COMPLETION_BAR_HEIGHT // 4),
@@ -163,9 +157,7 @@ class RankCardBuilder:
 
     def _draw_maps_count(self):
         text = f"{self._data['maps']}"
-        position = self._get_center_x_position(
-            _MISC_DATA_WIDTH, _MAP_COUNT_X_POSITION, text, self._large_font
-        )
+        position = self._get_center_x_position(_MISC_DATA_WIDTH, _MAP_COUNT_X_POSITION, text, self._large_font)
         self._draw.text(
             (position, _MISC_DATA_Y_POSITION + (_MISC_DATA_HEIGHT // 4)),
             text,
@@ -175,9 +167,7 @@ class RankCardBuilder:
 
     def _draw_playtests_count(self):
         text = f"{self._data['playtests']}"
-        position = self._get_center_x_position(
-            _MISC_DATA_WIDTH, _PLAYTEST_COUNT_X_POSITION, text, self._large_font
-        )
+        position = self._get_center_x_position(_MISC_DATA_WIDTH, _PLAYTEST_COUNT_X_POSITION, text, self._large_font)
         self._draw.text(
             (position, _MISC_DATA_Y_POSITION + (_MISC_DATA_HEIGHT // 4)),
             text,
@@ -200,9 +190,7 @@ class RankCardBuilder:
     def _draw_name(self):
         with ipy.Writer(self._rank_card) as w:
             text = f"{self._data['name']}"
-            position = self._get_center_x_position(
-                _NAME_WIDTH, _NAME_X_POSITION, text, self._large_font
-            )
+            position = self._get_center_x_position(_NAME_WIDTH, _NAME_X_POSITION, text, self._large_font)
             w.draw_text_wrapped(
                 text=text,
                 x=position,
@@ -217,7 +205,5 @@ class RankCardBuilder:
                 draw_emojis=True,
             )
 
-    def _get_center_x_position(
-        self, width: int, initial_pos: int, text: str, font: FreeTypeFont
-    ):
+    def _get_center_x_position(self, width: int, initial_pos: int, text: str, font: FreeTypeFont):
         return (width // 2 - self._draw.textlength(text, font) // 2) + initial_pos

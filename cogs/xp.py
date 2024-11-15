@@ -1,8 +1,7 @@
 from discord.ext import commands
 
 
-class XPCog(commands.Cog):
-    ...
+class XPCog(commands.Cog): ...
 
 
 async def setup(bot):

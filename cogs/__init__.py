@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import functools
 import pkgutil
 import typing
@@ -9,16 +8,13 @@ from datetime import timedelta
 import discord
 from discord import app_commands
 
-import utils
 import views
-from utils import MaxMapsInPlaytest, MaxWeeklyMapsInPlaytest, new_map_newsfeed
+from utils import maps, errors, embeds, constants, cache
 
 if typing.TYPE_CHECKING:
     import core
 
-EXTENSIONS = [
-    module.name for module in pkgutil.iter_modules(__path__, f"{__package__}.")
-]
+EXTENSIONS = [module.name for module in pkgutil.iter_modules(__path__, f"{__package__}.")]
 
 
 def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
@@ -48,28 +44,20 @@ async def _autocomplete(
     return response
 
 
-async def creator_autocomplete(
-    itx: discord.Interaction[core.Genji], current: str
-) -> list[app_commands.Choice[str]]:
+async def creator_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.users.creator_choices)
 
 
-async def map_codes_autocomplete(
-    itx: discord.Interaction[core.Genji], current: str
-) -> list[app_commands.Choice[str]]:
+async def map_codes_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
     current = current.replace("O", "0").replace("o", "0")
     return await _autocomplete(current, itx.client.cache.maps.choices)
 
 
-async def map_name_autocomplete(
-    itx: discord.Interaction[core.Genji], current: str
-) -> list[app_commands.Choice[str]]:
+async def map_name_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.map_names.choices)
 
 
-async def map_type_autocomplete(
-    itx: discord.Interaction[core.Genji], current: str
-) -> list[app_commands.Choice[str]]:
+async def map_type_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.map_types.choices)
 
 
@@ -85,21 +73,17 @@ async def map_restrictions_autocomplete(
     return await _autocomplete(current, itx.client.cache.map_restrictions.choices)
 
 
-async def tags_autocomplete(
-    itx: discord.Interaction[core.Genji], current: str
-) -> list[app_commands.Choice[str]]:
+async def tags_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.tags.choices)
 
 
-async def users_autocomplete(
-    itx: discord.Interaction[core.Genji], current: str
-) -> list[app_commands.Choice[str]]:
+async def users_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.users.choices)
 
 
 async def submit_map_(
     itx: discord.Interaction[core.Genji],
-    data: utils.MapSubmission,
+    data: maps.MapSubmission,
     mod: bool = False,
 ) -> None:
     """
@@ -115,23 +99,20 @@ async def submit_map_(
 
     if data.medals:
         if not 0 < data.gold < data.silver < data.bronze:
-            raise utils.InvalidMedals
+            raise errors.InvalidMedals
 
     if await _check_max_limit(itx) >= 5:
-        raise MaxMapsInPlaytest()
+        raise errors.MaxMapsInPlaytest()
     count, date = await _check_weekly_limit(itx)
     if count >= 2:
         date = date + timedelta(weeks=1)
-        raise MaxWeeklyMapsInPlaytest(
+        raise errors.MaxWeeklyMapsInPlaytest(
             "You will be able to submit again "
             f"{discord.utils.format_dt(date, 'R')}"
             f"| {discord.utils.format_dt(date, 'F')}"
         )
 
-    initial_message = (
-        f"{data.creator.mention}, "
-        f"fill in additional details to complete map submission!"
-    )
+    initial_message = f"{data.creator.mention}, " f"fill in additional details to complete map submission!"
     view = views.ConfirmMapSubmission(
         itx,
         partial_callback=None,
@@ -162,7 +143,7 @@ async def _check_max_limit(itx: discord.Interaction[core.Genji]):
 
 
 async def map_submission_first_step(
-    data: utils.MapSubmission,
+    data: maps.MapSubmission,
     itx: discord.Interaction[core.Genji],
     mod: bool,
     view: views.ConfirmMapSubmission,
@@ -173,7 +154,7 @@ async def map_submission_first_step(
         restrictions=view.restrictions.values,
         difficulty=view.difficulty.values[0],
     )
-    embed = utils.GenjiEmbed(
+    embed = embeds.GenjiEmbed(
         title="Map Submission",
         description=str(data),
     )
@@ -181,7 +162,7 @@ async def map_submission_first_step(
         name=itx.client.cache.users[data.creator.id].nickname,
         icon_url=data.creator.display_avatar.url,
     )
-    embed = utils.set_embed_thumbnail_maps(data.map_name, embed)
+    embed = embeds.set_embed_thumbnail_maps(data.map_name, embed)
     view_final_confirmation = views.ConfirmBaseView(
         view.itx,
         partial_callback=None,
@@ -193,7 +174,7 @@ async def map_submission_first_step(
 
 
 async def map_submission_second_step(
-    data: utils.MapSubmission,
+    data: maps.MapSubmission,
     embed: discord.Embed,
     itx: discord.Interaction[core.Genji],
     mod: bool,
@@ -204,18 +185,15 @@ async def map_submission_second_step(
             data,
             itx.client,
         )
-        playtest_message = await itx.guild.get_channel(utils.PLAYTEST).send(
+        playtest_message = await itx.guild.get_channel(constants.PLAYTEST).send(
             content=f"Total Votes: 0 / {view.required_votes}", embed=embed
         )
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title="Difficulty Ratings",
             description="You can change your vote, but you cannot cast multiple!\n\n",
         )
         thread = await playtest_message.create_thread(
-            name=(
-                f"{data.map_code} | {data.difficulty} | {data.map_name} "
-                f"{data.checkpoint_count} CPs"
-            )
+            name=(f"{data.map_code} | {data.difficulty} | {data.map_name} " f"{data.checkpoint_count} CPs")
         )
 
         thread_msg = await thread.send(
@@ -232,18 +210,18 @@ async def map_submission_second_step(
         await data.insert_playtest(itx, thread.id, thread_msg.id, playtest_message.id)
     await data.insert_all(itx, mod)
     itx.client.cache.maps.add_one(
-        utils.MapData(
+        cache.MapData(
             map_code=data.map_code,
             user_ids=[data.creator.id],
             archived=False,
         )
     )
     if not mod:
-        map_maker = itx.guild.get_role(utils.Roles.MAP_MAKER)
+        map_maker = itx.guild.get_role(constants.Roles.MAP_MAKER)
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        await new_map_newsfeed(itx.client, data.creator.id, data)
+        await maps.new_map_newsfeed(itx.client, data.creator.id, data)
 
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
@@ -256,7 +234,7 @@ async def add_creator_(
 ):
     await itx.response.defer(ephemeral=True)
     if creator in itx.client.cache.maps[map_code].user_ids:
-        raise utils.CreatorAlreadyExists
+        raise errors.CreatorAlreadyExists
     await itx.client.database.set(
         "INSERT INTO map_creators (map_code, user_id) VALUES ($1, $2)",
         map_code,
@@ -275,7 +253,7 @@ async def add_creator_(
 async def remove_creator_(creator, itx, map_code, checks: bool = False):
     await itx.response.defer(ephemeral=True)
     if creator not in itx.client.cache.maps[map_code].user_ids:
-        raise utils.CreatorDoesntExist
+        raise errors.CreatorDoesntExist
     await itx.client.database.set(
         "DELETE FROM map_creators WHERE map_code = $1 AND user_id = $2;",
         map_code,

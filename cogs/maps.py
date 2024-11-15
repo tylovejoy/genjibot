@@ -9,9 +9,8 @@ from discord.ext import commands
 
 import cogs
 import database
-import utils
 import views
-from utils import MapEmbedData, split_nth_iterable, wrap_string_with_percent
+from utils import constants, records, maps, ranks, embeds, errors, utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -25,31 +24,31 @@ class Maps(commands.Cog):
 
     _map_maker = app_commands.Group(
         name="map-maker",
-        guild_ids=[utils.GUILD_ID],
+        guild_ids=[constants.GUILD_ID],
         description="Map maker only commands",
     )
 
     _creator = app_commands.Group(
         name="creator",
-        guild_ids=[utils.GUILD_ID],
+        guild_ids=[constants.GUILD_ID],
         description="Edit creators",
         parent=_map_maker,
     )
 
     @app_commands.command(name="submit-map")
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     @app_commands.autocomplete(map_name=cogs.map_name_autocomplete)
     async def submit_map(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeSubmitTransformer],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeSubmitTransformer],
+        map_name: app_commands.Transform[str, maps.MapNameTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
         description: str | None = None,
         guide_url: str | None = None,
-        gold: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        silver: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        bronze: app_commands.Transform[float, utils.RecordTransformer] | None = None,
+        gold: app_commands.Transform[float, records.RecordTransformer] | None = None,
+        silver: app_commands.Transform[float, records.RecordTransformer] | None = None,
+        bronze: app_commands.Transform[float, records.RecordTransformer] | None = None,
     ) -> None:
         """
         Submit your map to get playtested.
@@ -69,7 +68,7 @@ class Maps(commands.Cog):
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
 
-        map_submission = utils.MapSubmission(
+        map_submission = maps.MapSubmission(
             itx.user,
             map_code,
             map_name,
@@ -85,12 +84,10 @@ class Maps(commands.Cog):
 
     @app_commands.command(name="random-map")
     @app_commands.choices(
-        minimum_rating=utils.ALL_STARS_CHOICES,
-        difficulty=[app_commands.Choice(name=x, value=x) for x in utils.DIFFICULTIES],
+        minimum_rating=constants.ALL_STARS_CHOICES,
+        difficulty=[app_commands.Choice(name=x, value=x) for x in ranks.DIFFICULTIES],
     )
-    @app_commands.guilds(
-        discord.Object(id=utils.GUILD_ID), discord.Object(id=868981788968640554)
-    )
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
     async def random_map(
         self,
         itx: discord.Interaction[core.Genji],
@@ -99,12 +96,10 @@ class Maps(commands.Cog):
         include_completed: bool = False,
     ):
         await itx.response.defer(ephemeral=True)
-        embed = utils.GenjiEmbed(title="Map Search")
+        embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
 
-        ranges = utils.TOP_DIFFICULTIES_RANGES.get(
-            getattr(difficulty, "value", None), None
-        )
+        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
 
@@ -112,27 +107,27 @@ class Maps(commands.Cog):
             True: None,
             False: False,
         }
-        maps = await self._base_map_search(
+        _maps = await self._base_map_search(
             itx,
             low_range=low_range,
             high_range=high_range,
             minimum_rating=int(getattr(minimum_rating, "value", 0)),
             view_filter=view_filter[include_completed],
         )
-        if not maps:
-            raise utils.NoMapsFoundError
+        if not _maps:
+            raise errors.NoMapsFoundError
 
-        rand = random.randint(0, len(maps) - 1)
-        maps = [maps[rand]]
+        rand = random.randint(0, len(_maps) - 1)
+        _maps = [_maps[rand]]
 
-        embeds = self.create_map_embeds(maps)
-        view = views.Paginator(embeds, itx.user)
+        _embeds = self.create_map_embeds(_maps)
+        view = views.Paginator(_embeds, itx.user)
         await view.start(itx)
 
     @app_commands.command(name="map-search")
     @app_commands.choices(
-        minimum_rating=utils.ALL_STARS_CHOICES,
-        difficulty=[app_commands.Choice(name=x, value=x) for x in utils.DIFFICULTIES],
+        minimum_rating=constants.ALL_STARS_CHOICES,
+        difficulty=[app_commands.Choice(name=x, value=x) for x in ranks.DIFFICULTIES],
     )
     @app_commands.autocomplete(
         map_name=cogs.map_name_autocomplete,
@@ -142,21 +137,17 @@ class Maps(commands.Cog):
         restrictions=cogs.map_restrictions_autocomplete,
         map_code=cogs.map_codes_autocomplete,
     )
-    @app_commands.guilds(
-        discord.Object(id=utils.GUILD_ID), discord.Object(id=868981788968640554)
-    )
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer] | None = None,
+        map_name: app_commands.Transform[str, maps.MapNameTransformer] | None = None,
         difficulty: app_commands.Choice[str] | None = None,
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer] | None = None,
-        creator: app_commands.Transform[int, utils.CreatorTransformer] | None = None,
-        mechanics: app_commands.Transform[str, utils.MapMechanicsTransformer]
-        | None = None,
-        restrictions: app_commands.Transform[str, utils.MapRestrictionsTransformer]
-        | None = None,
-        map_type: app_commands.Transform[str, utils.MapTypeTransformer] | None = None,
+        map_code: app_commands.Transform[str, records.MapCodeTransformer] | None = None,
+        creator: app_commands.Transform[int, records.CreatorTransformer] | None = None,
+        mechanics: (app_commands.Transform[str, maps.MapMechanicsTransformer] | None) = None,
+        restrictions: (app_commands.Transform[str, maps.MapRestrictionsTransformer] | None) = None,
+        map_type: app_commands.Transform[str, maps.MapTypeTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         only_playtest: bool = False,
         only_maps_with_medals: bool = False,
@@ -180,12 +171,10 @@ class Maps(commands.Cog):
             only_maps_with_medals: Show only maps that have medals
         """
         await itx.response.defer(ephemeral=True)
-        embed = utils.GenjiEmbed(title="Map Search")
+        embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
 
-        ranges = utils.TOP_DIFFICULTIES_RANGES.get(
-            getattr(difficulty, "value", None), None
-        )
+        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
 
@@ -194,7 +183,7 @@ class Maps(commands.Cog):
             "Not Completed": False,
             "Completed": True,
         }
-        maps = await self._base_map_search(
+        _maps = await self._base_map_search(
             itx,
             map_code,
             map_name,
@@ -209,12 +198,12 @@ class Maps(commands.Cog):
             only_playtest,
             view_filter[completed],
         )
-        if not maps:
-            raise utils.NoMapsFoundError
+        if not _maps:
+            raise errors.NoMapsFoundError
 
-        embeds = self.create_map_embeds(maps)
+        _embeds = self.create_map_embeds(_maps)
 
-        view = views.Paginator(embeds, itx.user)
+        view = views.Paginator(_embeds, itx.user)
         await view.start(itx)
 
     @staticmethod
@@ -232,8 +221,8 @@ class Maps(commands.Cog):
         only_maps_with_medals: bool = False,
         only_playtest: bool = False,
         view_filter: bool | None = None,
-    ):
-        maps = []
+    ) -> list[database.DotRecord]:
+        _maps: list[database.DotRecord | None] = []
         async for _map in itx.client.database.get(
             """
               WITH
@@ -285,9 +274,9 @@ class Maps(commands.Cog):
                difficulty, quality DESC;
             """,
             map_code,
-            wrap_string_with_percent(map_type),
+            utils.wrap_string_with_percent(map_type),
             map_name,
-            wrap_string_with_percent(mechanics),
+            utils.wrap_string_with_percent(mechanics),
             low_range,
             high_range,
             minimum_rating,
@@ -296,26 +285,26 @@ class Maps(commands.Cog):
             itx.user.id,
             not only_playtest,
             only_maps_with_medals,
-            wrap_string_with_percent(restrictions),
+            utils.wrap_string_with_percent(restrictions),
         ):
-            maps.append(_map)
-        return maps
+            _maps.append(_map)
+        return _maps
 
     @staticmethod
     def create_map_embeds(
-        maps: list[database.DotRecord],
-    ) -> list[discord.Embed | utils.GenjiEmbed]:
+        _maps: list[database.DotRecord],
+    ) -> list[discord.Embed | embeds.GenjiEmbed]:
         embed_list = []
-        embed = utils.GenjiEmbed(title="Map Search")
-        for i, _map in enumerate(maps):
-            m = MapEmbedData(_map)
+        embed = embeds.GenjiEmbed(title="Map Search")
+        for i, _map in enumerate(_maps):
+            m = maps.MapEmbedData(_map)
             embed.add_description_field(
                 name=m.name,
                 value=m.value,
             )
-            if split_nth_iterable(current=i, iterable=maps, split=5):
+            if utils.split_nth_iterable(current=i, iterable=_maps, split=5):
                 embed_list.append(embed)
-                embed = utils.GenjiEmbed(title="Map Search")
+                embed = embeds.GenjiEmbed(title="Map Search")
         return embed_list
 
     @staticmethod
@@ -341,11 +330,11 @@ class Maps(commands.Cog):
 
     @app_commands.command(name="guide")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def view_guide(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         """
         View guides that have been submitted for a particular map.
@@ -356,7 +345,7 @@ class Maps(commands.Cog):
         """
         await itx.response.defer(ephemeral=False)
         if map_code not in itx.client.cache.maps.keys:
-            raise utils.InvalidMapCodeError
+            raise errors.InvalidMapCodeError
 
         guides = [
             x
@@ -367,19 +356,19 @@ class Maps(commands.Cog):
         ]
         guides = [x.url for x in guides]
         if not guides:
-            raise utils.NoGuidesExistError
+            raise errors.NoGuidesExistError
 
         view = views.Paginator(guides, itx.user)
         await view.start(itx)
 
     @app_commands.command(name="add-guide")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def add_guide(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        url: app_commands.Transform[str, utils.URLTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        url: app_commands.Transform[str, records.URLTransformer],
     ):
         """
         Add a guide for a particular map.
@@ -391,7 +380,7 @@ class Maps(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
         if map_code not in itx.client.cache.maps.keys:
-            raise utils.InvalidMapCodeError
+            raise errors.InvalidMapCodeError
 
         guides = [
             x
@@ -403,7 +392,7 @@ class Maps(commands.Cog):
         guides = [x.url for x in guides]
 
         if url in guides:
-            raise utils.GuideExistsError
+            raise errors.GuideExistsError
 
         view = views.Confirm(itx, ephemeral=True)
         await itx.edit_original_response(
@@ -427,17 +416,17 @@ class Maps(commands.Cog):
     @app_commands.choices(
         quality=[
             app_commands.Choice(
-                name=utils.ALL_STARS[x - 1],
+                name=constants.ALL_STARS[x - 1],
                 value=x,
             )
             for x in range(1, 7)
         ]
     )
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def rate(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
         quality: app_commands.Choice[int],
     ):
         await itx.response.defer(ephemeral=True)
@@ -448,7 +437,7 @@ class Maps(commands.Cog):
                 itx.user.id,
             )
         ).get("exists", None):
-            raise utils.CannotRateOwnMap
+            raise errors.CannotRateOwnMap
 
         row = await itx.client.database.get_row(
             "SELECT exists(SELECT 1 FROM records WHERE map_code = $1 AND user_id = $2)",
@@ -456,7 +445,7 @@ class Maps(commands.Cog):
             itx.user.id,
         )
         if not row.exists:
-            raise utils.NoCompletionFoundError
+            raise errors.NoCompletionFoundError
 
         view = views.Confirm(itx)
         await itx.edit_original_response(

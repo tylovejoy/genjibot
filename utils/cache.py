@@ -81,24 +81,19 @@ class ChoiceOptionStrCache(StrCache, ChoiceMixin, OptionMixin):
         self._update_option(label=self.value, value=self.value)
 
 
-class MapNamesData(ChoiceOptionStrCache):
-    ...
+class MapNamesData(ChoiceOptionStrCache): ...
 
 
-class MapTypesData(ChoiceOptionStrCache):
-    ...
+class MapTypesData(ChoiceOptionStrCache): ...
 
 
-class MapMechanicsData(ChoiceOptionStrCache):
-    ...
+class MapMechanicsData(ChoiceOptionStrCache): ...
 
 
-class MapRestrictionsData(ChoiceOptionStrCache):
-    ...
+class MapRestrictionsData(ChoiceOptionStrCache): ...
 
 
-class TagsData(ChoiceOptionStrCache):
-    ...
+class TagsData(ChoiceOptionStrCache): ...
 
 
 class MapData(Cache, ChoiceMixin):
@@ -135,9 +130,7 @@ class MapData(Cache, ChoiceMixin):
 
 
 class UserData(Cache, ChoiceMixin):
-    def __init__(
-        self, user_id: int, nickname: str, flags: SettingFlags, is_creator: bool
-    ):
+    def __init__(self, user_id: int, nickname: str, flags: SettingFlags, is_creator: bool):
         self.user_id = user_id
         self.nickname = discord.utils.escape_markdown(nickname)
         self.flags = flags
@@ -288,24 +281,19 @@ class StrCacheSequence(SequenceCache[T]):
         return iter(self.values)
 
 
-class MapTypes(StrCacheSequence[MapTypesData]):
-    ...
+class MapTypes(StrCacheSequence[MapTypesData]): ...
 
 
-class MapNames(StrCacheSequence[MapNamesData]):
-    ...
+class MapNames(StrCacheSequence[MapNamesData]): ...
 
 
-class MapRestrictions(StrCacheSequence[MapRestrictionsData]):
-    ...
+class MapRestrictions(StrCacheSequence[MapRestrictionsData]): ...
 
 
-class MapMechanics(StrCacheSequence[MapMechanicsData]):
-    ...
+class MapMechanics(StrCacheSequence[MapMechanicsData]): ...
 
 
-class Tags(StrCacheSequence[TagsData]):
-    ...
+class Tags(StrCacheSequence[TagsData]): ...
 
 
 class GenjiCache:

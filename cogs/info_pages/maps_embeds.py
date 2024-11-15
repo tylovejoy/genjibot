@@ -24,9 +24,7 @@ MAP_SUBMISSIONS_INFO = discord.Embed(
     ),
     color=discord.Color.red(),
 )
-MAP_SUBMISSIONS_INFO.set_image(
-    url="https://bkan0n.com/assets/images/map_submission_1.png"
-)
+MAP_SUBMISSIONS_INFO.set_image(url="https://bkan0n.com/assets/images/map_submission_1.png")
 
 MAP_PLAYTESTING_INFO = discord.Embed(
     title="Playtesting Info",
@@ -38,9 +36,7 @@ MAP_PLAYTESTING_INFO = discord.Embed(
     ),
     color=discord.Color.red(),
 )
-MAP_PLAYTESTING_INFO.set_image(
-    url="https://bkan0n.com/assets/images/map_submit_flow.png"
-)
+MAP_PLAYTESTING_INFO.set_image(url="https://bkan0n.com/assets/images/map_submit_flow.png")
 
 DIFF_TECH_CHART = discord.Embed(
     title="Difficulty / Tech Chart",

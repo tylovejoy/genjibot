@@ -6,7 +6,7 @@ import typing
 
 from discord.ext import commands, tasks
 
-import utils
+from utils import constants
 
 if typing.TYPE_CHECKING:
     import core
@@ -27,9 +27,7 @@ class Tasks(commands.Cog):
     @tasks.loop(hours=12)
     async def _update_global_names(self):
         await self.bot.wait_until_ready()
-        global_names = [
-            (u.id, u.name) for u in self.bot.users if u.global_name is not None
-        ]
+        global_names = [(u.id, u.name) for u in self.bot.users if u.global_name is not None]
         query = """
             INSERT INTO user_global_names (user_id, global_name) 
             VALUES ($1, $2) 
@@ -72,11 +70,9 @@ class Tasks(commands.Cog):
             """
         map_codes = []
         async for row in self.bot.database.get(query):
-            thread = self.bot.get_guild(utils.GUILD_ID).get_thread(row.thread_id)
+            thread = self.bot.get_guild(constants.GUILD_ID).get_thread(row.thread_id)
             message = thread.get_partial_message(row.message_id)
-            await self.bot.playtest_views[row.message_id].toggle_finalize_button(
-                thread, message, True
-            )
+            await self.bot.playtest_views[row.message_id].toggle_finalize_button(thread, message, True)
             map_codes.append((row.map_code,))
         await self.bot.database.set_many(
             "UPDATE map_submission_dates SET approved = TRUE WHERE map_code = $1",
@@ -147,7 +143,7 @@ SELECT ap.map_code, ap.user_id, thread_id, message_id
          WHERE
            date < now() - INTERVAL '3 weeks' AND alerted = FALSE
             """
-        guild = self.bot.get_guild(utils.GUILD_ID)
+        guild = self.bot.get_guild(constants.GUILD_ID)
         map_codes = []
         async for row in self.bot.database.get(query):
             creator = guild.get_member(row.user_id)

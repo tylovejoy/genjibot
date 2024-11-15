@@ -9,7 +9,7 @@ from discord.ext import commands
 
 import cogs
 import core
-import utils
+from utils import cache
 from views import PlaytestVoting
 
 if typing.TYPE_CHECKING:
@@ -36,14 +36,12 @@ class Genji(commands.Bot):
         )
         self.session = session
         self.database = db
-        self.cache: utils.GenjiCache = utils.GenjiCache()
+        self.cache: cache.GenjiCache = cache.GenjiCache()
         self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
         self.analytics_buffer: list[tuple[str, int, datetime.datetime, dict]] = []
 
-    def log_analytics(
-        self, event: str, user_id: int, timestamp: datetime.datetime, data: dict
-    ):
+    def log_analytics(self, event: str, user_id: int, timestamp: datetime.datetime, data: dict):
         self.analytics_buffer.append((event, user_id, timestamp, data))
 
     async def setup_hook(self) -> None:
@@ -97,5 +95,4 @@ class Genji(commands.Bot):
         )
         return intents
 
-    async def on_command_error(self, context, exception):
-        ...
+    async def on_command_error(self, context, exception): ...

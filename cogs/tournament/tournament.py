@@ -15,13 +15,9 @@ class TournamentSetup(commands.Cog):
 
     @commands.command()
     async def start(self, ctx: commands.Context):
-        announcements = await ctx.channel.create_thread(
-            name="Announcements - Tournament Name"
-        )
+        announcements = await ctx.channel.create_thread(name="Announcements - Tournament Name")
         chat = await ctx.channel.create_thread(name="Chat - Tournament Name")
-        submissions = await ctx.channel.create_thread(
-            name="Submissions - Tournament Name"
-        )
+        submissions = await ctx.channel.create_thread(name="Submissions - Tournament Name")
         now = discord.utils.utcnow()
         now_formatted = discord.utils.format_dt(now, style="F")
         await ctx.send(

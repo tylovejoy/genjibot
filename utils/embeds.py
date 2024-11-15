@@ -5,8 +5,7 @@ import typing
 
 import discord
 
-import utils
-
+from . import ranks
 from .constants import COMPLETION_PLACEHOLDER
 
 
@@ -66,9 +65,7 @@ class ErrorEmbed(GenjiEmbed):
             self.set_footer(text="If you have any questions, message nebula#6662")
 
 
-def set_embed_thumbnail_maps(
-    map_name: str, embed: discord.Embed
-) -> discord.Embed | GenjiEmbed:
+def set_embed_thumbnail_maps(map_name: str, embed: discord.Embed) -> discord.Embed | GenjiEmbed:
     """
     The embed_thumbnail_setter function takes a map name
     and an embed object as parameters.
@@ -92,13 +89,13 @@ def record_embed(data: dict[str, typing.Any]):
     if not data.get("video", None):
         description = (
             f"┣ `   Code ` {data['map_code']}\n"
-            f"┣ `   Diff ` {utils.convert_num_to_difficulty(data['difficulty'])}\n"
+            f"┣ `   Diff ` {ranks.convert_num_to_difficulty(data['difficulty'])}\n"
             f"┗ ` Record ` {data['record']}\n"
         )
     else:
         description = (
             f"┣ `   Code ` {data['map_code']}\n"
-            f"┣ `   Diff ` {utils.convert_num_to_difficulty(data['difficulty'])}\n"
+            f"┣ `   Diff ` {ranks.convert_num_to_difficulty(data['difficulty'])}\n"
             f"┣ ` Record ` {data['record']}\n"
             f"┗ `  Video ` [Link]({data['video']})\n"
         )

@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import discord
 
-import utils
 import views
+from utils import constants, ranks, utils
 
 if TYPE_CHECKING:
     import core
@@ -18,7 +18,7 @@ class ConfirmButton(discord.ui.Button):
     def __init__(self, disabled=False):
         super().__init__(
             label="Yes, the information I have entered is correct.",
-            emoji=utils.CONFIRM_EMOJI,
+            emoji=constants.CONFIRM_EMOJI,
             style=discord.ButtonStyle.green,
             disabled=disabled,
         )
@@ -35,9 +35,7 @@ class ConfirmButton(discord.ui.Button):
         self.view.clear_items()
         # self.view.stop()
         with contextlib.suppress(discord.HTTPException):
-            await self.view.original_itx.edit_original_response(
-                content=self.view.confirm_msg, view=self.view
-            )
+            await self.view.original_itx.edit_original_response(content=self.view.confirm_msg, view=self.view)
         self.view.stop()
 
 
@@ -45,7 +43,7 @@ class RejectButton(discord.ui.Button):
     def __init__(self):
         super().__init__(
             label="No, the information I have entered is not correct.",
-            emoji=utils.UNVERIFIED_EMOJI,
+            emoji=constants.UNVERIFIED_EMOJI,
             style=discord.ButtonStyle.red,
         )
 
@@ -104,10 +102,7 @@ class Confirm(discord.ui.View):
         self.add_item(self.reject)
 
     async def map_submit_enable(self):
-        values = [
-            getattr(getattr(self, x, None), "values", True)
-            for x in ["map_type", "difficulty"]
-        ]
+        values = [getattr(getattr(self, x, None), "values", True) for x in ["map_type", "difficulty"]]
         if all(values):
             self.confirm.disabled = False
             await self.original_itx.edit_original_response(view=self)
@@ -120,7 +115,7 @@ class QualitySelect(discord.ui.Select):
         super().__init__(
             options=[
                 discord.SelectOption(
-                    label=utils.ALL_STARS[x - 1],
+                    label=constants.ALL_STARS[x - 1],
                     value=str(x),
                 )
                 for x in range(1, 7)
@@ -136,23 +131,16 @@ class QualitySelect(discord.ui.Select):
 class ConfirmCompletion(discord.ui.View):
     def __init__(
         self,
-        rank: int,
         original_itx: discord.Interaction[core.Genji],
         confirm_msg="Confirmed.",
         ephemeral=False,
     ):
         super().__init__(timeout=3600)
-        self.rank = rank
         self.original_itx = original_itx
         self.confirm_msg = confirm_msg
         self.value = None
         self.ephemeral = ephemeral
 
-        # if self.rank > 5:
-        #     self.quality = QualitySelect()
-        #     self.add_item(self.quality)
-
-        # self.confirm = ConfirmButton(disabled=self.rank > 5)
         self.confirm = ConfirmButton()
         self.reject = RejectButton()
         self.add_item(self.confirm)
@@ -192,9 +180,7 @@ class ButtonBase(discord.ui.Button):
     async def callback(self, itx: discord.Interaction[core.Genji]):
         await itx.response.defer(ephemeral=True)
         if self.view.itx.user != itx.user:
-            await itx.followup.send(
-                "You are not allowed to use this button.", ephemeral=True
-            )
+            await itx.followup.send("You are not allowed to use this button.", ephemeral=True)
             return
 
         self.view.value = self.value
@@ -207,9 +193,7 @@ class ButtonBase(discord.ui.Button):
                 f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
             )
 
-        await self.view.itx.edit_original_response(
-            content=self.view.confirmation_message, view=self.view
-        )
+        await self.view.itx.edit_original_response(content=self.view.confirmation_message, view=self.view)
         if not self.view.value:
             await utils.delete_interaction(self.view.itx, minutes=1)
         self.view.stop()
@@ -219,7 +203,7 @@ class BaseConfirmButton(ButtonBase):
     def __init__(self, disabled: bool):
         super().__init__(
             label="Yes, the information I have entered is correct.",
-            emoji=utils.CONFIRM_EMOJI,
+            emoji=constants.CONFIRM_EMOJI,
             style=discord.ButtonStyle.green,
             disabled=disabled,
             value=True,
@@ -231,7 +215,7 @@ class BaseRejectButton(ButtonBase):
     def __init__(self):
         super().__init__(
             label="No, the information I have entered is not correct.",
-            emoji=utils.UNVERIFIED_EMOJI,
+            emoji=constants.UNVERIFIED_EMOJI,
             style=discord.ButtonStyle.red,
             value=False,
             row=4,
@@ -311,9 +295,7 @@ class ConfirmMechanicsMixin(ConfirmBaseView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mechanics = views.MechanicsSelect(
-            copy.deepcopy(self.itx.client.cache.map_mechanics.options)
-        )
+        self.mechanics = views.MechanicsSelect(copy.deepcopy(self.itx.client.cache.map_mechanics.options))
         self.add_item(self.mechanics)
 
 
@@ -322,9 +304,7 @@ class ConfirmRestrictionsMixin(ConfirmBaseView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.restrictions = views.RestrictionsSelect(
-            copy.deepcopy(self.itx.client.cache.map_restrictions.options)
-        )
+        self.restrictions = views.RestrictionsSelect(copy.deepcopy(self.itx.client.cache.map_restrictions.options))
         self.add_item(self.restrictions)
 
 
@@ -333,9 +313,7 @@ class ConfirmMapTypeMixin(ConfirmBaseView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.map_type = views.MapTypeSelect(
-            copy.deepcopy(self.itx.client.cache.map_types.options)
-        )
+        self.map_type = views.MapTypeSelect(copy.deepcopy(self.itx.client.cache.map_types.options))
         self.add_item(self.map_type)
 
     async def map_submit_enable(self):
@@ -348,7 +326,7 @@ class ConfirmDifficultyMixin(ConfirmBaseView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.difficulty = views.DifficultySelect(
-            [discord.SelectOption(label=x, value=x) for x in utils.DIFFICULTIES_EXT[1:]]
+            [discord.SelectOption(label=x, value=x) for x in ranks.DIFFICULTIES_EXT[1:]]
         )
         self.add_item(self.difficulty)
 

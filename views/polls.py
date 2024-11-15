@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 from matplotlib import pyplot as plt
 
-import utils
+from utils import constants, embeds
 
 if typing.TYPE_CHECKING:
     import core
@@ -46,9 +46,7 @@ class PollView(discord.ui.View):
         if isinstance(error, ButtonOnCooldown):
             seconds = int(error.retry_after)
             unit = "second" if seconds == 1 else "seconds"
-            await itx.response.send_message(
-                f"You're on cooldown for {seconds} {unit}!", ephemeral=True
-            )
+            await itx.response.send_message(f"You're on cooldown for {seconds} {unit}!", ephemeral=True)
         else:
             await super().on_error(itx, error, item)
 
@@ -58,21 +56,19 @@ class PollView(discord.ui.View):
         custom_id="end_poll",
         row=4,
     )
-    async def end(
-        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
-    ):
-        if itx.guild.get_role(utils.STAFF) not in itx.user.roles:
-            await itx.response.send_message(
-                "You are not allowed to pres this button", ephemeral=True
-            )
+    async def end(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button):
+        if itx.guild.get_role(constants.STAFF) not in itx.user.roles:
+            await itx.response.send_message("You are not allowed to pres this button", ephemeral=True)
             return
         await itx.response.send_message("Ending poll.", ephemeral=True)
         self.clear_items()
         self.stop()
-        await itx.guild.get_channel(itx.channel_id).get_partial_message(
-            itx.message.id
-        ).edit(
-            view=self,
+        await (
+            itx.guild.get_channel(itx.channel_id)
+            .get_partial_message(itx.message.id)
+            .edit(
+                view=self,
+            )
         )
 
 
@@ -88,9 +84,7 @@ class PollOptionButton(discord.ui.Button):
         self.option_number = option_number
 
     async def callback(self, itx: discord.Interaction[core.Genji]):
-        await itx.response.send_message(
-            content=f"You voted for {self.label}!", ephemeral=True
-        )
+        await itx.response.send_message(content=f"You voted for {self.label}!", ephemeral=True)
         await self.insert_poll_vote(itx)
         counts = await self.get_all_counts(itx)
 
@@ -103,12 +97,14 @@ class PollOptionButton(discord.ui.Button):
         )
         embed = await build_embed(self.view.title)
 
-        await itx.guild.get_channel(itx.channel_id).get_partial_message(
-            itx.message.id
-        ).edit(
-            content=f"**Total Votes:** {sum(counts)}",
-            embed=embed,
-            attachments=[chart],
+        await (
+            itx.guild.get_channel(itx.channel_id)
+            .get_partial_message(itx.message.id)
+            .edit(
+                content=f"**Total Votes:** {sum(counts)}",
+                embed=embed,
+                attachments=[chart],
+            )
         )
 
     async def insert_poll_vote(self, itx):
@@ -177,6 +173,6 @@ def create_graph(data: dict[str, int | float]) -> discord.File:
 
 
 async def build_embed(title: str) -> discord.Embed:
-    embed = utils.GenjiEmbed(title=title)
+    embed = embeds.GenjiEmbed(title=title)
     embed.set_image(url="attachment://poll.png")
     return embed

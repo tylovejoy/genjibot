@@ -6,3 +6,4 @@ thefuzz
 python-Levenshtein
 matplotlib
 imagetext-py
+msgspec

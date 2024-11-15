@@ -6,8 +6,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import utils
 import views
+from utils import constants
 
 if typing.TYPE_CHECKING:
     import core
@@ -18,7 +18,7 @@ class Polls(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="poll")
-    @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def start_poll(
         self,
         itx: discord.Interaction[core.Genji],
@@ -30,17 +30,11 @@ class Polls(commands.Cog):
         option_5: str | None,
     ) -> None:
         await itx.response.defer()
-        chart = await self.bot.loop.run_in_executor(
-            None, views.create_graph, {"None": 100}
-        )
+        chart = await self.bot.loop.run_in_executor(None, views.create_graph, {"None": 100})
         embed = await views.build_embed(title)
-        options = self.get_default_valid_options(
-            [option_1, option_2, option_3, option_4, option_5]
-        )
+        options = self.get_default_valid_options([option_1, option_2, option_3, option_4, option_5])
         view = views.PollView(options, title)
-        message = await itx.edit_original_response(
-            embed=embed, attachments=[chart], view=view
-        )
+        message = await itx.edit_original_response(embed=embed, attachments=[chart], view=view)
         await self.insert_poll_info(itx, options, message.id, title)
 
     @staticmethod

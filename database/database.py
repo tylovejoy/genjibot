@@ -5,7 +5,7 @@ from io import BytesIO
 
 import asyncpg
 
-import utils
+from utils import errors
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class Database:
             DotRecords
         """
         if self.pool is None:
-            raise utils.DatabaseConnectionError()
+            raise errors.DatabaseConnectionError()
         query = textwrap.dedent(query)
         log.debug(query)
         log.debug(args)
@@ -105,7 +105,7 @@ class Database:
             *args (Any) Pass any additional arguments to the query
         """
         if self.pool is None:
-            raise utils.DatabaseConnectionError()
+            raise errors.DatabaseConnectionError()
 
         async with self.pool.acquire() as conn:
             async with conn.transaction():
@@ -126,7 +126,7 @@ class Database:
             *args (Any) Pass any additional arguments to the query
         """
         if self.pool is None:
-            raise utils.DatabaseConnectionError()
+            raise errors.DatabaseConnectionError()
 
         async with self.pool.acquire() as conn:
             async with conn.transaction():
@@ -176,3 +176,11 @@ class Database:
     ) -> None:
         _connection = connection or self.pool
         await _connection.executemany(query, args)
+
+    async def fetch_user_flags(self, user_id: int):
+        query = "SELECT flags FROM users WHERE user_id = $1"
+        return await self.fetchval(query, user_id)
+
+    async def fetch_nickname(self, user_id: int):
+        query = "SELECT nickname FROM users WHERE user_id = $1"
+        return await self.fetchval(query, user_id)

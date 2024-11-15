@@ -3,14 +3,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import operator
-import re
 import typing
 
 import discord
 from thefuzz import fuzz
 
-import utils
-import views
+from utils import constants, cache, ranks
 
 if typing.TYPE_CHECKING:
     import core
@@ -30,9 +28,7 @@ _emoji_numbers = {
 }
 
 
-async def delete_interaction(
-    itx: discord.Interaction[core.Genji], *, minutes: int | float
-):
+async def delete_interaction(itx: discord.Interaction[core.Genji], *, minutes: int | float):
     """Delete an itx message after x minutes. Fails silently.
     Args:
         itx (discord.Interaction): Interaction to find original message.
@@ -41,9 +37,7 @@ async def delete_interaction(
     if minutes < 0:
         raise ValueError("Time cannot be negative.")
     await asyncio.sleep(60 * minutes)
-    with contextlib.suppress(
-        discord.HTTPException, discord.NotFound, discord.Forbidden
-    ):
+    with contextlib.suppress(discord.HTTPException, discord.NotFound, discord.Forbidden):
         await itx.delete_original_response()
 
 
@@ -90,35 +84,35 @@ async def update_affected_users(
     ]
     if users:
         for x in users:
-            if user := client.get_guild(utils.GUILD_ID).get_member(x):
-                await utils.auto_role(client, user)
+            if user := client.get_guild(constants.GUILD_ID).get_member(x):
+                await auto_role(client, user)
 
 
 async def auto_role(client: core.Genji, user: discord.Member):
     rank, rank_plus, silver, bronze = await rank_finder(client, user)
     rank_roles = list(
         map(
-            lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.ranks()[1:],
+            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
+            constants.Roles.ranks()[1:],
         )
     )
     rank_plus_roles = list(
         map(
-            lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.gold_plus()[1:],
+            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
+            constants.Roles.gold_plus()[1:],
         )
     )
 
     rank_silver_roles = list(
         map(
-            lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.silver_plus()[1:],
+            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
+            constants.Roles.silver_plus()[1:],
         )
     )
     rank_bronze_roles = list(
         map(
-            lambda x: client.get_guild(utils.GUILD_ID).get_role(x),
-            utils.Roles.bronze_plus()[1:],
+            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
+            constants.Roles.bronze_plus()[1:],
         )
     )
 
@@ -161,26 +155,22 @@ async def auto_role(client: core.Genji, user: discord.Member):
         client.dispatch("newsfeed_role", client, user, added)
 
     if removed:
-        response += (
-            ", ".join([f"**{x.name}**" for x in removed]) + " has been removed.\n"
-        )
+        response += ", ".join([f"**{x.name}**" for x in removed]) + " has been removed.\n"
 
     if added or removed:
         with contextlib.suppress(discord.errors.HTTPException):
             flags = client.cache.users[user.id].flags
-            if utils.SettingFlags.PROMOTION in flags:
+            if cache.SettingFlags.PROMOTION in flags:
                 await user.send(response)
 
 
-async def rank_finder(
-    client: core.Genji, user: discord.Member
-) -> tuple[int, int, int, int]:
+async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, int, int, int]:
     amounts = await get_completions_data(client, user.id)
     rank = 0
     gold_rank = 0
     silver_rank = 0
     bronze_rank = 0
-    for i, diff in enumerate(utils.DIFFICULTIES[1:]):  # Ignore Beginner
+    for i, diff in enumerate(ranks.DIFFICULTIES[1:]):  # Ignore Beginner
         if diff not in amounts or amounts[diff][0] < _RANK_THRESHOLD[i]:
             break
         if amounts[diff][0] >= _RANK_THRESHOLD[i]:
@@ -202,9 +192,7 @@ async def get_completions_data(
     include_archived: bool = True,
 ) -> dict[str, tuple[int, int, int, int]]:
     if include_beginner:
-        clause = (
-            "('[0.0,0.59)'::numrange, 'Beginner'), ('[0.59,2.35)'::numrange, 'Easy'),"
-        )
+        clause = "('[0.0,0.59)'::numrange, 'Beginner'), ('[0.59,2.35)'::numrange, 'Easy'),"
     else:
         clause = "('[0.0,2.35)'::numrange, 'Easy'),"
 
@@ -243,10 +231,10 @@ async def get_completions_data(
         map_data AS (
             SELECT DISTINCT ON (m.map_code, r.user_id) 
                 AVG(mr.difficulty)                                            AS difficulty,
-                VERIFIED = TRUE AND (record <= gold OR medal LIKE 'Gold')     AS gold,
-                VERIFIED = TRUE AND
+                r.verified = TRUE AND (record <= gold OR medal LIKE 'Gold')     AS gold,
+                r.verified = TRUE AND
                 (record <= silver AND record > gold OR medal LIKE 'silver')   AS silver,
-                VERIFIED = TRUE AND
+                r.verified = TRUE AND
                 (record <= bronze AND record > silver OR medal LIKE 'Bronze') AS bronze
             FROM unioned_records r
                 LEFT JOIN maps m ON r.map_code = m.map_code
@@ -255,7 +243,7 @@ async def get_completions_data(
             WHERE r.user_id = $1
                 AND m.official = TRUE
                 AND ($2 IS TRUE OR m.archived = FALSE)
-            GROUP BY m.map_code, record, gold, silver, bronze, VERIFIED, medal, r.user_id
+            GROUP BY m.map_code, record, gold, silver, bronze, r.verified, medal, r.user_id
         )
         SELECT COUNT(name)                        AS completions,
                name                               AS difficulty,
@@ -274,7 +262,7 @@ async def get_completions_data(
 
 
 class FakeUser:
-    def __init__(self, id_: int, data: utils.UserData):
+    def __init__(self, id_: int, data: cache.UserData):
         self.id = id_
         self.nickname = data.nickname
         self.mention = data.nickname
@@ -293,9 +281,7 @@ def wrap_string_with_percent(string: str):
 
 def split_nth_iterable(*, current: int, iterable: list[typing.Any], split: int):
     return (
-        (current != 0 and current % split == 0)
-        or (current == 0 and len(iterable) == 1)
-        or current == len(iterable) - 1
+        (current != 0 and current % split == 0) or (current == 0 and len(iterable) == 1) or current == len(iterable) - 1
     )
 
 

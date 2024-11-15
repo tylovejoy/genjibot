@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import logging
 import re
 import typing
@@ -11,10 +12,11 @@ from discord.ext import commands
 
 import core
 import database
-import utils
 import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
 from cogs.tickets.views import TicketStart
+from utils import errors, constants, maps, records, ranks, cache, embeds, utils, models
+from utils.records import icon_generator
 
 if typing.TYPE_CHECKING:
     from .genji import Genji
@@ -27,7 +29,7 @@ ASCII_LOGO = r""""""
 class BotEvents(commands.Cog):
     def __init__(self, bot: Genji):
         self.bot = bot
-        bot.tree.on_error = utils.on_app_command_error
+        bot.tree.on_error = errors.on_app_command_error
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -48,7 +50,7 @@ class BotEvents(commands.Cog):
             queue = [
                 x.hidden_id
                 async for x in self.bot.database.get(
-                    "SELECT hidden_id FROM records_queue;",
+                    "SELECT hidden_id FROM records WHERE verified = FALSE;",
                 )
             ]
             for x in queue:
@@ -56,38 +58,44 @@ class BotEvents(commands.Cog):
 
             view = views.AnnouncementRoles()
             self.bot.add_view(view, message_id=1073294355613360129)
-            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
-                1073294355613360129
-            ).edit(
-                content="**Announcement Pings**",
-                view=view,
+            await (
+                self.bot.get_channel(constants.ROLE_REACT)
+                .get_partial_message(1073294355613360129)
+                .edit(
+                    content="**Announcement Pings**",
+                    view=view,
+                )
             )
 
             view = views.RegionRoles()
             self.bot.add_view(view, message_id=1073294377050460253)
-            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
-                1073294377050460253
-            ).edit(
-                content="**Regions**",
-                view=view,
+            await (
+                self.bot.get_channel(constants.ROLE_REACT)
+                .get_partial_message(1073294377050460253)
+                .edit(
+                    content="**Regions**",
+                    view=view,
+                )
             )
 
             view = views.ConsoleRoles()
             self.bot.add_view(view, message_id=1073294381311873114)
-            await self.bot.get_channel(utils.ROLE_REACT).get_partial_message(
-                1073294381311873114
-            ).edit(
-                content="**Platform**",
-                view=view,
+            await (
+                self.bot.get_channel(constants.ROLE_REACT)
+                .get_partial_message(1073294381311873114)
+                .edit(
+                    content="**Platform**",
+                    view=view,
+                )
             )
 
-            queue = await utils.get_map_info(self.bot)
+            queue = await maps.get_map_info(self.bot)
             for x in queue:
                 if x is None:
                     continue
                 try:
-                    data = utils.MapSubmission(
-                        creator=await utils.transform_user(self.bot, x.creator_ids[0]),
+                    data = maps.MapSubmission(
+                        creator=await records.transform_user(self.bot, x.creator_ids[0]),
                         map_code=x.map_code,
                         map_name=x.map_name,
                         checkpoint_count=x.checkpoints,
@@ -97,7 +105,7 @@ class BotEvents(commands.Cog):
                         map_types=x.map_type,
                         mechanics=x.mechanics,
                         restrictions=x.restrictions,
-                        difficulty=utils.convert_num_to_difficulty(x.value),
+                        difficulty=ranks.convert_num_to_difficulty(x.value),
                     )
 
                     with contextlib.suppress(AttributeError):
@@ -112,9 +120,7 @@ class BotEvents(commands.Cog):
                         self.bot.playtest_views[x.message_id] = view
                 except Exception as e:
                     ...
-            queue = [
-                x async for x in self.bot.database.get("SELECT * FROM polls_info;")
-            ]
+            queue = [x async for x in self.bot.database.get("SELECT * FROM polls_info;")]
             for x in queue:
                 self.bot.add_view(
                     views.PollView(
@@ -147,10 +153,10 @@ class BotEvents(commands.Cog):
             )
         if not self.bot.cache.users[member.id]:
             self.bot.cache.users.add_one(
-                utils.UserData(
+                cache.UserData(
                     user_id=member.id,
                     nickname=member.name[:25],
-                    flags=utils.SettingFlags.DEFAULT,
+                    flags=cache.SettingFlags.DEFAULT,
                     is_creator=False,
                 )
             )
@@ -168,15 +174,11 @@ class BotEvents(commands.Cog):
             )
         ]
         if res and (
-            (map_maker := member.guild.get_role(utils.Roles.MAP_MAKER)) is not None
+            (map_maker := member.guild.get_role(constants.Roles.MAP_MAKER)) is not None
             and map_maker not in member.roles
         ):
-            await member.add_roles(
-                map_maker, reason="User rejoined. Re-granting map maker."
-            )
-        if (
-            ninja := member.guild.get_role(utils.Roles.NINJA)
-        ) is not None and ninja not in member.roles:
+            await member.add_roles(map_maker, reason="User rejoined. Re-granting map maker.")
+        if (ninja := member.guild.get_role(constants.Roles.NINJA)) is not None and ninja not in member.roles:
             await member.add_roles(ninja, reason="User joined. Granting Ninja.")
 
         await utils.auto_role(self.bot, member)
@@ -215,38 +217,37 @@ class BotEvents(commands.Cog):
         guild: discord.Guild,
         record: database.DotRecord,
         medals: tuple[float, float, float],
-    ):
-        ...
+    ): ...
 
     @commands.Cog.listener()
     async def on_newsfeed_record(
         self,
         itx: discord.Interaction[core.Genji],
-        record: database.DotRecord,
+        record: asyncpg.Record,
         medals: tuple[float, float, float],
     ):
-        if not record.video:
+        if not record["video"]:
             return
-        icon = utils.icon_generator(record, medals)
-        embed = utils.GenjiEmbed(
-            url=record.screenshot,
+        icon = icon_generator(record, medals)
+        embed = embeds.GenjiEmbed(
+            url=record["screenshot"],
             description=(
-                f"**{record.map_name} by {record.creators} ({record.map_code})**\n"
-                f"┣ `Record` {record.record} {icon}\n"
-                f"┗ `Video` [Link]({record.video})"
-                if record.video
+                f"**{record['map_name']} by {record['creators']} ({record['map_code']})**\n"
+                f"┣ `Record` {record['record']} {icon}\n"
+                f"┗ `Video` [Link]({record['video']})"
+                if record["video"]
                 else ""
             ),
             color=discord.Color.yellow(),
         )
 
-        if record.rank_num == 1:
-            embed.title = f"{record.nickname} set a new World Record!"
-        elif icon in [utils.PARTIAL_VERIFIED, utils.FULLY_VERIFIED]:
+        if record["rank_num"] == 1:
+            embed.title = f"{record['nickname']} set a new World Record!"
+        elif icon in [constants.PARTIAL_VERIFIED, constants.FULLY_VERIFIED]:
             return
         else:
-            embed.title = f"{record.nickname} got a medal!"
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+            embed.title = f"{record['nickname']} got a medal!"
+        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
 
         data = {
             "map": {
@@ -264,21 +265,18 @@ class BotEvents(commands.Cog):
             },
         }
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        await itx.client.database.execute(query, "record", data)
+        json_data = json.dumps(data)
+        await itx.client.database.execute(query, "record", json_data)
 
     @commands.Cog.listener()
-    async def on_newsfeed_role(
-        self, client: core.Genji, user: discord.Member, roles: list[discord.Role]
-    ):
+    async def on_newsfeed_role(self, client: core.Genji, user: discord.Member, roles: list[discord.Role]):
         nickname = client.cache.users[user.id].nickname
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title=f"{nickname} got promoted!",
             description="\n".join([f"{x.mention}" for x in roles]),
             color=discord.Color.green(),
         )
-        await client.get_guild(utils.GUILD_ID).get_channel(utils.NEWSFEED).send(
-            embed=embed
-        )
+        await client.get_guild(constants.GUILD_ID).get_channel(constants.NEWSFEED).send(embed=embed)
         data = {
             "user": {
                 "user_id": user.id,
@@ -287,7 +285,8 @@ class BotEvents(commands.Cog):
             },
         }
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        await client.database.execute(query, "role", data)
+        json_data = json.dumps(data)
+        await client.database.execute(query, "role", json_data)
 
     @commands.Cog.listener()
     async def on_newsfeed_guide(
@@ -298,13 +297,13 @@ class BotEvents(commands.Cog):
         map_code: str,
     ):
         nickname = itx.client.cache.users[user.id].nickname
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title=f"{nickname} has posted a guide for {map_code}",
             url=url,
             color=discord.Color.orange(),
         )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
-        await itx.guild.get_channel(utils.NEWSFEED).send(url)
+        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
+        await itx.guild.get_channel(constants.NEWSFEED).send(url)
         data = {
             "user": {
                 "user_id": user.id,
@@ -316,7 +315,8 @@ class BotEvents(commands.Cog):
             },
         }
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        await itx.client.database.execute(query, "guide", data)
+        json_data = json.dumps(data)
+        await itx.client.database.execute(query, "guide", json_data)
 
     @commands.Cog.listener()
     async def on_newsfeed_archive(
@@ -328,15 +328,13 @@ class BotEvents(commands.Cog):
     ):
         if value == "archive":
             description = (
-                "This map will not appear in the map search command.\n"
-                "You cannot submit records for archived maps."
+                "This map will not appear in the map search command.\n" "You cannot submit records for archived maps."
             )
         else:
             description = (
-                "This map will now appear in the map search command "
-                "and be eligible for record submissions."
+                "This map will now appear in the map search command " "and be eligible for record submissions."
             )
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title=f"{map_code} has been {value}d.",
             description=description,
             color=discord.Color.red(),
@@ -345,25 +343,23 @@ class BotEvents(commands.Cog):
             guide_txt = ""
             medals_txt = ""
             if map_data.get("guide") and None not in map_data.get("guide"):
-                guides = [
-                    f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)
-                ]
+                guides = [f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)]
                 guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
             if map_data.gold:
                 medals_txt = (
                     f"┣ `Medals` "
-                    f"{utils.FULLY_VERIFIED_GOLD} {map_data.gold} | "
-                    f"{utils.FULLY_VERIFIED_SILVER} {map_data.silver} | "
-                    f"{utils.FULLY_VERIFIED_BRONZE} {map_data.bronze}\n"
+                    f"{constants.FULLY_VERIFIED_GOLD} {map_data.gold} | "
+                    f"{constants.FULLY_VERIFIED_SILVER} {map_data.silver} | "
+                    f"{constants.FULLY_VERIFIED_BRONZE} {map_data.bronze}\n"
                 )
 
             embed.add_description_field(
                 name=f"{map_data.map_code}",
                 value=(
-                    f"┣ `Rating` {utils.create_stars(map_data.quality)}\n"
+                    f"┣ `Rating` {constants.create_stars(map_data.quality)}\n"
                     f"┣ `Creator` {discord.utils.escape_markdown(map_data.creators)}\n"
                     f"┣ `Map` {map_data.map_name}\n"
-                    f"┣ `Difficulty` {utils.convert_num_to_difficulty(map_data.difficulty)}\n"
+                    f"┣ `Difficulty` {ranks.convert_num_to_difficulty(map_data.difficulty)}\n"
                     f"┣ `Mechanics` {map_data.mechanics}\n"
                     f"┣ `Restrictions` {map_data.restrictions}\n"
                     f"{guide_txt}"
@@ -373,12 +369,13 @@ class BotEvents(commands.Cog):
                     f"┗ `Desc` {map_data.desc}"
                 ),
             )
-        await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
         data = {
             "map": map_data,
         }
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        await itx.client.database.execute(query, value, data)
+        json_data = json.dumps(data)
+        await itx.client.database.execute(query, value, json_data)
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(
@@ -393,7 +390,7 @@ class BotEvents(commands.Cog):
         for k, v in values.items():
             description += f"`{k}` {v}\n"
 
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title=f"{map_code} has been changed:",
             description=description,
             color=discord.Color.red(),
@@ -417,20 +414,18 @@ class BotEvents(commands.Cog):
 
             await thread.edit(
                 name=(
-                    f"{values.get('Code', None) or map_code} | {utils.convert_num_to_difficulty(row.difficulty)} "
+                    f"{values.get('Code', None) or map_code} | {ranks.convert_num_to_difficulty(row.difficulty)} "
                     f"| {row.map_name} | {row.checkpoints} CPs"
                 )
             )
             await thread.send(embed=embed)
-            original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
-                message_id
-            )
+            original = await itx.guild.get_channel(constants.PLAYTEST).fetch_message(message_id)
             embed = None
             for k, v in values.items():
                 embed = self.edit_embed(original.embeds[0], k, v)
             await original.edit(embed=embed)
         else:
-            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+            await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:

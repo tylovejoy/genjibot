@@ -4,8 +4,8 @@ import typing
 
 import discord.ui
 
-import utils
 import views
+from utils import cache
 
 if typing.TYPE_CHECKING:
     import core
@@ -30,14 +30,11 @@ class TagFuzzView(discord.ui.View):
         super().__init__(timeout=3600)
         self.itx = itx
         self.matches.options = [
-            discord.SelectOption(label=x, value=x, emoji=NUMBER_EMOJI[i + 1])
-            for i, x in enumerate(options)
+            discord.SelectOption(label=x, value=x, emoji=NUMBER_EMOJI[i + 1]) for i, x in enumerate(options)
         ]
 
     @discord.ui.select()
-    async def matches(
-        self, itx: discord.Interaction[core.Genji], select: discord.SelectMenu
-    ):
+    async def matches(self, itx: discord.Interaction[core.Genji], select: discord.SelectMenu):
         await itx.response.defer()
         tag = [
             x
@@ -47,9 +44,7 @@ class TagFuzzView(discord.ui.View):
             )
         ][0]
 
-        await itx.edit_original_response(
-            content=f"**{tag.name}**\n\n{tag.value}", view=None, embed=None
-        )
+        await itx.edit_original_response(content=f"**{tag.name}**\n\n{tag.value}", view=None, embed=None)
 
 
 class TagCreate(discord.ui.Modal, title="Create Tag"):
@@ -72,4 +67,4 @@ class TagCreate(discord.ui.Modal, title="Create Tag"):
             self.name.value,
             self.value.value,
         )
-        itx.client.cache.tags.add_one(utils.TagsData(self.name.value))
+        itx.client.cache.tags.add_one(cache.TagsData(self.name.value))

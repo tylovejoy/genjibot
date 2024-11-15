@@ -9,11 +9,9 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
-import utils
-import utils.maps
 import views
 from database import DotRecord
-from utils import NEWSFEED, convert_to_emoji_number
+from utils import constants, records, errors, utils, embeds, maps, cache, ranks
 from views import GuidesSelect
 
 if typing.TYPE_CHECKING:
@@ -30,12 +28,12 @@ class ModCommands(commands.Cog):
 
     mod = app_commands.Group(
         name="mod",
-        guild_ids=[utils.GUILD_ID],
+        guild_ids=[constants.GUILD_ID],
         description="Mod only commands",
     )
     map = app_commands.Group(
         name="map",
-        guild_ids=[utils.GUILD_ID],
+        guild_ids=[constants.GUILD_ID],
         description="Mod only commands",
         parent=mod,
     )
@@ -47,7 +45,7 @@ class ModCommands(commands.Cog):
     async def remove_guide(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ) -> None:
         """
         Remove a guide from a map.
@@ -61,12 +59,9 @@ class ModCommands(commands.Cog):
         query = "SELECT url FROM guides WHERE map_code = $1;"
         guides = [x.url async for x in itx.client.database.get(query, map_code)]
         if not guides:
-            raise utils.NoGuidesExistError
+            raise errors.NoGuidesExistError
 
-        guides_formatted = [
-            f"{convert_to_emoji_number(i)}. <{g[:100]}>\n"
-            for i, g in enumerate(guides, start=1)
-        ]
+        guides_formatted = [f"{utils.convert_to_emoji_number(i)}. <{g[:100]}>\n" for i, g in enumerate(guides, start=1)]
 
         content = (
             f"# Guides for {map_code}\n"
@@ -75,8 +70,7 @@ class ModCommands(commands.Cog):
         )
 
         options = [
-            discord.SelectOption(label=convert_to_emoji_number(x + 1), value=str(x))
-            for x in range(len(guides))
+            discord.SelectOption(label=utils.convert_to_emoji_number(x + 1), value=str(x)) for x in range(len(guides))
         ]
         select = GuidesSelect(options)
         view = views.Confirm(itx, ephemeral=True, preceeding_items={"guides": select})
@@ -91,9 +85,7 @@ class ModCommands(commands.Cog):
         url = guides[int(view.guides.values[0])]
         query = "DELETE FROM guides WHERE map_code = $1 AND url = $2;"
         await itx.client.database.set(query, map_code, url)
-        await itx.edit_original_response(
-            content=f"# Deleted guide\n## Map code: {map_code}\n## URL: {url}"
-        )
+        await itx.edit_original_response(content=f"# Deleted guide\n## Map code: {map_code}\n## URL: {url}")
 
     @map.command(name="add-creator")
     @app_commands.autocomplete(
@@ -103,8 +95,8 @@ class ModCommands(commands.Cog):
     async def add_creator(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        creator: app_commands.Transform[int, utils.UserTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        creator: app_commands.Transform[int, records.UserTransformer],
     ) -> None:
         """
         Add a creator to a map.
@@ -124,8 +116,8 @@ class ModCommands(commands.Cog):
     async def remove_creator(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        creator: app_commands.Transform[int, utils.UserTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        creator: app_commands.Transform[int, records.UserTransformer],
     ) -> None:
         """
         Remove a creator from a map.
@@ -144,10 +136,10 @@ class ModCommands(commands.Cog):
     async def edit_medals(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        gold: app_commands.Transform[float, utils.RecordTransformer],
-        silver: app_commands.Transform[float, utils.RecordTransformer],
-        bronze: app_commands.Transform[float, utils.RecordTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        gold: app_commands.Transform[float, records.RecordTransformer],
+        silver: app_commands.Transform[float, records.RecordTransformer],
+        bronze: app_commands.Transform[float, records.RecordTransformer],
     ) -> None:
         """
         Edit all medals for a map. Set all medals to 0 to remove them.
@@ -164,7 +156,7 @@ class ModCommands(commands.Cog):
         delete = gold == silver == bronze == 0
 
         if not delete and not 0 < gold < silver < bronze:
-            raise utils.InvalidMedals
+            raise errors.InvalidMedals
 
         if delete:
             query = "DELETE FROM map_medals WHERE map_code = $1"
@@ -209,9 +201,9 @@ class ModCommands(commands.Cog):
     def _edit_medals(embed: discord.Embed, gold, silver, bronze) -> discord.Embed:
         medals_txt = (
             f"┣ `Medals` "
-            f"{utils.FULLY_VERIFIED_GOLD} {gold} | "
-            f"{utils.FULLY_VERIFIED_SILVER} {silver} | "
-            f"{utils.FULLY_VERIFIED_BRONZE} {bronze}\n┗"
+            f"{constants.FULLY_VERIFIED_GOLD} {gold} | "
+            f"{constants.FULLY_VERIFIED_SILVER} {silver} | "
+            f"{constants.FULLY_VERIFIED_BRONZE} {bronze}\n┗"
         )
         if bool(re.search("`Medals`", embed.description)):
             embed.description = re.sub(
@@ -240,10 +232,8 @@ class ModCommands(commands.Cog):
     ):
         description = "All medals removed."
         if not delete:
-            description = (
-                f"`Gold` {gold}\n" f"`Silver` {silver}\n" f"`Bronze` {bronze}\n"
-            )
-        embed = utils.GenjiEmbed(
+            description = f"`Gold` {gold}\n" f"`Silver` {silver}\n" f"`Bronze` {bronze}\n"
+        embed = embeds.GenjiEmbed(
             title=f"Medals have been added/changed for code {map_code}",
             description=description,
             color=discord.Color.red(),
@@ -251,13 +241,11 @@ class ModCommands(commands.Cog):
 
         if thread_id:
             await itx.guild.get_thread(thread_id).send(embed=embed)
-            original = await itx.guild.get_channel(utils.PLAYTEST).fetch_message(
-                message_id
-            )
+            original = await itx.guild.get_channel(constants.PLAYTEST).fetch_message(message_id)
             embed = self._edit_medals(original.embeds[0], gold, silver, bronze)
             await original.edit(embed=embed)
         else:
-            await itx.guild.get_channel(utils.NEWSFEED).send(embed=embed)
+            await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
 
     @map.command(name="submit-map")
     @app_commands.autocomplete(
@@ -267,17 +255,15 @@ class ModCommands(commands.Cog):
     async def submit_fake_map(
         self,
         itx: discord.Interaction[core.Genji],
-        user: app_commands.Transform[
-            utils.FakeUser | discord.Member, utils.AllUserTransformer
-        ],
-        map_code: app_commands.Transform[str, utils.MapCodeSubmitTransformer],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer],
+        user: app_commands.Transform[utils.FakeUser | discord.Member, records.AllUserTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeSubmitTransformer],
+        map_name: app_commands.Transform[str, maps.MapNameTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
         description: str | None = None,
         guide_url: str | None = None,
-        gold: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        silver: app_commands.Transform[float, utils.RecordTransformer] | None = None,
-        bronze: app_commands.Transform[float, utils.RecordTransformer] | None = None,
+        gold: app_commands.Transform[float, records.RecordTransformer] | None = None,
+        silver: app_commands.Transform[float, records.RecordTransformer] | None = None,
+        bronze: app_commands.Transform[float, records.RecordTransformer] | None = None,
     ) -> None:
         """
         Submit a map for a specific user to the database This will skip the playtesting phase.
@@ -299,7 +285,7 @@ class ModCommands(commands.Cog):
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
 
-        map_submission = utils.MapSubmission(
+        map_submission = maps.MapSubmission(
             creator=user,
             map_code=map_code,
             map_name=map_name,
@@ -322,7 +308,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         member: discord.Member,
-        map_code: app_commands.Transform[str, utils.MapCodeRecordsTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeRecordsTransformer],
     ):
         """
         Remove a record from the database/user
@@ -345,10 +331,10 @@ class ModCommands(commands.Cog):
             )
         ]
         if not record:
-            raise utils.NoRecordsFoundError
+            raise errors.NoRecordsFoundError
 
         record = record[0]
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title="Delete Record",
             description=(
                 f"`Name` {discord.utils.escape_markdown(record.nickname)}\n"
@@ -358,9 +344,7 @@ class ModCommands(commands.Cog):
             ),
         )
         view = views.Confirm(itx)
-        await itx.edit_original_response(
-            content="Delete this record?", embed=embed, view=view
-        )
+        await itx.edit_original_response(content="Delete this record?", embed=embed, view=view)
         await view.wait()
 
         if not view.value:
@@ -380,7 +364,7 @@ class ModCommands(commands.Cog):
     async def change_name(
         self,
         itx: discord.Interaction[core.Genji],
-        member: app_commands.Transform[int, utils.UserTransformer],
+        member: app_commands.Transform[int, records.UserTransformer],
         nickname: app_commands.Range[str, 1, 25],
     ):
         """
@@ -393,9 +377,7 @@ class ModCommands(commands.Cog):
         """
         old = self.bot.cache.users[member].nickname
         self.bot.cache.users[member].update_nickname(nickname)
-        await self.bot.database.set(
-            "UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member
-        )
+        await self.bot.database.set("UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member)
         await itx.response.send_message(
             f"Changing {old} ({member}) nickname to {nickname}",
             ephemeral=True,
@@ -426,8 +408,7 @@ class ModCommands(commands.Cog):
             return
         value = (
             await itx.client.database.get_row(
-                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users "
-                "WHERE user_id < 100000 LIMIT 1;"
+                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users " "WHERE user_id < 100000 LIMIT 1;"
             )
         ).user_id_
         await itx.client.database.set(
@@ -436,10 +417,10 @@ class ModCommands(commands.Cog):
             fake_user,
         )
         itx.client.cache.users.add_one(
-            utils.UserData(
+            cache.UserData(
                 user_id=value,
                 nickname=fake_user,
-                flags=utils.SettingFlags.NONE.value,
+                flags=cache.SettingFlags.NONE,
                 is_creator=True,
             )
         )
@@ -464,14 +445,12 @@ class ModCommands(commands.Cog):
         try:
             fake_user = int(fake_user)
         except ValueError:
-            raise utils.InvalidFakeUser
+            raise errors.InvalidFakeUser
         if fake_user >= 100000:
-            raise utils.InvalidFakeUser
-        fake_name = await itx.client.database.get_row(
-            "SELECT * FROM users WHERE user_id=$1", fake_user
-        )
+            raise errors.InvalidFakeUser
+        fake_name = await itx.client.database.get_row("SELECT * FROM users WHERE user_id=$1", fake_user)
         if not fake_name:
-            raise utils.InvalidFakeUser
+            raise errors.InvalidFakeUser
 
         view = views.Confirm(itx, ephemeral=True)
         await itx.edit_original_response(
@@ -484,15 +463,9 @@ class ModCommands(commands.Cog):
         await self.link_fake_to_member(itx, fake_user, member)
 
     @staticmethod
-    async def link_fake_to_member(
-        itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member
-    ):
-        await itx.client.database.set(
-            "UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id
-        )
-        await itx.client.database.set(
-            "UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id
-        )
+    async def link_fake_to_member(itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member):
+        await itx.client.database.set("UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
+        await itx.client.database.set("UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
         await itx.client.database.set(
             "DELETE FROM users WHERE user_id=$1",
             fake_id,
@@ -511,14 +484,11 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         action: app_commands.Choice[str],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         await itx.response.defer(ephemeral=True)
         row = None
-        if (
-            action.value == "archive"
-            and itx.client.cache.maps[map_code].archived is False
-        ):
+        if action.value == "archive" and itx.client.cache.maps[map_code].archived is False:
             value = True
             row = await itx.client.database.get_row(
                 """
@@ -574,15 +544,10 @@ class ModCommands(commands.Cog):
                 map_code,
             )
 
-        elif (
-            action.value == "unarchive"
-            and itx.client.cache.maps[map_code].archived is True
-        ):
+        elif action.value == "unarchive" and itx.client.cache.maps[map_code].archived is True:
             value = False
         else:
-            await itx.edit_original_response(
-                content=f"**{map_code}** has already been {action.value}d."
-            )
+            await itx.edit_original_response(content=f"**{map_code}** has already been {action.value}d.")
             return
         itx.client.cache.maps[map_code].update_archived(value)
         await itx.client.database.set(
@@ -590,13 +555,11 @@ class ModCommands(commands.Cog):
             value,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"**{map_code}** has been {action.value}d."
-        )
+        await itx.edit_original_response(content=f"**{map_code}** has been {action.value}d.")
         itx.client.dispatch("newsfeed_archive", itx, map_code, action.value, row)
 
     @map.command()
-    @app_commands.choices(value=utils.DIFFICULTIES_CHOICES)
+    @app_commands.choices(value=ranks.DIFFICULTIES_CHOICES)
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def difficulty(
         self,
@@ -614,7 +577,7 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        difficulty = utils.ALL_DIFFICULTY_RANGES_MIDPOINT[value.value]
+        difficulty = ranks.ALL_DIFFICULTY_RANGES_MIDPOINT[value.value]
         view = views.Confirm(
             itx,
             f"Updated {map_code} difficulty to {value.value}.",
@@ -646,11 +609,7 @@ class ModCommands(commands.Cog):
             view.change_difficulty(difficulty)
             new_required_votes = view.required_votes
             if cur_required_votes != new_required_votes:
-                msg = (
-                    await itx.guild.get_channel(utils.PLAYTEST)
-                    .get_partial_message(playtest.thread_id)
-                    .fetch()
-                )
+                msg = await itx.guild.get_channel(constants.PLAYTEST).get_partial_message(playtest.thread_id).fetch()
                 content, total_votes = await self._regex_replace_votes(msg, view)
                 await msg.edit(content=content)
                 await view.mod_check_status(int(total_votes), msg)
@@ -665,26 +624,22 @@ class ModCommands(commands.Cog):
             )
         else:
             await utils.update_affected_users(itx.client, map_code)
-            itx.client.dispatch(
-                "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
-            )
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Difficulty": value.value})
 
     async def _regex_replace_votes(self, msg, view):
         regex = r"Total Votes: (\d+) / \d+"
         search = re.search(regex, msg.content)
         total_votes = search.group(1)
-        content = re.sub(
-            regex, f"Total Votes: {total_votes} / {view.required_votes}", msg.content
-        )
+        content = re.sub(regex, f"Total Votes: {total_votes} / {view.required_votes}", msg.content)
         return content, total_votes
 
     @map.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
-    @app_commands.choices(value=utils.ALL_STARS_CHOICES)
+    @app_commands.choices(value=constants.ALL_STARS_CHOICES)
     async def rating(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
         value: app_commands.Choice[int],
     ):
         """Completely change the rating of a map.
@@ -715,9 +670,7 @@ class ModCommands(commands.Cog):
             value,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"Updated {map_code} rating to {value}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} rating to {value}.")
         itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Rating": value.name})
 
     @map.command(name="map-type")
@@ -725,7 +678,7 @@ class ModCommands(commands.Cog):
     async def map_type(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         """Change the type of map.
 
@@ -736,11 +689,7 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        select = {
-            "map_type": views.MapTypeSelect(
-                copy.deepcopy(itx.client.cache.map_types.options)
-            )
-        }
+        select = {"map_type": views.MapTypeSelect(copy.deepcopy(itx.client.cache.map_types.options))}
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
         await itx.edit_original_response(
             content=f"Select the new map type(s).",
@@ -755,9 +704,7 @@ class ModCommands(commands.Cog):
             map_types,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"Updated {map_code} types to {', '.join(map_types)}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} types to {', '.join(map_types)}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -783,7 +730,7 @@ class ModCommands(commands.Cog):
     async def mechanics(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         """Change the mechanics of a map.
 
@@ -806,9 +753,7 @@ class ModCommands(commands.Cog):
             option.default = option.value in preload_options
 
         select = {
-            "mechanics": views.MechanicsSelect(
-                options + [discord.SelectOption(label="Remove All", value="Remove All")]
-            )
+            "mechanics": views.MechanicsSelect(options + [discord.SelectOption(label="Remove All", value="Remove All")])
         }
         view = views.Confirm(itx, ephemeral=True, preceeding_items=select)
         await itx.edit_original_response(
@@ -819,9 +764,7 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
         mechanics = view.mechanics.values
-        await itx.client.database.set(
-            "DELETE FROM map_mechanics WHERE map_code=$1", map_code
-        )
+        await itx.client.database.set("DELETE FROM map_mechanics WHERE map_code=$1", map_code)
         if "Remove All" not in mechanics:
             mechanics_args = [(map_code, x) for x in mechanics]
             await itx.client.database.set_many(
@@ -832,9 +775,7 @@ class ModCommands(commands.Cog):
         else:
             mechanics = "Removed all mechanics"
 
-        await itx.edit_original_response(
-            content=f"Updated {map_code} mechanics: {mechanics}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} mechanics: {mechanics}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -860,7 +801,7 @@ class ModCommands(commands.Cog):
     async def restrictions(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         """Change the restrictions of a map.
 
@@ -897,9 +838,7 @@ class ModCommands(commands.Cog):
 
         restrictions = view.restrictions.values
 
-        await itx.client.database.set(
-            "DELETE FROM map_restrictions WHERE map_code=$1", map_code
-        )
+        await itx.client.database.set("DELETE FROM map_restrictions WHERE map_code=$1", map_code)
         if "Remove All" not in restrictions:
             restrictions_args = [(map_code, x) for x in restrictions]
             await itx.client.database.set_many(
@@ -910,9 +849,7 @@ class ModCommands(commands.Cog):
         else:
             restrictions = "Removed all restrictions"
 
-        await itx.edit_original_response(
-            content=f"Updated {map_code} restrictions: {restrictions}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} restrictions: {restrictions}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -938,7 +875,7 @@ class ModCommands(commands.Cog):
     async def checkpoints(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
     ):
         """Change the checkpoint count of a map
@@ -968,9 +905,7 @@ class ModCommands(commands.Cog):
             checkpoint_count,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"Updated {map_code} checkpoint count to {checkpoint_count}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} checkpoint count to {checkpoint_count}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -984,17 +919,15 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            itx.client.dispatch(
-                "newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count}
-            )
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count})
 
     @map.command(name="map-code")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
     async def map_code(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        new_map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        new_map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         """Change the map code of a map
 
@@ -1006,7 +939,7 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
         if new_map_code in itx.client.cache.maps.keys:
-            raise utils.MapExistsError
+            raise errors.MapExistsError
 
         view = views.Confirm(
             itx,
@@ -1025,9 +958,7 @@ class ModCommands(commands.Cog):
             new_map_code,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"Updated {map_code} map code to {new_map_code}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} map code to {new_map_code}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg, message_id FROM playtest WHERE map_code=$1",
@@ -1050,9 +981,7 @@ class ModCommands(commands.Cog):
 
             self.bot.playtest_views[playtest.message_id].data.map_code = new_map_code
         else:
-            itx.client.dispatch(
-                "newsfeed_map_edit", itx, map_code, {"Code": new_map_code}
-            )
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Code": new_map_code})
         itx.client.cache.maps[map_code].update_map_code(new_map_code)
 
     @map.command()
@@ -1060,7 +989,7 @@ class ModCommands(commands.Cog):
     async def description(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
         description: str,
     ):
         """Change the description of a map
@@ -1090,9 +1019,7 @@ class ModCommands(commands.Cog):
             description,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"Updated {map_code} description to {description}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} description to {description}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -1106,9 +1033,7 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            itx.client.dispatch(
-                "newsfeed_map_edit", itx, map_code, {"Description": description}
-            )
+            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Description": description})
 
     @map.command(name="map-name")
     @app_commands.autocomplete(
@@ -1118,8 +1043,8 @@ class ModCommands(commands.Cog):
     async def map_name(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
-        map_name: app_commands.Transform[str, utils.MapNameTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        map_name: app_commands.Transform[str, maps.MapNameTransformer],
     ):
         """Change the description of a map
 
@@ -1148,9 +1073,7 @@ class ModCommands(commands.Cog):
             map_name,
             map_code,
         )
-        await itx.edit_original_response(
-            content=f"Updated {map_code} map name to {map_name}."
-        )
+        await itx.edit_original_response(content=f"Updated {map_code} map name to {map_name}.")
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -1173,7 +1096,7 @@ class ModCommands(commands.Cog):
     async def convert_legacy(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, utils.MapCodeTransformer],
+        map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
         await itx.response.defer(ephemeral=True)
 
@@ -1197,13 +1120,13 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
 
-        records = await self._get_legacy_medal_records(itx, map_code)
-        record_tuples = self._format_legacy_records_for_insertion(records)
+        _records = await self._get_legacy_medal_records(itx, map_code)
+        record_tuples = self._format_legacy_records_for_insertion(_records)
         await self._insert_legacy_records(record_tuples)
         await self._update_records_to_completions(map_code)
         await self._remove_medal_entries(map_code)
 
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title=f"{map_code} has been changed:",
             description=(
                 "# Records have been converted to completions due to breaking changes.\n"
@@ -1211,7 +1134,7 @@ class ModCommands(commands.Cog):
             ),
             color=discord.Color.red(),
         )
-        await itx.guild.get_channel(NEWSFEED).send(embed=embed)
+        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
 
     async def _check_if_queued(self, map_code: str):
         query = """SELECT EXISTS (SELECT * FROM records_queue WHERE map_code = $1)"""
@@ -1232,17 +1155,17 @@ class ModCommands(commands.Cog):
         """
         await self.bot.database.set(query, map_code)
 
-    async def _insert_legacy_records(self, records: list[tuple]):
+    async def _insert_legacy_records(self, _records: list[tuple]):
         query = """
             INSERT INTO legacy_records (map_code, user_id, record, screenshot, video, message_id, channel_id, medal) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
         """
-        await self.bot.database.set_many(query, records)
+        await self.bot.database.set_many(query, _records)
 
     @staticmethod
-    def _format_legacy_records_for_insertion(records: list[DotRecord]):
+    def _format_legacy_records_for_insertion(_records: list[DotRecord]):
         res = []
-        for record in records:
+        for record in _records:
             if record.gold:
                 medal = "Gold"
             elif record.silver:

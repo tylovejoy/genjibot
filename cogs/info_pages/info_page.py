@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import asyncio
-import io
 import typing
 
-import discord
-from discord import app_commands
 from discord.ext import commands
 
-import cogs
-import utils
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
+from utils import embeds
 
 if typing.TYPE_CHECKING:
     import core
@@ -29,7 +24,7 @@ class InfoPage(commands.Cog):
         ctx: commands.Context[core.Genji],
     ) -> None:
         await ctx.message.delete(delay=1)
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title="Completions Information!",
             description="Click the buttons below to learn more!",
         )
@@ -42,7 +37,7 @@ class InfoPage(commands.Cog):
         ctx: commands.Context[core.Genji],
     ) -> None:
         await ctx.message.delete(delay=1)
-        embed = utils.GenjiEmbed(
+        embed = embeds.GenjiEmbed(
             title="Map Submission / Playtest Information!",
             description="Click the buttons below to learn more!",
         )

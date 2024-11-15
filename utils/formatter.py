@@ -17,11 +17,7 @@ class Formatter:
 
     def format_map(self) -> str:
         res = ""
-        filtered_values = {
-            k: v
-            for k, v in self.values.items()
-            if v is not False and v is not None and v != ""
-        }.items()
+        filtered_values = {k: v for k, v in self.values.items() if v is not False and v is not None and v != ""}.items()
         length = len(filtered_values)
         for i, (name, value) in enumerate(filtered_values):
             char = self.formatting_character(i + 1 < length)

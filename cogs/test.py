@@ -50,8 +50,7 @@ class Test(commands.Cog):
                 synced = await ctx.bot.tree.sync()
 
             await ctx.send(
-                f"Synced {len(synced)} commands "
-                f"{'globally' if spec is None else 'to the current guild.'}"
+                f"Synced {len(synced)} commands " f"{'globally' if spec is None else 'to the current guild.'}"
             )
             return
 
@@ -134,9 +133,7 @@ class Test(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def enlarge(
-        self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji | str
-    ):
+    async def enlarge(self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji | str):
         if isinstance(emoji, discord.PartialEmoji):
             await ctx.send(emoji.url)
         else:

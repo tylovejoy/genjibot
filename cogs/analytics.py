@@ -35,9 +35,7 @@ class AnalyticsTasks(commands.Cog):
     @commands.Cog.listener()
     async def on_interaction(self, itx: discord.Interaction[Genji]):
         if itx.command and itx.type == InteractionType.application_command:
-            self.bot.log_analytics(
-                itx.command.name, itx.user.id, itx.created_at, itx.namespace.__dict__
-            )
+            self.bot.log_analytics(itx.command.name, itx.user.id, itx.created_at, itx.namespace.__dict__)
 
     @tasks.loop(seconds=60)
     async def send_info_to_db(self):

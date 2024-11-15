@@ -70,10 +70,7 @@ def _generate_all_stars() -> list[str]:
 
 
 ALL_STARS = _generate_all_stars()
-ALL_STARS_CHOICES = [
-    discord.app_commands.Choice(name=x, value=i)
-    for i, x in enumerate(ALL_STARS, start=1)
-]
+ALL_STARS_CHOICES = [discord.app_commands.Choice(name=x, value=i) for i, x in enumerate(ALL_STARS, start=1)]
 
 # NEW_MAPS = 1060045563883700255  # Test
 # PLAYTEST = 988812516551438426  # Test
