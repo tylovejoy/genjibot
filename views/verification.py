@@ -174,8 +174,10 @@ class VerificationView(discord.ui.View):
         flags = cache.SettingFlags(flags)
         with contextlib.suppress(discord.NotFound, discord.Forbidden):
             if cache.SettingFlags.VERIFICATION in flags:
-                await record_submitter.send(f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`")
-            await itx.message.delete()
+                await record_submitter.send(
+                    f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`"
+                )
+        await itx.message.delete()
 
     @staticmethod
     async def find_original_message(
