@@ -39,9 +39,7 @@ class VerificationView(discord.ui.View):
         style=discord.ButtonStyle.green,
         custom_id="persistent_view:accept",
     )
-    async def green(
-        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
-    ) -> None:
+    async def green(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
         """Accept button."""
         await itx.response.defer(ephemeral=True)
         await self.verification(itx, True)
@@ -51,9 +49,7 @@ class VerificationView(discord.ui.View):
         style=discord.ButtonStyle.red,
         custom_id="persistent_view:reject",
     )
-    async def red(
-        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
-    ) -> None:
+    async def red(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
         """Reject button."""
         modal = RejectReasonModal()
         await itx.response.send_modal(modal)
@@ -61,9 +57,7 @@ class VerificationView(discord.ui.View):
         await self.verification(itx, False, modal.reason.value)
 
     @staticmethod
-    async def _fetch_record_by_hidden_id(
-        db: database.Database, hidden_id: int
-    ) -> models.Record:
+    async def _fetch_record_by_hidden_id(db: database.Database, hidden_id: int) -> models.Record:
         query = """
             SELECT
                 rq.*, m.official
@@ -81,25 +75,19 @@ class VerificationView(discord.ui.View):
         return await db.fetchrow(query, map_code)
 
     @staticmethod
-    async def _verify_record(
-        db: database.Database, hidden_id: int, verifier_id: int
-    ) -> None:
+    async def _verify_record(db: database.Database, hidden_id: int, verifier_id: int) -> None:
         query = """
             UPDATE records SET verified=True, verified_by=$2 WHERE hidden_id=$1
         """
         await db.execute(query, hidden_id, verifier_id)
 
     @staticmethod
-    async def _verify_quality_rating(
-        db: database.Database, map_code: str, user_id: int
-    ) -> None:
+    async def _verify_quality_rating(db: database.Database, map_code: str, user_id: int) -> None:
         query = "UPDATE map_ratings SET verified=True WHERE map_code=$1 AND user_id=$2"
         await db.execute(query, map_code, user_id)
 
     @staticmethod
-    async def _get_record_for_newsfeed(
-        db: database.Database, user_id: int, map_code: str
-    ) -> asyncpg.Record:
+    async def _get_record_for_newsfeed(db: database.Database, user_id: int, map_code: str) -> asyncpg.Record:
         query = """
             WITH map AS (
                 SELECT
@@ -154,16 +142,12 @@ class VerificationView(discord.ui.View):
         rejection: str | None = None,
     ) -> None:
         """Verify a record."""
-        search = await self._fetch_record_by_hidden_id(
-            itx.client.database, itx.message.id
-        )
+        search = await self._fetch_record_by_hidden_id(itx.client.database, itx.message.id)
         if search.user_id == itx.user.id:
             await itx.followup.send(content="You cannot verify your own submissions.")
             return
         self.stop()
-        original_message = await self.find_original_message(
-            itx, search.channel_id, search.message_id
-        )
+        original_message = await self.find_original_message(itx, search.channel_id, search.message_id)
         if not original_message:
             return
         record_submitter = itx.guild.get_member(search.user_id)
@@ -179,9 +163,7 @@ class VerificationView(discord.ui.View):
 
             data = self.accepted(itx.user.mention, search, medals)
             await self._verify_record(itx.client.database, itx.message.id, itx.user.id)
-            await self._verify_quality_rating(
-                itx.client.database, search.map_code, record_submitter.id
-            )
+            await self._verify_quality_rating(itx.client.database, search.map_code, record_submitter.id)
             if search.official:
                 await utils.auto_skill_role(itx.client, itx.guild, record_submitter)
 
@@ -199,9 +181,7 @@ class VerificationView(discord.ui.View):
         flags = cache.SettingFlags(flags)
         with contextlib.suppress(discord.NotFound, discord.Forbidden):
             if cache.SettingFlags.VERIFICATION in flags:
-                await record_submitter.send(
-                    f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`"
-                )
+                await record_submitter.send(f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`")
         await itx.message.delete()
 
     @staticmethod
@@ -230,17 +210,11 @@ class VerificationView(discord.ui.View):
         if search.video:
             edit = f"{icon} Complete verification by {verifier_mention}!"
         else:
-            edit = (
-                f"{icon} Partial verification by {verifier_mention}! "
-                f"No video proof supplied."
-            )
+            edit = f"{icon} Partial verification by {verifier_mention}! " f"No video proof supplied."
         return {
             "edit": edit,
             "direct_message": (
-                f"**Map Code:** {search.map_code}\n"
-                + record
-                + f"verified by {verifier_mention}!\n\n"
-                + ALERT
+                f"**Map Code:** {search.map_code}\n" + record + f"verified by {verifier_mention}!\n\n" + ALERT
             ),
         }
 
@@ -259,9 +233,7 @@ class VerificationView(discord.ui.View):
         return {
             "edit": f"{constants.UNVERIFIED} " f"Rejected by {verifier_mention}!",
             "direct_message": (
-                f"**Map Code:** {search.map_code}\n"
-                + record
-                + f"Your record got {constants.UNVERIFIED} "
+                f"**Map Code:** {search.map_code}\n" + record + f"Your record got {constants.UNVERIFIED} "
                 f"rejected by {verifier_mention}!\n\n"
                 f"**Reason:** {rejection}\n\n" + ALERT
             ),
@@ -271,6 +243,5 @@ class VerificationView(discord.ui.View):
 ALERT = (
     # "Don't like these alerts? "
     # "Turn it off by using the command `/alerts false`.\n"
-    "You can change your display name "
-    "for records in the bot with the command `/name`!"
+    "You can change your display name " "for records in the bot with the command `/name`!"
 )

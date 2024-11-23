@@ -65,9 +65,7 @@ class ErrorEmbed(GenjiEmbed):
             self.set_footer(text="If you have any questions, message nebula#6662")
 
 
-def set_embed_thumbnail_maps(
-    map_name: str, embed: discord.Embed
-) -> discord.Embed | GenjiEmbed:
+def set_embed_thumbnail_maps(map_name: str, embed: discord.Embed) -> discord.Embed | GenjiEmbed:
     """Set embed thumbnail.
 
     The embed_thumbnail_setter function takes a map name

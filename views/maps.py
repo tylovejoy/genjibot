@@ -212,9 +212,7 @@ class PlaytestVoting(discord.ui.View):
         custom_id="diff_voting",
         row=0,
     )
-    async def difficulties(
-        self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
-    ) -> None:
+    async def difficulties(self, itx: discord.Interaction[core.Genji], select: discord.ui.Select) -> None:
         await itx.response.defer(ephemeral=True)
         if not await self._interaction_check(itx):
             await itx.message.edit(view=self)
@@ -256,9 +254,7 @@ class PlaytestVoting(discord.ui.View):
             )
         await self.check_status(itx, count)
 
-    async def get_plot_data(
-        self, itx: discord.Interaction[core.Genji]
-    ) -> tuple[int, discord.File]:
+    async def get_plot_data(self, itx: discord.Interaction[core.Genji]) -> tuple[int, discord.File]:
         row = await itx.client.database.get_row(
             """
                 SELECT AVG(value) as value, SUM(CASE WHEN user_id != $2 THEN 1 ELSE 0 END) as count
@@ -276,9 +272,7 @@ class PlaytestVoting(discord.ui.View):
         image = await itx.client.loop.run_in_executor(None, func)
         return count, image
 
-    async def set_select_vote_value(
-        self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
-    ) -> None:
+    async def set_select_vote_value(self, itx: discord.Interaction[core.Genji], select: discord.ui.Select) -> None:
         vote_value = ranks.ALL_DIFFICULTY_RANGES_MIDPOINT[select.values[0]]
         await self.update_playtest_vote(itx, vote_value)
 
@@ -288,14 +282,10 @@ class PlaytestVoting(discord.ui.View):
         vote_value = ranks.ALL_DIFFICULTY_RANGES_MIDPOINT[select.values[0]]
         await self._update_user_vote(itx, vote_value, self.data.creator.id)
 
-    async def update_playtest_vote(
-        self, itx: discord.Interaction[core.Genji], vote_value: float
-    ) -> None:
+    async def update_playtest_vote(self, itx: discord.Interaction[core.Genji], vote_value: float) -> None:
         await self._update_user_vote(itx, vote_value, itx.user.id)
 
-    async def _update_user_vote(
-        self, itx: discord.Interaction[core.Genji], vote_value: float, user_id: int
-    ) -> None:
+    async def _update_user_vote(self, itx: discord.Interaction[core.Genji], vote_value: float, user_id: int) -> None:
         await itx.client.database.set(
             """
             INSERT INTO playtest (thread_id, message_id, map_code, user_id, value)
@@ -312,9 +302,7 @@ class PlaytestVoting(discord.ui.View):
             vote_value,
         )
 
-    async def delete_user_vote(
-        self, itx: discord.Interaction[core.Genji], user_id: int
-    ) -> None:
+    async def delete_user_vote(self, itx: discord.Interaction[core.Genji], user_id: int) -> None:
         await itx.client.database.set(
             "DELETE FROM playtest WHERE user_id = $1 AND map_code = $2",
             user_id,
@@ -391,10 +379,7 @@ class PlaytestVoting(discord.ui.View):
         return discord.File(b, filename="vote_chart.png")
 
     async def mod_check_status(self, count: int, message: discord.Message) -> None:
-        if (
-            count >= self.required_votes
-            and self.ready_up_button.style == ButtonStyle.red
-        ):
+        if count >= self.required_votes and self.ready_up_button.style == ButtonStyle.red:
             self.ready_up_button.disabled = False
             await message.edit(view=self)
             await self.data.creator.send(
@@ -402,13 +387,8 @@ class PlaytestVoting(discord.ui.View):
                 f"Go to the thread and *Finalize* the submission!"
             )
 
-    async def check_status(
-        self, itx: discord.Interaction[core.Genji], count: int
-    ) -> None:
-        if (
-            count >= self.required_votes
-            and self.ready_up_button.style == ButtonStyle.red
-        ):
+    async def check_status(self, itx: discord.Interaction[core.Genji], count: int) -> None:
+        if count >= self.required_votes and self.ready_up_button.style == ButtonStyle.red:
             self.ready_up_button.disabled = False
             await itx.message.edit(view=self)
             if hasattr(self.data.creator, "send"):
@@ -444,9 +424,7 @@ class PlaytestVoting(discord.ui.View):
 
         await self.delete_playtest_db_entry()
 
-    async def increment_playtest_count(
-        self, votes_db_rows: list[database.DotRecord]
-    ) -> None:
+    async def increment_playtest_count(self, votes_db_rows: list[database.DotRecord]) -> None:
         query = """
             INSERT INTO playtest_count (user_id, amount)
             VALUES ($1, 1)
@@ -466,9 +444,7 @@ class PlaytestVoting(discord.ui.View):
         )
 
     async def lock_and_archive_thread(self, thread_id: int) -> None:
-        await self.client.get_channel(constants.PLAYTEST).get_thread(thread_id).edit(
-            archived=True, locked=True
-        )
+        await self.client.get_channel(constants.PLAYTEST).get_thread(thread_id).edit(archived=True, locked=True)
 
     async def delete_playtest_thread(self, thread_id: int) -> None:
         await self.client.get_channel(constants.PLAYTEST).get_thread(thread_id).delete()
@@ -504,15 +480,11 @@ class PlaytestVoting(discord.ui.View):
         await maps.new_map_newsfeed(self.client, author.id, self.data)
 
         try:
-            await utils.update_affected_users(
-                self.client, author.guild, self.data.map_code
-            )
+            await utils.update_affected_users(self.client, author.guild, self.data.map_code)
         except Exception as e:
             print("This needs to be excepted:  1----->", e)
         try:
-            await self.client.get_channel(constants.PLAYTEST).get_partial_message(
-                original_msg
-            ).delete()
+            await self.client.get_channel(constants.PLAYTEST).get_partial_message(original_msg).delete()
         except Exception as e:
             print("This needs to be excepted:  2----->", e)
 
@@ -523,11 +495,7 @@ class PlaytestVoting(discord.ui.View):
         )
 
     async def set_map_ratings(self, votes: list[database.DotRecord]) -> None:
-        votes_args = [
-            (self.data.map_code, x.user_id, x.value)
-            for x in votes
-            if x.user_id != self.data.creator.id
-        ]
+        votes_args = [(self.data.map_code, x.user_id, x.value) for x in votes if x.user_id != self.data.creator.id]
         await self.client.database.set_many(
             """
             INSERT INTO map_ratings (map_code, user_id, difficulty)
@@ -540,9 +508,7 @@ class PlaytestVoting(discord.ui.View):
             votes_args,
         )
 
-    async def edit_embed(
-        self, embed: discord.Embed, itx: discord.Interaction[core.Genji]
-    ) -> discord.Embed:
+    async def edit_embed(self, embed: discord.Embed, itx: discord.Interaction[core.Genji]) -> discord.Embed:
         embed.title = "New Map!"
         embed.set_footer(
             text="For notification of newly added maps only. "
@@ -552,9 +518,7 @@ class PlaytestVoting(discord.ui.View):
         embed.description = await self.generate_new_embed_text(itx)
         return embed
 
-    async def generate_new_embed_text(
-        self, itx: discord.Interaction[core.Genji]
-    ) -> str:
+    async def generate_new_embed_text(self, itx: discord.Interaction[core.Genji]) -> str:
         queue = await maps.get_map_info(self.client, itx.message.id)
         if not queue:
             return ""
@@ -581,9 +545,7 @@ class PlaytestVoting(discord.ui.View):
             self.data.map_code,
         )
 
-    async def send_denial_to_author(
-        self, author: discord.Member, reason: str | None = None
-    ) -> None:
+    async def send_denial_to_author(self, author: discord.Member, reason: str | None = None) -> None:
         await author.send(
             f"The **{self.data.map_code}** map submission has been denied by a Sensei and has been deleted."
             f"\n\n{reason if reason else ''}"
@@ -602,26 +564,18 @@ class PlaytestVoting(discord.ui.View):
         disabled=True,
         custom_id="ready_up",
     )
-    async def ready_up_button(
-        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
-    ) -> None:
+    async def ready_up_button(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
         if itx.user.id != self.data.creator.id:
-            await itx.response.send_message(
-                "You are not allowed to use this button.", ephemeral=True
-            )
+            await itx.response.send_message("You are not allowed to use this button.", ephemeral=True)
             return
         await itx.response.defer(ephemeral=True)
         await self._set_ready_button(itx, button)
         verification_msg = await self.send_verification_embed(itx)
 
         query = """UPDATE playtest SET verification_id = $1 WHERE user_id = $2 AND map_code = $3;"""
-        await itx.client.database.set(
-            query, verification_msg.id, self.data.creator.id, self.data.map_code
-        )
+        await itx.client.database.set(query, verification_msg.id, self.data.creator.id, self.data.map_code)
 
-    async def _set_ready_button(
-        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
-    ) -> None:
+    async def _set_ready_button(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
         button.style = discord.ButtonStyle.green
         button.disabled = True
         button.label = "Ready! Waiting on Sensei response..."
@@ -641,9 +595,7 @@ class PlaytestVoting(discord.ui.View):
         if edit_now:
             await itx.message.edit(view=self)
 
-    async def send_verification_embed(
-        self, itx: discord.Interaction[core.Genji]
-    ) -> discord.Message:
+    async def send_verification_embed(self, itx: discord.Interaction[core.Genji]) -> discord.Message:
         embed = embeds.GenjiEmbed(
             title=f"{itx.client.cache.users[self.data.creator.id].nickname} "
             f"has marked a map as ready ({self.data.map_code})!",
@@ -659,9 +611,7 @@ class PlaytestVoting(discord.ui.View):
                 "- `Start Process Over` Remove all prior completions and votes.\n"
             ),
         )
-        return await itx.client.get_channel(constants.VERIFICATION_QUEUE).send(
-            embed=embed
-        )
+        return await itx.client.get_channel(constants.VERIFICATION_QUEUE).send(embed=embed)
 
     @discord.ui.select(
         placeholder="Sensei Only Options",
@@ -672,9 +622,7 @@ class PlaytestVoting(discord.ui.View):
         row=1,
         custom_id="sensei_only_select",
     )
-    async def sensei_only_select(
-        self, itx: discord.Interaction[core.Genji], select: discord.ui.Select
-    ) -> None:
+    async def sensei_only_select(self, itx: discord.Interaction[core.Genji], select: discord.ui.Select) -> None:
         if not await self.check_sensei(itx):
             return
         await itx.message.edit(view=self)
@@ -682,14 +630,10 @@ class PlaytestVoting(discord.ui.View):
 
     async def force_accept(self, itx: discord.Interaction[core.Genji]) -> None:
         if await self.check_creator(itx):
-            await itx.response.send_message(
-                "You cannot use this if you are the creator.", ephemeral=True
-            )
+            await itx.response.send_message("You cannot use this if you are the creator.", ephemeral=True)
             return
 
-        view = views.Confirm(
-            itx, proceeding_items={"difficulty": DifficultySelect(self.options)}
-        )
+        view = views.Confirm(itx, proceeding_items={"difficulty": DifficultySelect(self.options)})
 
         await itx.response.send_message(
             content=f"{itx.user.mention}, choose a difficulty.",
@@ -743,9 +687,7 @@ class PlaytestVoting(discord.ui.View):
     async def delete_playtest_post(self, thread_id: int) -> None:
         try:
             thread = self.client.get_guild(constants.GUILD_ID).get_thread(thread_id)
-            message = await self.client.get_channel(constants.PLAYTEST).fetch_message(
-                thread_id
-            )
+            message = await self.client.get_channel(constants.PLAYTEST).fetch_message(thread_id)
             embed = message.embeds[0]
         except Exception as e:
             print(e, "Playtest deletion error")
@@ -760,9 +702,7 @@ class PlaytestVoting(discord.ui.View):
 
     async def approve_submission(self, itx: discord.Interaction[core.Genji]) -> None:
         if await self.check_creator(itx):
-            await itx.response.send_message(
-                "You cannot use this if you are the creator.", ephemeral=True
-            )
+            await itx.response.send_message("You cannot use this if you are the creator.", ephemeral=True)
             return
         view = views.Confirm(itx)
         await itx.response.send_message(
@@ -810,9 +750,7 @@ class PlaytestVoting(discord.ui.View):
                     content=f"Total Votes: 0 / {self.required_votes}",
                 )
             )
-        await itx.message.channel.send(
-            "@here, All records and votes have been removed by a Sensei."
-        )
+        await itx.message.channel.send("@here, All records and votes have been removed by a Sensei.")
         author = itx.guild.get_member(self.data.creator.id)
         await author.send(
             "Your map submission process has been reset by a Sensei.\n"
@@ -832,14 +770,10 @@ class PlaytestVoting(discord.ui.View):
         if not view.value:
             return
         await self._unset_ready_button(itx, self.ready_up_button)
-        await itx.message.channel.send(
-            "@here, All votes have been removed by a Sensei."
-        )
+        await itx.message.channel.send("@here, All votes have been removed by a Sensei.")
         await self.remove_votes()
 
-    async def remove_completions_option(
-        self, itx: discord.Interaction[core.Genji]
-    ) -> None:
+    async def remove_completions_option(self, itx: discord.Interaction[core.Genji]) -> None:
         view = views.Confirm(itx)
         await itx.response.send_message(
             content="Are you sure you want to remove all the completions for this submission?",
@@ -850,18 +784,12 @@ class PlaytestVoting(discord.ui.View):
         if not view.value:
             return
         await self._unset_ready_button(itx, self.ready_up_button)
-        await itx.message.channel.send(
-            "@here, All records have been removed by a Sensei."
-        )
+        await itx.message.channel.send("@here, All records have been removed by a Sensei.")
         await self.remove_records()
 
-    async def _pre_toggle_finalize_button(
-        self, itx: discord.Interaction[core.Genji]
-    ) -> None:
+    async def _pre_toggle_finalize_button(self, itx: discord.Interaction[core.Genji]) -> None:
         if await self.check_creator(itx):
-            await itx.response.send_message(
-                "You cannot use this if you are the creator.", ephemeral=True
-            )
+            await itx.response.send_message("You cannot use this if you are the creator.", ephemeral=True)
             return
         view = views.Confirm(itx)
         await itx.response.send_message(
@@ -884,16 +812,14 @@ class PlaytestVoting(discord.ui.View):
         await message.edit(view=self)
         if not self.ready_up_button.disabled:
             await channel.send(
-                f"{self.data.creator.mention}, "
-                + "the Finalize Submission button has been enabled by a Sensei."
+                f"{self.data.creator.mention}, " + "the Finalize Submission button has been enabled by a Sensei."
                 if not bot
                 else "the Finalize Submission button has been enabled by the auto approval time limit.\n"
                 "Please, make sure your map is in order before you Finalize."
             )
         else:
             await channel.send(
-                f"{self.data.creator.mention}, "
-                + "the Finalize Submission button has been disabled by a Sensei."
+                f"{self.data.creator.mention}, " + "the Finalize Submission button has been disabled by a Sensei."
             )
 
     async def remove_votes(self) -> None:

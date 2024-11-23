@@ -53,9 +53,7 @@ class PollView(discord.ui.View):
         if isinstance(error, ButtonOnCooldown):
             seconds = int(error.retry_after)
             unit = "second" if seconds == 1 else "seconds"
-            await itx.response.send_message(
-                f"You're on cooldown for {seconds} {unit}!", ephemeral=True
-            )
+            await itx.response.send_message(f"You're on cooldown for {seconds} {unit}!", ephemeral=True)
         else:
             await super().on_error(itx, error, item)
 
@@ -65,14 +63,10 @@ class PollView(discord.ui.View):
         custom_id="end_poll",
         row=4,
     )
-    async def end(
-        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
-    ) -> None:
+    async def end(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
         """End poll button callback."""
         if itx.guild.get_role(constants.STAFF) not in itx.user.roles:
-            await itx.response.send_message(
-                "You are not allowed to pres this button", ephemeral=True
-            )
+            await itx.response.send_message("You are not allowed to pres this button", ephemeral=True)
             return
         await itx.response.send_message("Ending poll.", ephemeral=True)
         self.clear_items()
@@ -101,9 +95,7 @@ class PollOptionButton(discord.ui.Button):
 
     async def callback(self, itx: discord.Interaction[core.Genji]) -> None:
         """Poll option voting callback."""
-        await itx.response.send_message(
-            content=f"You voted for {self.label}!", ephemeral=True
-        )
+        await itx.response.send_message(content=f"You voted for {self.label}!", ephemeral=True)
         await self.insert_poll_vote(itx)
         counts = await self.get_all_counts(itx)
 

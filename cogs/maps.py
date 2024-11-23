@@ -87,9 +87,7 @@ class Maps(commands.Cog):
         minimum_rating=constants.ALL_STARS_CHOICES,
         difficulty=[app_commands.Choice(name=x, value=x) for x in ranks.DIFFICULTIES],
     )
-    @app_commands.guilds(
-        discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554)
-    )
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
     async def random_map(
         self,
         itx: discord.Interaction[core.Genji],
@@ -101,9 +99,7 @@ class Maps(commands.Cog):
         embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
 
-        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(
-            getattr(difficulty, "value", None), None
-        )
+        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
 
@@ -141,9 +137,7 @@ class Maps(commands.Cog):
         restrictions=cogs.map_restrictions_autocomplete,
         map_code=cogs.map_codes_autocomplete,
     )
-    @app_commands.guilds(
-        discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554)
-    )
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
@@ -151,12 +145,8 @@ class Maps(commands.Cog):
         difficulty: app_commands.Choice[str] | None = None,
         map_code: app_commands.Transform[str, records.MapCodeTransformer] | None = None,
         creator: app_commands.Transform[int, records.CreatorTransformer] | None = None,
-        mechanics: (
-            app_commands.Transform[str, maps.MapMechanicsTransformer] | None
-        ) = None,
-        restrictions: (
-            app_commands.Transform[str, maps.MapRestrictionsTransformer] | None
-        ) = None,
+        mechanics: (app_commands.Transform[str, maps.MapMechanicsTransformer] | None) = None,
+        restrictions: (app_commands.Transform[str, maps.MapRestrictionsTransformer] | None) = None,
         map_type: app_commands.Transform[str, maps.MapTypeTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         only_playtest: bool = False,
@@ -184,9 +174,7 @@ class Maps(commands.Cog):
         embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
 
-        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(
-            getattr(difficulty, "value", None), None
-        )
+        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
 

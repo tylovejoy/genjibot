@@ -25,28 +25,19 @@ class RankCard(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="rank-card")
-    @app_commands.guilds(
-        discord.Object(id=constants.GUILD_ID), discord.Object(id=968951072599187476)
-    )
+    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=968951072599187476))
     @app_commands.autocomplete(user=cogs.users_autocomplete)
     async def rank_card(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (
-            app_commands.Transform[
-                discord.Member | utils.FakeUser, records.AllUserTransformer
-            ]
-            | None
-        ),
+        user: (app_commands.Transform[discord.Member | utils.FakeUser, records.AllUserTransformer] | None),
     ) -> None:
         await itx.response.defer(ephemeral=True)
         if not user or user.id == itx.user.id:
             user = itx.user
 
         totals = await self._get_map_totals()
-        rank_data = await utils.fetch_user_rank_data(
-            itx.client.database, user.id, True, True
-        )
+        rank_data = await utils.fetch_user_rank_data(itx.client.database, user.id, True, True)
 
         world_records = await self._get_world_record_count(user.id)
         maps = await self._get_maps_count(user.id)
