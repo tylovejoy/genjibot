@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import logging
-import random
 import typing
 
 import discord
 from discord.ext import commands
 
-from utils.utils import auto_skill_role
 
 if typing.TYPE_CHECKING:
     import core
@@ -25,7 +23,8 @@ class Test(commands.Cog):
         guilds: commands.Greedy[discord.Object],
         spec: typing.Literal["~", "*", "^"] | None = None,
     ) -> None:
-        """?sync -> global sync
+        """
+        ?sync -> global sync
         ?sync ~ -> sync current guild
         ?sync * -> copies all global app commands to current guild and syncs
         ?sync ^ -> clears all commands from the current
@@ -79,8 +78,11 @@ class Test(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def xxx(self, ctx: commands.Context[core.Genji]):
-        await auto_skill_role(ctx.bot, ctx.guild, ctx.author)
-
+        members = [(member.id, member.name[:25]) for member in ctx.guild.members]
+        await ctx.bot.database.set_many(
+            "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
+            [(_id, nick) for _id, nick in members],
+        )
         await ctx.send("done")
 
     @commands.command()

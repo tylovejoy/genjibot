@@ -23,7 +23,11 @@ class _EmbedFormatter:
     @classmethod
     def format(cls, values: dict[str, str]) -> str:
         res = ""
-        filtered_values = {k: v for k, v in values.items() if v is not False and v is not None and v != ""}.items()
+        filtered_values = {
+            k: v
+            for k, v in values.items()
+            if v is not False and v is not None and v != ""
+        }.items()
         length = len(filtered_values)
         for i, (name, value) in enumerate(filtered_values):
             if not name.startswith("_"):
@@ -186,14 +190,23 @@ class Record(msgspec.Struct, kw_only=True):
         return icon
 
     @classmethod
-    def build_embeds(cls, _records: list[Record], *, strategy: EmbedDataStrategy) -> list[discord.Embed]:
+    def build_embeds(
+        cls, _records: list[Record], *, strategy: EmbedDataStrategy
+    ) -> list[discord.Embed]:
         descriptions = [strategy.create_embed_data(record) for record in _records]
         formatted_descriptions = [_EmbedFormatter.format(data) for data in descriptions]
         chunks = discord.utils.as_chunks(formatted_descriptions, 10)
-        return [discord.Embed(title=strategy.create_embed_title(), description="\n".join(chunk)) for chunk in chunks]
+        return [
+            discord.Embed(
+                title=strategy.create_embed_title(), description="\n".join(chunk)
+            )
+            for chunk in chunks
+        ]
 
     @classmethod
-    def build_embed(cls, record: Record, *, strategy: EmbedDataStrategy) -> discord.Embed:
+    def build_embed(
+        cls, record: Record, *, strategy: EmbedDataStrategy
+    ) -> discord.Embed:
         return cls.build_embeds([record], strategy=strategy)[0]
 
 

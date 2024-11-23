@@ -9,15 +9,6 @@ import discord
 import core
 import database
 
-import sentry_sdk
-
-sentry_sdk.init(
-    dsn="https://2324f323c0618c17ef5aaae6ba250312@sentry.bkan0n.com/4",
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for tracing.
-    traces_sample_rate=1.0,
-)
-
 
 class RemoveNoise(logging.Filter):
     def __init__(self):
@@ -62,7 +53,8 @@ def setup_logging():
 
 
 async def main() -> None:
-    """The main function is the entry point of the program.
+    """
+    The main function is the entry point of the program.
     It creates a bot instance and runs it.
     """
     async with aiohttp.ClientSession() as session:

@@ -55,7 +55,12 @@ class Records(commands.Cog):
     async def summary(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[int | discord.Member | utils.FakeUser, records.AllUserTransformer] | None) = None,
+        user: (
+            app_commands.Transform[
+                int | discord.Member | utils.FakeUser, records.AllUserTransformer
+            ]
+            | None
+        ) = None,
     ):
         """Display a summary of your records and associated difficulties/medals
 
@@ -76,6 +81,7 @@ class Records(commands.Cog):
         rows = await utils.fetch_user_rank_data(itx.client.database, user, True, False)
         description = ""
         for row in rows:
+
             description += (
                 f"```{row.difficulty}```"
                 f"` Total` {row.completions}\n"
@@ -258,7 +264,9 @@ class Records(commands.Cog):
             video = None
 
         if old_record:
-            _continue = await self._compare_submission_to_last_record(itx, old_record, submission)
+            _continue = await self._compare_submission_to_last_record(
+                itx, old_record, submission
+            )
             if not _continue:
                 return
 
@@ -267,7 +275,9 @@ class Records(commands.Cog):
             f"{constants.TIME}\n",
         )
 
-        embed = models.Record.build_embed(submission, strategy=models.RecordSubmissionStrategy())
+        embed = models.Record.build_embed(
+            submission, strategy=models.RecordSubmissionStrategy()
+        )
         embed.set_author(name=nickname, icon_url=itx.user.display_avatar.url)
         embed.set_image(url=cdn_screenshot)
 
@@ -286,7 +296,9 @@ class Records(commands.Cog):
         )
 
         v_view = views.VerificationView()
-        verification_msg = await itx.client.get_channel(constants.VERIFICATION_QUEUE).send(
+        verification_msg = await itx.client.get_channel(
+            constants.VERIFICATION_QUEUE
+        ).send(
             content="**ALERT:** VIDEO SUBMISSION" if video else None,
             embed=embed,
         )
@@ -313,7 +325,9 @@ class Records(commands.Cog):
                     connection=conn,
                 )
             except Exception as e:
-                await itx.followup.send("There was an error while submitting your time. Please try again later.")
+                await itx.followup.send(
+                    "There was an error while submitting your time. Please try again later."
+                )
                 await channel_msg.delete()
                 await verification_msg.delete()
                 raise e
@@ -498,7 +512,9 @@ class Records(commands.Cog):
                     AND ($4::text != 'Completions' OR completion)
             )
         """
-        _records = await self.bot.database.fetch(query, map_code, lb_filters, user_id, pr_filters)
+        _records = await self.bot.database.fetch(
+            query, map_code, lb_filters, user_id, pr_filters
+        )
         recs = [models.Record(**r) for r in _records]
         if not recs:
             raise errors.NoRecordsFoundError
@@ -528,7 +544,9 @@ class Records(commands.Cog):
         if not await self._check_map_exists(map_code):
             raise errors.InvalidMapCodeError
 
-        _records = await self._fetch_leaderboard_records(map_code=map_code, lb_filters=filters)
+        _records = await self._fetch_leaderboard_records(
+            map_code=map_code, lb_filters=filters
+        )
 
         _embeds = models.Record.build_embeds(
             _records,
@@ -547,7 +565,12 @@ class Records(commands.Cog):
     async def personal_records_slash(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[int | discord.Member | utils.FakeUser, records.AllUserTransformer] | None) = None,
+        user: (
+            app_commands.Transform[
+                int | discord.Member | utils.FakeUser, records.AllUserTransformer
+            ]
+            | None
+        ) = None,
         filters: PR_FILTERS = "All",
     ):
         """Show all records a specific user has (fully AND partially verified)
@@ -560,13 +583,19 @@ class Records(commands.Cog):
         """
         await self._personal_records(itx, user, filters)
 
-    async def pr_context_callback(self, itx: discord.Interaction[core.Genji], user: discord.Member):
+    async def pr_context_callback(
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
+    ):
         await self._personal_records(itx, user, "Records")
 
-    async def wr_context_callback(self, itx: discord.Interaction[core.Genji], user: discord.Member):
+    async def wr_context_callback(
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
+    ):
         await self._personal_records(itx, user, "World Records")
 
-    async def completion_context_callback(self, itx: discord.Interaction[core.Genji], user: discord.Member):
+    async def completion_context_callback(
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
+    ):
         await self._personal_records(itx, user, "Completions")
 
     async def _personal_records(
@@ -585,7 +614,9 @@ class Records(commands.Cog):
             user_id = int(user)
 
         nickname = await self.bot.database.fetch_nickname(user_id)
-        _records = await self._fetch_leaderboard_records(user_id=user_id, pr_filters=filters)
+        _records = await self._fetch_leaderboard_records(
+            user_id=user_id, pr_filters=filters
+        )
         _embeds = models.Record.build_embeds(
             _records,
             strategy=models.PersonalRecordStrategy(

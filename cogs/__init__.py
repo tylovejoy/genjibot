@@ -14,7 +14,9 @@ from utils import cache, constants, embeds, errors, maps
 if typing.TYPE_CHECKING:
     import core
 
-EXTENSIONS = [module.name for module in pkgutil.iter_modules(__path__, f"{__package__}.")]
+EXTENSIONS = [
+    module.name for module in pkgutil.iter_modules(__path__, f"{__package__}.")
+]
 
 
 def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
@@ -44,20 +46,28 @@ async def _autocomplete(
     return response
 
 
-async def creator_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+async def creator_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.users.creator_choices)
 
 
-async def map_codes_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+async def map_codes_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
     current = current.replace("O", "0").replace("o", "0")
     return await _autocomplete(current, itx.client.cache.maps.choices)
 
 
-async def map_name_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+async def map_name_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.map_names.choices)
 
 
-async def map_type_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+async def map_type_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.map_types.choices)
 
 
@@ -73,11 +83,15 @@ async def map_restrictions_autocomplete(
     return await _autocomplete(current, itx.client.cache.map_restrictions.choices)
 
 
-async def tags_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+async def tags_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.tags.choices)
 
 
-async def users_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+async def users_autocomplete(
+    itx: discord.Interaction[core.Genji], current: str
+) -> list[app_commands.Choice[str]]:
     return await _autocomplete(current, itx.client.cache.users.choices)
 
 
@@ -110,7 +124,10 @@ async def submit_map_(
             f"| {discord.utils.format_dt(date, 'F')}"
         )
 
-    initial_message = f"{data.creator.mention}, " f"fill in additional details to complete map submission!"
+    initial_message = (
+        f"{data.creator.mention}, "
+        f"fill in additional details to complete map submission!"
+    )
     view = views.ConfirmMapSubmission(
         itx,
         partial_callback=None,
@@ -191,7 +208,10 @@ async def map_submission_second_step(
             description="You can change your vote, but you cannot cast multiple!\n\n",
         )
         thread = await playtest_message.create_thread(
-            name=(f"{data.map_code} | {data.difficulty} | {data.map_name} " f"{data.checkpoint_count} CPs")
+            name=(
+                f"{data.map_code} | {data.difficulty} | {data.map_name} "
+                f"{data.checkpoint_count} CPs"
+            )
         )
 
         thread_msg = await thread.send(

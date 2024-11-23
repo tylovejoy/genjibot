@@ -61,7 +61,10 @@ class ModCommands(commands.Cog):
         if not guides:
             raise errors.NoGuidesExistError
 
-        guides_formatted = [f"{utils.convert_to_emoji_number(i)}. <{g[:100]}>\n" for i, g in enumerate(guides, start=1)]
+        guides_formatted = [
+            f"{utils.convert_to_emoji_number(i)}. <{g[:100]}>\n"
+            for i, g in enumerate(guides, start=1)
+        ]
 
         content = (
             f"# Guides for {map_code}\n"
@@ -70,7 +73,10 @@ class ModCommands(commands.Cog):
         )
 
         options = [
-            discord.SelectOption(label=utils.convert_to_emoji_number(x + 1), value=str(x)) for x in range(len(guides))
+            discord.SelectOption(
+                label=utils.convert_to_emoji_number(x + 1), value=str(x)
+            )
+            for x in range(len(guides))
         ]
         select = GuidesSelect(options)
         view = views.Confirm(itx, proceeding_items={"guides": select}, ephemeral=True)
@@ -85,7 +91,9 @@ class ModCommands(commands.Cog):
         url = guides[int(view.guides.values[0])]
         query = "DELETE FROM guides WHERE map_code = $1 AND url = $2;"
         await itx.client.database.set(query, map_code, url)
-        await itx.edit_original_response(content=f"# Deleted guide\n## Map code: {map_code}\n## URL: {url}")
+        await itx.edit_original_response(
+            content=f"# Deleted guide\n## Map code: {map_code}\n## URL: {url}"
+        )
 
     @map.command(name="add-creator")
     @app_commands.autocomplete(
@@ -231,7 +239,9 @@ class ModCommands(commands.Cog):
     ):
         description = "All medals removed."
         if not delete:
-            description = f"`Gold` {gold}\n" f"`Silver` {silver}\n" f"`Bronze` {bronze}\n"
+            description = (
+                f"`Gold` {gold}\n" f"`Silver` {silver}\n" f"`Bronze` {bronze}\n"
+            )
         embed = embeds.GenjiEmbed(
             title=f"Medals have been added/changed for code {map_code}",
             description=description,
@@ -240,7 +250,9 @@ class ModCommands(commands.Cog):
 
         if thread_id:
             await itx.guild.get_thread(thread_id).send(embed=embed)
-            original = await itx.guild.get_channel(constants.PLAYTEST).fetch_message(message_id)
+            original = await itx.guild.get_channel(constants.PLAYTEST).fetch_message(
+                message_id
+            )
             embed = self._edit_medals(original.embeds[0], gold, silver, bronze)
             await original.edit(embed=embed)
         else:
@@ -254,7 +266,9 @@ class ModCommands(commands.Cog):
     async def submit_fake_map(
         self,
         itx: discord.Interaction[core.Genji],
-        user: app_commands.Transform[utils.FakeUser | discord.Member, records.AllUserTransformer],
+        user: app_commands.Transform[
+            utils.FakeUser | discord.Member, records.AllUserTransformer
+        ],
         map_code: app_commands.Transform[str, records.MapCodeSubmitTransformer],
         map_name: app_commands.Transform[str, maps.MapNameTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
@@ -341,7 +355,9 @@ class ModCommands(commands.Cog):
             ),
         )
         view = views.Confirm(itx)
-        await itx.edit_original_response(content="Delete this record?", embed=embed, view=view)
+        await itx.edit_original_response(
+            content="Delete this record?", embed=embed, view=view
+        )
         await view.wait()
 
         if not view.value:
@@ -374,7 +390,9 @@ class ModCommands(commands.Cog):
         """
         old = self.bot.cache.users[member].nickname
         self.bot.cache.users[member].update_nickname(nickname)
-        await self.bot.database.set("UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member)
+        await self.bot.database.set(
+            "UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member
+        )
         await itx.response.send_message(
             f"Changing {old} ({member}) nickname to {nickname}",
             ephemeral=True,
@@ -405,7 +423,8 @@ class ModCommands(commands.Cog):
             return
         value = (
             await itx.client.database.get_row(
-                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users " "WHERE user_id < 100000 LIMIT 1;"
+                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users "
+                "WHERE user_id < 100000 LIMIT 1;"
             )
         ).user_id_
         await itx.client.database.set(
@@ -445,7 +464,9 @@ class ModCommands(commands.Cog):
             raise errors.InvalidFakeUser
         if fake_user >= 100000:
             raise errors.InvalidFakeUser
-        fake_name = await itx.client.database.get_row("SELECT * FROM users WHERE user_id=$1", fake_user)
+        fake_name = await itx.client.database.get_row(
+            "SELECT * FROM users WHERE user_id=$1", fake_user
+        )
         if not fake_name:
             raise errors.InvalidFakeUser
 
@@ -460,9 +481,15 @@ class ModCommands(commands.Cog):
         await self.link_fake_to_member(itx, fake_user, member)
 
     @staticmethod
-    async def link_fake_to_member(itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member):
-        await itx.client.database.set("UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
-        await itx.client.database.set("UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
+    async def link_fake_to_member(
+        itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member
+    ):
+        await itx.client.database.set(
+            "UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id
+        )
+        await itx.client.database.set(
+            "UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id
+        )
         await itx.client.database.set(
             "DELETE FROM users WHERE user_id=$1",
             fake_id,
@@ -485,7 +512,10 @@ class ModCommands(commands.Cog):
     ):
         await itx.response.defer(ephemeral=True)
         row = None
-        if action.value == "archive" and itx.client.cache.maps[map_code].archived is False:
+        if (
+            action.value == "archive"
+            and itx.client.cache.maps[map_code].archived is False
+        ):
             value = True
             row = await itx.client.database.get_row(
                 """
@@ -541,10 +571,15 @@ class ModCommands(commands.Cog):
                 map_code,
             )
 
-        elif action.value == "unarchive" and itx.client.cache.maps[map_code].archived is True:
+        elif (
+            action.value == "unarchive"
+            and itx.client.cache.maps[map_code].archived is True
+        ):
             value = False
         else:
-            await itx.edit_original_response(content=f"**{map_code}** has already been {action.value}d.")
+            await itx.edit_original_response(
+                content=f"**{map_code}** has already been {action.value}d."
+            )
             return
         itx.client.cache.maps[map_code].update_archived(value)
         await itx.client.database.set(
@@ -552,7 +587,9 @@ class ModCommands(commands.Cog):
             value,
             map_code,
         )
-        await itx.edit_original_response(content=f"**{map_code}** has been {action.value}d.")
+        await itx.edit_original_response(
+            content=f"**{map_code}** has been {action.value}d."
+        )
         itx.client.dispatch("newsfeed_archive", itx, map_code, action.value, row)
 
     @map.command()
@@ -575,7 +612,9 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
         difficulty = ranks.ALL_DIFFICULTY_RANGES_MIDPOINT[value.value]
-        view = views.Confirm(itx, f"Updated {map_code} difficulty to {value.value}.", ephemeral=True)
+        view = views.Confirm(
+            itx, f"Updated {map_code} difficulty to {value.value}.", ephemeral=True
+        )
         await itx.edit_original_response(
             content=f"{map_code} difficulty to {value.value}. Is this correct?",
             view=view,
@@ -602,7 +641,11 @@ class ModCommands(commands.Cog):
             view.change_difficulty(difficulty)
             new_required_votes = view.required_votes
             if cur_required_votes != new_required_votes:
-                msg = await itx.guild.get_channel(constants.PLAYTEST).get_partial_message(playtest.thread_id).fetch()
+                msg = (
+                    await itx.guild.get_channel(constants.PLAYTEST)
+                    .get_partial_message(playtest.thread_id)
+                    .fetch()
+                )
                 content, total_votes = await self._regex_replace_votes(msg, view)
                 await msg.edit(content=content)
                 await view.mod_check_status(int(total_votes), msg)
@@ -617,13 +660,17 @@ class ModCommands(commands.Cog):
             )
         else:
             await utils.update_affected_users(itx.client, itx.guild, map_code)
-            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Difficulty": value.value})
+            itx.client.dispatch(
+                "newsfeed_map_edit", itx, map_code, {"Difficulty": value.value}
+            )
 
     async def _regex_replace_votes(self, msg, view):
         regex = r"Total Votes: (\d+) / \d+"
         search = re.search(regex, msg.content)
         total_votes = search.group(1)
-        content = re.sub(regex, f"Total Votes: {total_votes} / {view.required_votes}", msg.content)
+        content = re.sub(
+            regex, f"Total Votes: {total_votes} / {view.required_votes}", msg.content
+        )
         return content, total_votes
 
     @map.command()
@@ -646,7 +693,9 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        view = views.Confirm(itx, f"Updated {map_code} rating to {value}.", ephemeral=True)
+        view = views.Confirm(
+            itx, f"Updated {map_code} rating to {value}.", ephemeral=True
+        )
         await itx.edit_original_response(
             content=f"{map_code} rating to {value}. Is this correct?",
             view=view,
@@ -659,7 +708,9 @@ class ModCommands(commands.Cog):
             value,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} rating to {value}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} rating to {value}."
+        )
         itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Rating": value.name})
 
     @map.command(name="map-type")
@@ -678,7 +729,11 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        select = {"map_type": views.MapTypeSelect(copy.deepcopy(itx.client.cache.map_types.options))}
+        select = {
+            "map_type": views.MapTypeSelect(
+                copy.deepcopy(itx.client.cache.map_types.options)
+            )
+        }
         view = views.Confirm(itx, proceeding_items=select, ephemeral=True)
         await itx.edit_original_response(
             content="Select the new map type(s).",
@@ -693,7 +748,9 @@ class ModCommands(commands.Cog):
             map_types,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} types to {', '.join(map_types)}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} types to {', '.join(map_types)}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -742,7 +799,9 @@ class ModCommands(commands.Cog):
             option.default = option.value in preload_options
 
         select = {
-            "mechanics": views.MechanicsSelect(options + [discord.SelectOption(label="Remove All", value="Remove All")])
+            "mechanics": views.MechanicsSelect(
+                options + [discord.SelectOption(label="Remove All", value="Remove All")]
+            )
         }
         view = views.Confirm(itx, proceeding_items=select, ephemeral=True)
         await itx.edit_original_response(
@@ -753,7 +812,9 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
         mechanics = view.mechanics.values
-        await itx.client.database.set("DELETE FROM map_mechanics WHERE map_code=$1", map_code)
+        await itx.client.database.set(
+            "DELETE FROM map_mechanics WHERE map_code=$1", map_code
+        )
         if "Remove All" not in mechanics:
             mechanics_args = [(map_code, x) for x in mechanics]
             await itx.client.database.set_many(
@@ -764,7 +825,9 @@ class ModCommands(commands.Cog):
         else:
             mechanics = "Removed all mechanics"
 
-        await itx.edit_original_response(content=f"Updated {map_code} mechanics: {mechanics}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} mechanics: {mechanics}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -827,7 +890,9 @@ class ModCommands(commands.Cog):
 
         restrictions = view.restrictions.values
 
-        await itx.client.database.set("DELETE FROM map_restrictions WHERE map_code=$1", map_code)
+        await itx.client.database.set(
+            "DELETE FROM map_restrictions WHERE map_code=$1", map_code
+        )
         if "Remove All" not in restrictions:
             restrictions_args = [(map_code, x) for x in restrictions]
             await itx.client.database.set_many(
@@ -838,7 +903,9 @@ class ModCommands(commands.Cog):
         else:
             restrictions = "Removed all restrictions"
 
-        await itx.edit_original_response(content=f"Updated {map_code} restrictions: {restrictions}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} restrictions: {restrictions}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -894,7 +961,9 @@ class ModCommands(commands.Cog):
             checkpoint_count,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} checkpoint count to {checkpoint_count}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} checkpoint count to {checkpoint_count}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -908,7 +977,9 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count})
+            itx.client.dispatch(
+                "newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count}
+            )
 
     @map.command(name="map-code")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
@@ -930,7 +1001,9 @@ class ModCommands(commands.Cog):
         if new_map_code in itx.client.cache.maps.keys:
             raise errors.MapExistsError
 
-        view = views.Confirm(itx, f"Updated {map_code} map code to {new_map_code}.", ephemeral=True)
+        view = views.Confirm(
+            itx, f"Updated {map_code} map code to {new_map_code}.", ephemeral=True
+        )
         await itx.edit_original_response(
             content=f"{map_code} map code to {new_map_code}. Is this correct?",
             view=view,
@@ -943,7 +1016,9 @@ class ModCommands(commands.Cog):
             new_map_code,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} map code to {new_map_code}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} map code to {new_map_code}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg, message_id FROM playtest WHERE map_code=$1",
@@ -966,7 +1041,9 @@ class ModCommands(commands.Cog):
 
             self.bot.playtest_views[playtest.message_id].data.map_code = new_map_code
         else:
-            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Code": new_map_code})
+            itx.client.dispatch(
+                "newsfeed_map_edit", itx, map_code, {"Code": new_map_code}
+            )
         itx.client.cache.maps[map_code].update_map_code(new_map_code)
 
     @map.command()
@@ -987,7 +1064,9 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        view = views.Confirm(itx, f"Updated {map_code} description to {description}.", ephemeral=True)
+        view = views.Confirm(
+            itx, f"Updated {map_code} description to {description}.", ephemeral=True
+        )
         await itx.edit_original_response(
             content=f"{map_code} description to \n\n{description}\n\n Is this correct?",
             view=view,
@@ -1000,7 +1079,9 @@ class ModCommands(commands.Cog):
             description,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} description to {description}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} description to {description}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
@@ -1014,7 +1095,9 @@ class ModCommands(commands.Cog):
                 playtest.original_msg,
             )
         else:
-            itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Description": description})
+            itx.client.dispatch(
+                "newsfeed_map_edit", itx, map_code, {"Description": description}
+            )
 
     @map.command(name="map-name")
     @app_commands.autocomplete(
@@ -1037,7 +1120,9 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        view = views.Confirm(itx, f"Updated {map_code} map name to {map_name}.", ephemeral=True)
+        view = views.Confirm(
+            itx, f"Updated {map_code} map name to {map_name}.", ephemeral=True
+        )
         await itx.edit_original_response(
             content=f"{map_code} map name to {map_name}. Is this correct?",
             view=view,
@@ -1050,7 +1135,9 @@ class ModCommands(commands.Cog):
             map_name,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} map name to {map_name}.")
+        await itx.edit_original_response(
+            content=f"Updated {map_code} map name to {map_name}."
+        )
         # If playtesting
         if playtest := await itx.client.database.get_row(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code

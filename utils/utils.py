@@ -31,7 +31,9 @@ _emoji_numbers = {
 }
 
 
-async def delete_interaction(itx: discord.Interaction[core.Genji], *, minutes: float) -> None:
+async def delete_interaction(
+    itx: discord.Interaction[core.Genji], *, minutes: float
+) -> None:
     """Delete an itx message after x minutes. Fails silently.
 
     Args:
@@ -42,7 +44,9 @@ async def delete_interaction(itx: discord.Interaction[core.Genji], *, minutes: f
     if minutes < 0:
         raise ValueError("Time cannot be negative.")
     await asyncio.sleep(60 * minutes)
-    with contextlib.suppress(discord.HTTPException, discord.NotFound, discord.Forbidden):
+    with contextlib.suppress(
+        discord.HTTPException, discord.NotFound, discord.Forbidden
+    ):
         await itx.delete_original_response()
 
 
@@ -262,11 +266,16 @@ async def grant_skill_rank_roles(
         "Complete more maps to get your roles back!\n"
     )
     if roles_to_grant:
-        response += ", ".join([f"**{x.name}**" for x in roles_to_grant]) + " has been added.\n"
+        response += (
+            ", ".join([f"**{x.name}**" for x in roles_to_grant]) + " has been added.\n"
+        )
         bot.dispatch("newsfeed_role", bot, user, roles_to_grant)
 
     if roles_to_remove:
-        response += ", ".join([f"**{x.name}**" for x in roles_to_remove]) + " has been removed.\n"
+        response += (
+            ", ".join([f"**{x.name}**" for x in roles_to_remove])
+            + " has been removed.\n"
+        )
 
     if roles_to_grant or roles_to_remove:
         with contextlib.suppress(discord.errors.HTTPException):
@@ -275,14 +284,18 @@ async def grant_skill_rank_roles(
                 await user.send(response)
 
 
-async def auto_skill_role(bot: core.Genji, guild: discord.Guild, user: discord.Member) -> None:
+async def auto_skill_role(
+    bot: core.Genji, guild: discord.Guild, user: discord.Member
+) -> None:
     """Perform automatic skill roles process."""
     data = await fetch_user_rank_data(bot.database, user.id, True, False)
     add, remove = determine_skill_rank_roles_to_give(data, guild)
     await grant_skill_rank_roles(user, add, remove, bot)
 
 
-async def update_affected_users(client: core.Genji, guild: discord.Guild, map_code: str) -> None:
+async def update_affected_users(
+    client: core.Genji, guild: discord.Guild, map_code: str
+) -> None:
     """Update roles for users affected by map edits or changes."""
     query = "SELECT DISTINCT user_id FROM records WHERE map_code=$1;"
     rows = await client.database.fetch(query, map_code)
@@ -325,7 +338,9 @@ def wrap_string_with_percent(string: str) -> str | None:
 def split_nth_iterable(*, current: int, iterable: list[typing.Any], split: int) -> bool:
     """Determine if the current iteration should be split at the nth (split) position."""
     return (
-        (current != 0 and current % split == 0) or (current == 0 and len(iterable) == 1) or current == len(iterable) - 1
+        (current != 0 and current % split == 0)
+        or (current == 0 and len(iterable) == 1)
+        or current == len(iterable) - 1
     )
 
 
