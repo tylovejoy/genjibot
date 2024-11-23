@@ -370,7 +370,7 @@ class ModCommands(commands.Cog):
         )
 
         await member.send(f"Your record for {map_code} has been deleted by staff.")
-        await utils.auto_role(itx.client, member)
+        await utils.auto_skill_role(itx.client, itx.guild, member)
 
     @mod.command(name="change-name")
     @app_commands.autocomplete(member=cogs.users_autocomplete)

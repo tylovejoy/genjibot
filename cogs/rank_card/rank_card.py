@@ -44,15 +44,16 @@ class RankCard(commands.Cog):
             user = itx.user
 
         totals = await self._get_map_totals()
-        completions = await utils.get_completions_data(
-            itx.client, user.id, include_beginner=True, include_archived=False
+        rank_data = await utils.fetch_user_rank_data(
+            itx.client.database, user.id, True, True
         )
 
         world_records = await self._get_world_record_count(user.id)
         maps = await self._get_maps_count(user.id)
         playtests = await self._get_playtests_count(user.id)
-        rank_num, _, _, _ = await utils.rank_finder(itx.client, user)
-        rank = RANKS[rank_num]
+
+        rank = utils.find_highest_rank(rank_data)
+
         background = await self._get_background_choice(user.id)
         data = {
             "rank": rank,
@@ -62,22 +63,24 @@ class RankCard(commands.Cog):
             "playtests": playtests,
             "world_records": world_records,
         }
-        for category, values in completions.items():
-            data[category] = {
-                "completed": values[0],
-                "gold": values[1],
-                "silver": values[2],
-                "bronze": values[3],
+
+        for row in rank_data:
+            data[row.difficulty] = {
+                "completed": row.completions,
+                "gold": row.gold,
+                "silver": row.silver,
+                "bronze": row.bronze,
             }
+
+        data["Beginner"] = {
+            "completed": 0,
+            "gold": 0,
+            "silver": 0,
+            "bronze": 0,
+        }
+
         for total in totals:
-            if total.name not in data:
-                data[total.name] = {
-                    "completed": 0,
-                    "gold": 0,
-                    "silver": 0,
-                    "bronze": 0,
-                }
-            data[total.name]["total"] = total.total
+            data[total["name"]]["total"] = total["total"]
 
         image = await asyncio.to_thread(RankCardBuilder(data).create_card)
         with io.BytesIO() as image_binary:
@@ -107,8 +110,7 @@ class RankCard(commands.Cog):
             INNER JOIN ranges r ON r.range @> md.difficulty
             GROUP BY name
         """
-
-        return [x async for x in self.bot.database.get(query)]
+        return await self.bot.database.fetch(query)
 
     async def _get_world_record_count(self, user_id: int):
         query = """

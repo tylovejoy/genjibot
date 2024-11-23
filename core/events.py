@@ -169,7 +169,7 @@ class BotEvents(commands.Cog):
             x
             async for x in self.bot.database.get(
                 """
-            SELECT * FROM maps 
+            SELECT * FROM maps
             LEFT JOIN map_creators mc on maps.map_code = mc.map_code
             WHERE user_id = $1;
             """,
@@ -188,7 +188,7 @@ class BotEvents(commands.Cog):
         ) is not None and ninja not in member.roles:
             await member.add_roles(ninja, reason="User joined. Granting Ninja.")
 
-        await utils.auto_role(self.bot, member)
+        await utils.auto_skill_role(self.bot, member.guild, member)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):

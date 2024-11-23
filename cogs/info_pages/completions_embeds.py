@@ -25,9 +25,8 @@ COMPLETION_SUBMISSIONS_INFO = discord.Embed(
 RANKS_INFO = discord.Embed(
     title="Ranks Info",
     description=(
-        "- Ranks ***must*** be acquired in order.\n"
-        "- To receive a rank you must be ranked in each preceding difficulty.\n"
-        "- Submissions are allowed for higher ranks but you will not get the rank until you pass each ranks promotion threshold.\n\n"
+        "- Ranks do not need to be acquired in order.\n"
+        "- To receive a rank you must complete the required amount of maps for that difficulty/rank.\n"
         "- See image below for rank thresholds."
     ),
     color=discord.Color.red(),

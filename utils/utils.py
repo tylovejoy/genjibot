@@ -78,136 +78,15 @@ class UserCacheData(typing.TypedDict):
 _RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
 
 
-async def update_affected_users(
-    client: core.Genji,
-    map_code: str,
-):
-    users = [
-        x.user_id
-        async for x in client.database.get(
-            """
-            SELECT DISTINCT user_id FROM records WHERE map_code=$1;
-            """,
-            map_code,
-        )
-    ]
-    if users:
-        for x in users:
-            if user := client.get_guild(constants.GUILD_ID).get_member(x):
-                await auto_role(client, user)
-
-
-async def auto_role(client: core.Genji, user: discord.Member):
-    rank, rank_plus, silver, bronze = await rank_finder(client, user)
-    rank_roles = list(
-        map(
-            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
-            constants.Roles.ranks()[1:],
-        )
-    )
-    rank_plus_roles = list(
-        map(
-            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
-            constants.Roles.gold_plus()[1:],
-        )
-    )
-
-    rank_silver_roles = list(
-        map(
-            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
-            constants.Roles.silver_plus()[1:],
-        )
-    )
-    rank_bronze_roles = list(
-        map(
-            lambda x: client.get_guild(constants.GUILD_ID).get_role(x),
-            constants.Roles.bronze_plus()[1:],
-        )
-    )
-
-    added = (
-        list(filter(lambda x: x not in user.roles, rank_roles[:rank]))
-        + list(filter(lambda x: x not in user.roles, rank_plus_roles[:rank_plus]))
-        + list(filter(lambda x: x not in user.roles, rank_silver_roles[:silver]))
-        + list(filter(lambda x: x not in user.roles, rank_bronze_roles[:bronze]))
-    )
-    removed = (
-        list(filter(lambda x: x in user.roles, rank_roles[rank:]))
-        + list(filter(lambda x: x in user.roles, rank_plus_roles[rank_plus:]))
-        + list(filter(lambda x: x in user.roles, rank_silver_roles[silver:]))
-        + list(filter(lambda x: x in user.roles, rank_bronze_roles[bronze:]))
-    )
-    new_roles = user.roles
-    for a in added:
-        if a not in new_roles:
-            new_roles.append(a)
-    for r in removed:
-        if r in new_roles:
-            new_roles.remove(r)
-
-    if set(new_roles) != set(user.roles):
-        await user.edit(roles=new_roles)
-
-        await client.database.set(
-            """UPDATE users SET rank=$2 WHERE user_id=$1;""",
-            user.id,
-            rank,
-        )
-
-    response = (
-        "🚨***ALERT!***🚨\nYour roles have been updated! If roles have been removed, "
-        "it's because a map that you have completed has changed difficulty.\n"
-        "Complete more maps to get your roles back!\n"
-    )
-    if added:
-        response += ", ".join([f"**{x.name}**" for x in added]) + " has been added.\n"
-        client.dispatch("newsfeed_role", client, user, added)
-
-    if removed:
-        response += ", ".join([f"**{x.name}**" for x in removed]) + " has been removed.\n"
-
-    if added or removed:
-        with contextlib.suppress(discord.errors.HTTPException):
-            flags = client.cache.users[user.id].flags
-            if cache.SettingFlags.PROMOTION in flags:
-                await user.send(response)
-
-
-async def rank_finder(client: core.Genji, user: discord.Member) -> tuple[int, int, int, int]:
-    amounts = await get_completions_data(client, user.id)
-    rank = 0
-    gold_rank = 0
-    silver_rank = 0
-    bronze_rank = 0
-    for i, diff in enumerate(ranks.DIFFICULTIES[1:]):  # Ignore Beginner
-        if diff not in amounts or amounts[diff][0] < _RANK_THRESHOLD[i]:
-            break
-        if amounts[diff][0] >= _RANK_THRESHOLD[i]:
-            rank += 1
-            all_ranks = sum((gold_rank, silver_rank, bronze_rank))
-            if amounts[diff][1] >= _RANK_THRESHOLD[i] and all_ranks + 1 == rank:
-                gold_rank += 1
-            elif amounts[diff][2] >= _RANK_THRESHOLD[i] and all_ranks + 1 == rank:
-                silver_rank += 1
-            elif amounts[diff][3] >= _RANK_THRESHOLD[i] and all_ranks + 1 == rank:
-                bronze_rank += 1
-    return rank, gold_rank, silver_rank, bronze_rank
-
-
-async def get_completions_data(
-    client: core.Genji,
-    user: int,
-    include_beginner: bool = False,
-    include_archived: bool = True,
-) -> dict[str, tuple[int, int, int, int]]:
-    if include_beginner:
-        clause = "('[0.0,0.59)'::numrange, 'Beginner'), ('[0.59,2.35)'::numrange, 'Easy'),"
-    else:
-        clause = "('[0.0,2.35)'::numrange, 'Easy'),"
-
-    query = f"""
+async def fetch_user_rank_data(
+    db: database.Database, user_id: int, include_archived: bool, include_beginner: bool
+) -> list[RankDetail]:
+    """Fetch user rank data."""
+    query = """
         WITH unioned_records AS (
-            SELECT  map_code,
+            (
+                SELECT DISTINCT ON (map_code, user_id)
+                    map_code,
                     user_id,
                     record,
                     screenshot,
@@ -215,10 +94,15 @@ async def get_completions_data(
                     verified,
                     message_id,
                     channel_id,
+                    completion,
                     NULL AS medal
-            FROM records
-            UNION
-            SELECT  map_code,
+                FROM records
+                ORDER BY map_code, user_id, inserted_at DESC
+            )
+            UNION ALL
+            (
+                SELECT DISTINCT ON (map_code, user_id)
+                    map_code,
                     user_id,
                     record,
                     screenshot,
@@ -226,48 +110,210 @@ async def get_completions_data(
                     TRUE AS verified,
                     message_id,
                     channel_id,
+                    FALSE AS completion,
                     medal
-                    FROM legacy_records
+                FROM legacy_records
+                ORDER BY map_code, user_id, inserted_at DESC
+            )
         ),
-        ranges ("range", "name") AS (
-             VALUES  {clause}
-                     ('[2.35,4.12)'::numrange, 'Medium'),
-                     ('[4.12,5.88)'::numrange, 'Hard'),
-                     ('[5.88,7.65)'::numrange, 'Very Hard'),
-                     ('[7.65,9.41)'::numrange, 'Extreme'),
-                     ('[9.41,10.0]'::numrange, 'Hell')
+        ranges AS (
+            SELECT range, name FROM
+            (
+                VALUES
+                    ('[0.0,0.59)'::numrange, 'Beginner', TRUE),
+                    ('[0.59,2.35)'::numrange, 'Easy', TRUE),
+                    ('[0.0,2.35)'::numrange, 'Easy', FALSE),
+                    ('[2.35,4.12)'::numrange, 'Medium', NULL),
+                    ('[4.12,5.88)'::numrange, 'Hard', NULL),
+                    ('[5.88,7.65)'::numrange, 'Very Hard', NULL),
+                    ('[7.65,9.41)'::numrange, 'Extreme', NULL),
+                    ('[9.41,10.0]'::numrange, 'Hell', NULL)
+            ) AS ranges("range", "name", "includes_beginner")
+            WHERE includes_beginner = $3 OR includes_beginner IS NULL
+            --($3 IS TRUE OR (includes_beginner = TRUE AND includes_beginner IS NULL))
+            -- includes_beginner = $3 OR includes_beginner IS NULL
+        ),
+        thresholds AS (
+            -- Mapping difficulty names to thresholds using VALUES
+            SELECT * FROM (
+                VALUES
+                    ('Easy', 10),
+                    ('Medium', 10),
+                    ('Hard', 10),
+                    ('Very Hard', 10),
+                    ('Extreme', 7),
+                    ('Hell', 3)
+            ) AS t(name, threshold)
         ),
         map_data AS (
-            SELECT DISTINCT ON (m.map_code, r.user_id) 
-                AVG(mr.difficulty)                                            AS difficulty,
-                r.verified = TRUE AND (record <= gold OR medal LIKE 'Gold')     AS gold,
-                r.verified = TRUE AND
-                (record <= silver AND record > gold OR medal LIKE 'silver')   AS silver,
-                r.verified = TRUE AND
-                (record <= bronze AND record > silver OR medal LIKE 'Bronze') AS bronze
+            SELECT DISTINCT ON (m.map_code, r.user_id)
+                AVG(mr.difficulty) AS difficulty,
+                r.verified = TRUE AND (record <= gold OR medal LIKE 'Gold') AS gold,
+                r.verified = TRUE AND (record <= silver AND record > gold OR medal LIKE 'Silver') AS silver,
+                r.verified = TRUE AND (record <= bronze AND record > silver OR medal LIKE 'Bronze') AS bronze
             FROM unioned_records r
-                LEFT JOIN maps m ON r.map_code = m.map_code
-                LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
-                LEFT JOIN map_medals mm ON r.map_code = mm.map_code
+            LEFT JOIN maps m ON r.map_code = m.map_code
+            LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+            LEFT JOIN map_medals mm ON r.map_code = mm.map_code
             WHERE r.user_id = $1
-                AND m.official = TRUE
-                AND ($2 IS TRUE OR m.archived = FALSE)
+              AND m.official = TRUE
+              AND ($2 IS TRUE OR m.archived = FALSE)
             GROUP BY m.map_code, record, gold, silver, bronze, r.verified, medal, r.user_id
-        )
-        SELECT COUNT(name)                        AS completions,
-               name                               AS difficulty,
-               COUNT(CASE WHEN gold THEN 1 END)   AS gold,
-               COUNT(CASE WHEN silver THEN 1 END) AS silver,
-               COUNT(CASE WHEN bronze THEN 1 END) AS bronze
+        ), counts_data AS (
+        SELECT
+            r.name AS difficulty,
+            count(r.name) AS completions,
+            count(CASE WHEN gold THEN 1 END) AS gold,
+            count(CASE WHEN silver THEN 1 END) AS silver,
+            count(CASE WHEN bronze THEN 1 END) AS bronze,
+            -- Use threshold for rank comparison
+            count(r.name) >= t.threshold AS rank_met,
+            count(CASE WHEN gold THEN 1 END) >= t.threshold AS gold_rank_met,
+            count(CASE WHEN silver THEN 1 END) >= t.threshold AS silver_rank_met,
+            count(CASE WHEN bronze THEN 1 END) >= t.threshold AS bronze_rank_met
         FROM ranges r
-             INNER JOIN map_data md ON r.range @> md.difficulty
-        GROUP BY name;
+        INNER JOIN map_data md ON r.range @> md.difficulty
+        INNER JOIN thresholds t ON r.name = t.name
+        GROUP BY r.name, t.threshold
+        )
+        SELECT
+            name AS difficulty,
+            coalesce(completions, 0) AS completions,
+            coalesce(gold, 0) AS gold,
+            coalesce(silver, 0) AS silver,
+            coalesce(bronze, 0) AS bronze,
+            coalesce(rank_met, FALSE) AS rank_met,
+            coalesce(gold_rank_met, FALSE) AS gold_rank_met,
+            coalesce(silver_rank_met, FALSE) AS silver_rank_met,
+            coalesce(bronze_rank_met, FALSE) AS bronze_rank_met
+        FROM thresholds t
+        LEFT JOIN counts_data cd ON t.name = cd.difficulty
+        ORDER BY
+        CASE name
+            WHEN 'Easy' THEN 1
+            WHEN 'Medium' THEN 2
+            WHEN 'Hard' THEN 3
+            WHEN 'Very Hard' THEN 4
+            WHEN 'Extreme' THEN 5
+            WHEN 'Hell' THEN 6
+        END;
     """
-    amounts = {
-        x.difficulty: tuple(map(int, (x.completions, x.gold, x.silver, x.bronze)))
-        async for x in client.database.get(query, user, include_archived)
-    }
-    return amounts
+    rows = await db.fetch(query, user_id, include_archived, include_beginner)
+    return [RankDetail(**row) for row in rows]
+
+
+def determine_skill_rank_roles_to_give(
+    data: list[RankDetail],
+    guild: discord.Guild,
+) -> tuple[list[discord.Role], list[discord.Role]]:
+    """Determine skill rank roles to give to a member."""
+    roles_to_grant = []
+    roles_to_remove = []
+
+    for row in data:
+        base_rank_name = DIFF_TO_RANK[row.difficulty]
+        base_rank = discord.utils.get(guild.roles, name=base_rank_name)
+
+        bronze = (discord.utils.get(guild.roles, name=f"{base_rank_name} +"),)
+        silver = (discord.utils.get(guild.roles, name=f"{base_rank_name} ++"),)
+        gold = (discord.utils.get(guild.roles, name=f"{base_rank_name} +++"),)
+
+        # Base rank
+        if row.rank_met:
+            roles_to_grant.append(base_rank)
+        else:
+            roles_to_remove.append(base_rank)
+
+        # Rank medals
+        if row.gold_rank_met:
+            roles_to_grant.append(gold)
+            roles_to_remove.extend([silver, bronze])
+        elif row.silver_rank_met:
+            roles_to_grant.append(silver)
+            roles_to_remove.extend([gold, bronze])
+        elif row.bronze_rank_met:
+            roles_to_grant.append(bronze)
+            roles_to_remove.extend([gold, silver])
+        else:
+            roles_to_remove.extend([gold, silver, bronze])
+
+    return roles_to_grant, roles_to_remove
+
+
+async def grant_skill_rank_roles(
+    user: discord.Member,
+    roles_to_grant: list[discord.Role],
+    roles_to_remove: list[discord.Role],
+    bot: core.Genji,
+) -> None:
+    """Grant skill rank roles to a Discord server Member."""
+    new_roles = user.roles[1:]
+    for a in roles_to_grant:
+        if a not in new_roles:
+            new_roles.append(a)
+    for r in roles_to_remove:
+        if r in new_roles:
+            new_roles.remove(r)
+
+    if set(new_roles) == set(user.roles):
+        return
+
+    await user.edit(roles=new_roles)
+
+    response = (
+        "🚨***ALERT!***🚨\nYour roles have been updated! If roles have been removed, "
+        "it's because a map that you have completed has changed difficulty.\n"
+        "Complete more maps to get your roles back!\n"
+    )
+    if roles_to_grant:
+        response += (
+            ", ".join([f"**{x.name}**" for x in roles_to_grant]) + " has been added.\n"
+        )
+        bot.dispatch("newsfeed_role", bot, user, roles_to_grant)
+
+    if roles_to_remove:
+        response += (
+            ", ".join([f"**{x.name}**" for x in roles_to_remove])
+            + " has been removed.\n"
+        )
+
+    if roles_to_grant or roles_to_remove:
+        with contextlib.suppress(discord.errors.HTTPException):
+            flags = cache.SettingFlags(await bot.database.fetch_user_flags(user.id))
+            if cache.SettingFlags.PROMOTION in flags:
+                await user.send(response)
+
+
+async def auto_skill_role(
+    bot: core.Genji, guild: discord.Guild, user: discord.Member
+) -> None:
+    """Perform automatic skill roles process."""
+    data = await fetch_user_rank_data(bot.database, user.id, True, False)
+    add, remove = determine_skill_rank_roles_to_give(data, guild)
+    await grant_skill_rank_roles(user, add, remove, bot)
+
+
+async def update_affected_users(
+    client: core.Genji, guild: discord.Guild, map_code: str
+) -> None:
+    """Update roles for users affected by map edits or changes."""
+    query = "SELECT DISTINCT user_id FROM records WHERE map_code=$1;"
+    rows = await client.database.fetch(query, map_code)
+    ids = [row["user_id"] for row in rows]
+
+    if ids:
+        for _id in ids:
+            if _user := client.get_guild(constants.GUILD_ID).get_member(_id):
+                await auto_skill_role(client, guild, _user)
+
+
+def find_highest_rank(data: list[RankDetail]) -> str:
+    """Find the highest rank a user has."""
+    highest = "Ninja"
+    for row in data:
+        if row.rank_met:
+            highest = DIFF_TO_RANK[row.difficulty]
+    return highest
 
 
 class FakeUser:

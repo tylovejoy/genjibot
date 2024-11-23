@@ -140,7 +140,9 @@ class Record(msgspec.Struct, kw_only=True):
 
     @property
     def difficulty_string(self) -> str:
-        return ranks.convert_num_to_difficulty(self.difficulty)
+        if self.difficulty:
+            return ranks.convert_num_to_difficulty(self.difficulty)
+        return "In Playtest"
 
     @property
     def record_screenshot_link(self) -> str:

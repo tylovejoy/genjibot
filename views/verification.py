@@ -4,29 +4,34 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING
 
-import asyncpg
 import discord
 
-from utils import models, utils, cache, records, constants
+from utils import cache, constants, models, utils
 
 if TYPE_CHECKING:
-    import core
+    import asyncpg
 
-import database
+    import core
+    import database
 
 
 log = logging.getLogger(__name__)
 
 
 class RejectReasonModal(discord.ui.Modal, title="Rejection Reason"):
+    """Reject modal for reasoning."""
+
     reason = discord.ui.TextInput(label="Reason", style=discord.TextStyle.long)
 
-    async def on_submit(self, itx: discord.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Reject modal submission callback."""
         await itx.response.send_message("Sending reason to user.", ephemeral=True)
 
 
 class VerificationView(discord.ui.View):
-    def __init__(self):
+    """Verification view for completions and records."""
+
+    def __init__(self) -> None:
         super().__init__(timeout=None)
 
     @discord.ui.button(
@@ -34,8 +39,11 @@ class VerificationView(discord.ui.View):
         style=discord.ButtonStyle.green,
         custom_id="persistent_view:accept",
     )
-    async def green(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button):
-        await itx.response.defer(ephemeral=True, thinking=True)
+    async def green(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ) -> None:
+        """Accept button."""
+        await itx.response.defer(ephemeral=True)
         await self.verification(itx, True)
 
     @discord.ui.button(
@@ -43,17 +51,22 @@ class VerificationView(discord.ui.View):
         style=discord.ButtonStyle.red,
         custom_id="persistent_view:reject",
     )
-    async def red(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button):
+    async def red(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ) -> None:
+        """Reject button."""
         modal = RejectReasonModal()
         await itx.response.send_modal(modal)
         await modal.wait()
         await self.verification(itx, False, modal.reason.value)
 
     @staticmethod
-    async def _fetch_record_by_hidden_id(db: database.Database, hidden_id: int) -> models.Record:
+    async def _fetch_record_by_hidden_id(
+        db: database.Database, hidden_id: int
+    ) -> models.Record:
         query = """
-            SELECT 
-                rq.*, m.official 
+            SELECT
+                rq.*, m.official
             FROM records rq
             LEFT JOIN maps m on rq.map_code = m.map_code
             WHERE hidden_id=$1
@@ -68,19 +81,25 @@ class VerificationView(discord.ui.View):
         return await db.fetchrow(query, map_code)
 
     @staticmethod
-    async def _verify_record(db: database.Database, hidden_id: int, verifier_id: int):
+    async def _verify_record(
+        db: database.Database, hidden_id: int, verifier_id: int
+    ) -> None:
         query = """
             UPDATE records SET verified=True, verified_by=$2 WHERE hidden_id=$1
         """
         await db.execute(query, hidden_id, verifier_id)
 
     @staticmethod
-    async def _verify_quality_rating(db: database.Database, map_code: str, user_id: int):
+    async def _verify_quality_rating(
+        db: database.Database, map_code: str, user_id: int
+    ) -> None:
         query = "UPDATE map_ratings SET verified=True WHERE map_code=$1 AND user_id=$2"
         await db.execute(query, map_code, user_id)
 
     @staticmethod
-    async def _get_record_for_newsfeed(db: database.Database, user_id: int, map_code: str):
+    async def _get_record_for_newsfeed(
+        db: database.Database, user_id: int, map_code: str
+    ) -> asyncpg.Record:
         query = """
             WITH map AS (
                 SELECT
@@ -133,14 +152,18 @@ class VerificationView(discord.ui.View):
         itx: discord.Interaction[core.Genji],
         verified: bool,
         rejection: str | None = None,
-    ):
+    ) -> None:
         """Verify a record."""
-
-        search = await self._fetch_record_by_hidden_id(itx.client.database, itx.message.id)
-        if search.user_id == itx.user.id and itx.user.id != 141372217677053952:
-            return await itx.edit_original_response(content="You cannot verify your own submissions.")
+        search = await self._fetch_record_by_hidden_id(
+            itx.client.database, itx.message.id
+        )
+        if search.user_id == itx.user.id:
+            await itx.followup.send(content="You cannot verify your own submissions.")
+            return
         self.stop()
-        original_message = await self.find_original_message(itx, search.channel_id, search.message_id)
+        original_message = await self.find_original_message(
+            itx, search.channel_id, search.message_id
+        )
         if not original_message:
             return
         record_submitter = itx.guild.get_member(search.user_id)
@@ -156,9 +179,11 @@ class VerificationView(discord.ui.View):
 
             data = self.accepted(itx.user.mention, search, medals)
             await self._verify_record(itx.client.database, itx.message.id, itx.user.id)
-            await self._verify_quality_rating(itx.client.database, search.map_code, record_submitter.id)
+            await self._verify_quality_rating(
+                itx.client.database, search.map_code, record_submitter.id
+            )
             if search.official:
-                await utils.auto_role(itx.client, record_submitter)
+                await utils.auto_skill_role(itx.client, itx.guild, record_submitter)
 
             newsfeed_data = await self._get_record_for_newsfeed(
                 itx.client.database, record_submitter.id, search.map_code
@@ -196,7 +221,7 @@ class VerificationView(discord.ui.View):
         search: models.Record,
         medals: tuple[float, float, float],
     ) -> dict[str, str]:
-        """Data for verified records."""
+        """Get data for verified records."""
         if search.completion:
             search.record = "Completion"
 
@@ -205,11 +230,17 @@ class VerificationView(discord.ui.View):
         if search.video:
             edit = f"{icon} Complete verification by {verifier_mention}!"
         else:
-            edit = f"{icon} Partial verification by {verifier_mention}! " f"No video proof supplied."
+            edit = (
+                f"{icon} Partial verification by {verifier_mention}! "
+                f"No video proof supplied."
+            )
         return {
             "edit": edit,
             "direct_message": (
-                f"**Map Code:** {search.map_code}\n" + record + f"verified by {verifier_mention}!\n\n" + ALERT
+                f"**Map Code:** {search.map_code}\n"
+                + record
+                + f"verified by {verifier_mention}!\n\n"
+                + ALERT
             ),
         }
 
@@ -219,7 +250,7 @@ class VerificationView(discord.ui.View):
         search: models.Record,
         rejection: str,
     ) -> dict[str, str]:
-        """Data for rejected records."""
+        """Get data for rejected records."""
         if search.completion:
             search.record = "Completion"
 
@@ -228,7 +259,9 @@ class VerificationView(discord.ui.View):
         return {
             "edit": f"{constants.UNVERIFIED} " f"Rejected by {verifier_mention}!",
             "direct_message": (
-                f"**Map Code:** {search.map_code}\n" + record + f"Your record got {constants.UNVERIFIED} "
+                f"**Map Code:** {search.map_code}\n"
+                + record
+                + f"Your record got {constants.UNVERIFIED} "
                 f"rejected by {verifier_mention}!\n\n"
                 f"**Reason:** {rejection}\n\n" + ALERT
             ),
@@ -238,5 +271,6 @@ class VerificationView(discord.ui.View):
 ALERT = (
     # "Don't like these alerts? "
     # "Turn it off by using the command `/alerts false`.\n"
-    "You can change your display name " "for records in the bot with the command `/name`!"
+    "You can change your display name "
+    "for records in the bot with the command `/name`!"
 )

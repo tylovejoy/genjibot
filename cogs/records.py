@@ -11,7 +11,7 @@ from discord.ext import commands
 
 import cogs
 import views
-from utils import constants, utils, records, models, ranks, embeds, errors
+from utils import constants, embeds, errors, models, ranks, records, utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -55,13 +55,19 @@ class Records(commands.Cog):
     async def summary(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[int | discord.Member | utils.FakeUser, records.AllUserTransformer] | None) = None,
+        user: (
+            app_commands.Transform[
+                int | discord.Member | utils.FakeUser, records.AllUserTransformer
+            ]
+            | None
+        ) = None,
     ):
         """Display a summary of your records and associated difficulties/medals
 
         Args:
             itx: Interaction
             user: User
+
         """
         await itx.response.defer(ephemeral=True)
         if not user:
@@ -72,20 +78,16 @@ class Records(commands.Cog):
         else:
             user = int(user)
 
-        data = await utils.get_completions_data(itx.client, user)
+        rows = await utils.fetch_user_rank_data(itx.client.database, user, True, False)
         description = ""
-        for diff in ranks.DIFFICULTIES:
-            if diff not in data:
-                completions, gold, silver, bronze = 0, 0, 0, 0
-            else:
-                completions, gold, silver, bronze = data[diff]
+        for row in rows:
 
             description += (
-                f"```{diff}```"
-                f"` Total` {completions}\n"
-                f"`  Gold` {gold} {constants.FULLY_VERIFIED_GOLD}\n"
-                f"`Silver` {silver} {constants.FULLY_VERIFIED_SILVER}\n"
-                f"`Bronze` {bronze} {constants.FULLY_VERIFIED_BRONZE}\n\n"
+                f"```{row.difficulty}```"
+                f"` Total` {row.completions}\n"
+                f"`  Gold` {row.gold} {constants.FULLY_VERIFIED_GOLD}\n"
+                f"`Silver` {row.silver} {constants.FULLY_VERIFIED_SILVER}\n"
+                f"`Bronze` {row.bronze} {constants.FULLY_VERIFIED_BRONZE}\n\n"
             )
 
         embed = embeds.GenjiEmbed(
@@ -128,7 +130,7 @@ class Records(commands.Cog):
         return models.Record(**row)
 
     async def _fetch_difficulty(self, map_code: str) -> float:
-        query = "SELECT avg(difficulty) FROM map_ratings WHERE map_code = $1 AND verified"
+        query = "SELECT avg(difficulty) FROM map_ratings WHERE map_code = $1 AND verified = TRUE"
         return await self.bot.database.fetchval(query, map_code)
 
     @staticmethod
@@ -164,9 +166,10 @@ class Records(commands.Cog):
 
     async def _upload_screenshot(self, screenshot: discord.Attachment) -> str:
         image = await screenshot.read()
+
         r = await self.bot.session.post(
             "http://genji-lust:8000/v1/images/genji-parkour-images",
-            params={"format": "png"},
+            params={"format": screenshot.content_type.split("/")[1]},
             headers={
                 "content-length": str(len(image)),
                 "content-type": "application/octet-stream",
@@ -203,8 +206,7 @@ class Records(commands.Cog):
         quality: app_commands.Choice[int],
         video: app_commands.Transform[str, records.URLTransformer] | None,
     ) -> None:
-        """
-        Submit a record to the database. Video proof is required for full verification!
+        """Submit a record to the database. Video proof is required for full verification!
 
         Args:
             itx: Interaction
@@ -213,6 +215,7 @@ class Records(commands.Cog):
             screenshot: Screenshot of completion
             video: Video of play through. REQUIRED FOR FULL VERIFICATION!
             quality: Quality of the map
+
         """
         await itx.response.defer(ephemeral=True)
 
@@ -261,7 +264,9 @@ class Records(commands.Cog):
             video = None
 
         if old_record:
-            _continue = await self._compare_submission_to_last_record(itx, old_record, submission)
+            _continue = await self._compare_submission_to_last_record(
+                itx, old_record, submission
+            )
             if not _continue:
                 return
 
@@ -270,7 +275,9 @@ class Records(commands.Cog):
             f"{constants.TIME}\n",
         )
 
-        embed = models.Record.build_embed(submission, strategy=models.RecordSubmissionStrategy())
+        embed = models.Record.build_embed(
+            submission, strategy=models.RecordSubmissionStrategy()
+        )
         embed.set_author(name=nickname, icon_url=itx.user.display_avatar.url)
         embed.set_image(url=cdn_screenshot)
 
@@ -289,7 +296,9 @@ class Records(commands.Cog):
         )
 
         v_view = views.VerificationView()
-        verification_msg = await itx.client.get_channel(constants.VERIFICATION_QUEUE).send(
+        verification_msg = await itx.client.get_channel(
+            constants.VERIFICATION_QUEUE
+        ).send(
             content="**ALERT:** VIDEO SUBMISSION" if video else None,
             embed=embed,
         )
@@ -316,7 +325,9 @@ class Records(commands.Cog):
                     connection=conn,
                 )
             except Exception as e:
-                await itx.followup.send("There was an error while submitting your time. Please try again later.")
+                await itx.followup.send(
+                    "There was an error while submitting your time. Please try again later."
+                )
                 await channel_msg.delete()
                 await verification_msg.delete()
                 raise e
@@ -393,7 +404,7 @@ class Records(commands.Cog):
         if not await self._check_map_exists(map_code):
             raise errors.InvalidMapCodeError
 
-        query = f"""
+        query = """
                 SELECT u.nickname, 
                        record, 
                        screenshot,
@@ -501,7 +512,9 @@ class Records(commands.Cog):
                     AND ($4::text != 'Completions' OR completion)
             )
         """
-        _records = await self.bot.database.fetch(query, map_code, lb_filters, user_id, pr_filters)
+        _records = await self.bot.database.fetch(
+            query, map_code, lb_filters, user_id, pr_filters
+        )
         recs = [models.Record(**r) for r in _records]
         if not recs:
             raise errors.NoRecordsFoundError
@@ -518,20 +531,22 @@ class Records(commands.Cog):
         map_code: app_commands.Transform[str, records.MapCodeRecordsTransformer],
         filters: LB_FILTERS = "All",
     ) -> None:
-        """
-        View leaderboard/completions for any map in the database.
+        """View leaderboard/completions for any map in the database.
         You are able to filter by Fully Verified, Verified, Completions or All.
 
         Args:
             itx: Interaction
             map_code: Overwatch share code
             filters: Type of submissions to show
+
         """
         await itx.response.defer(ephemeral=True)
         if not await self._check_map_exists(map_code):
             raise errors.InvalidMapCodeError
 
-        _records = await self._fetch_leaderboard_records(map_code=map_code, lb_filters=filters)
+        _records = await self._fetch_leaderboard_records(
+            map_code=map_code, lb_filters=filters
+        )
 
         _embeds = models.Record.build_embeds(
             _records,
@@ -550,26 +565,37 @@ class Records(commands.Cog):
     async def personal_records_slash(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[int | discord.Member | utils.FakeUser, records.AllUserTransformer] | None) = None,
+        user: (
+            app_commands.Transform[
+                int | discord.Member | utils.FakeUser, records.AllUserTransformer
+            ]
+            | None
+        ) = None,
         filters: PR_FILTERS = "All",
     ):
-        """
-        Show all records a specific user has (fully AND partially verified)
+        """Show all records a specific user has (fully AND partially verified)
 
         Args:
             itx: Interaction
             user: User
             filters: Filter submissions by All, World Records, Completions, or Records
+
         """
         await self._personal_records(itx, user, filters)
 
-    async def pr_context_callback(self, itx: discord.Interaction[core.Genji], user: discord.Member):
+    async def pr_context_callback(
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
+    ):
         await self._personal_records(itx, user, "Records")
 
-    async def wr_context_callback(self, itx: discord.Interaction[core.Genji], user: discord.Member):
+    async def wr_context_callback(
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
+    ):
         await self._personal_records(itx, user, "World Records")
 
-    async def completion_context_callback(self, itx: discord.Interaction[core.Genji], user: discord.Member):
+    async def completion_context_callback(
+        self, itx: discord.Interaction[core.Genji], user: discord.Member
+    ):
         await self._personal_records(itx, user, "Completions")
 
     async def _personal_records(
@@ -588,7 +614,9 @@ class Records(commands.Cog):
             user_id = int(user)
 
         nickname = await self.bot.database.fetch_nickname(user_id)
-        _records = await self._fetch_leaderboard_records(user_id=user_id, pr_filters=filters)
+        _records = await self._fetch_leaderboard_records(
+            user_id=user_id, pr_filters=filters
+        )
         _embeds = models.Record.build_embeds(
             _records,
             strategy=models.PersonalRecordStrategy(
