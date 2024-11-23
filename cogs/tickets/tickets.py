@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from .utils import ticket_thread_check
-from .views import TicketStart, CloseTicketView
+from .views import CloseTicketView, TicketStart
 
 if typing.TYPE_CHECKING:
     import core

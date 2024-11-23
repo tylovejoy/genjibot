@@ -10,7 +10,7 @@ import discord
 from discord import app_commands
 
 import database
-from utils import formatter, constants, ranks, embeds, utils
+from utils import constants, embeds, formatter, ranks, utils
 
 if typing.TYPE_CHECKING:
     import core

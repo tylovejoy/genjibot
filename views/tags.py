@@ -26,32 +26,45 @@ NUMBER_EMOJI = {
 
 
 class TagFuzzView(discord.ui.View):
-    def __init__(self, itx: discord.Interaction[core.Genji], options: list[str]):
+    """Tag fuzzy search view."""
+
+    def __init__(
+        self, itx: discord.Interaction[core.Genji], options: list[str]
+    ) -> None:
         super().__init__(timeout=3600)
         self.itx = itx
         self.matches.options = [
-            discord.SelectOption(label=x, value=x, emoji=NUMBER_EMOJI[i + 1]) for i, x in enumerate(options)
+            discord.SelectOption(label=x, value=x, emoji=NUMBER_EMOJI[i + 1])
+            for i, x in enumerate(options)
         ]
 
     @discord.ui.select()
-    async def matches(self, itx: discord.Interaction[core.Genji], select: discord.SelectMenu):
+    async def matches(
+        self, itx: discord.Interaction[core.Genji], select: discord.SelectMenu
+    ) -> None:
+        """Select menu for tag fuzzy matches."""
         await itx.response.defer()
-        tag = [
+        tag = next(
             x
             async for x in itx.client.database.get(
                 "SELECT * FROM tags WHERE name=$1",
                 select.values[0],
             )
-        ][0]
+        )
 
-        await itx.edit_original_response(content=f"**{tag.name}**\n\n{tag.value}", view=None, embed=None)
+        await itx.edit_original_response(
+            content=f"**{tag.name}**\n\n{tag.value}", view=None, embed=None
+        )
 
 
 class TagCreate(discord.ui.Modal, title="Create Tag"):
+    """Create tag modal."""
+
     name = discord.ui.TextInput(label="Name")
     value = discord.ui.TextInput(label="Value", style=discord.TextStyle.paragraph)
 
-    async def on_submit(self, itx: discord.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Create tag modal callback."""
         view = views.Confirm(itx)
         await itx.response.send_message(
             content=f"Is this correct?\n\n**{self.name}**\n\n{self.value}",

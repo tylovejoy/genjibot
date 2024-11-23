@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 
 import discord
 from discord import InteractionType
-from discord.ext import tasks, commands
-
+from discord.ext import commands, tasks
 
 if TYPE_CHECKING:
     from core import Genji

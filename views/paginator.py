@@ -13,13 +13,13 @@ if TYPE_CHECKING:
 
 
 class Paginator(discord.ui.View):
-    """ "A view for paginating multiple embeds."""
+    """A view for paginating multiple embeds."""
 
     def __init__(
         self,
         _embeds: list[discord.Embed | embeds.GenjiEmbed | str],
         author: discord.Member | discord.User,
-        timeout=600,
+        timeout: int = 600,
     ) -> None:
         """Init paginator."""
         super().__init__(timeout=timeout)
@@ -38,12 +38,15 @@ class Paginator(discord.ui.View):
         if timeout is not None:
             self._update_end_time()
 
-    def _update_end_time(self):
-        time = discord.utils.format_dt(discord.utils.utcnow() + timedelta(seconds=self._timeout), "R")
+    def _update_end_time(self) -> None:
+        time = discord.utils.format_dt(
+            discord.utils.utcnow() + timedelta(seconds=self._timeout), "R"
+        )
         self.timeout = self._timeout
         self.end_time = "This search will time out " + time
 
     async def start(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Start the pagination view."""
         if isinstance(self.pages[0], str):
             await itx.edit_original_response(
                 content=self.end_time + "\n" + self.pages[0],
@@ -58,23 +61,9 @@ class Paginator(discord.ui.View):
         self.original_itx = itx
         await self.wait()
 
-    # @property
-    # def formatted_pages(self) -> list[discord.Embed | str]:
-    #     """The embeds with formatted footers to act as pages."""
-    #
-    #     pages = deepcopy(self.pages)
-    #     if not isinstance(pages[0], str):
-    #         for page in pages:
-    #             page.set_footer(text=f"({pages.index(page) + 1}/{len(pages)})")
-    #     return pages
-
     async def interaction_check(self, itx: discord.Interaction[core.Genji]) -> bool:
-        """
-        Check if the itx user is the original users who started the itx.
-        """
-        if itx.user == self.author:
-            return True
-        return False
+        """Check if the itx user is the original users who started the itx."""
+        return itx.user == self.author
 
     async def on_timeout(self) -> None:
         """Stop view on timeout."""
@@ -95,7 +84,9 @@ class Paginator(discord.ui.View):
         return await super().on_timeout()
 
     @discord.ui.button(label="First", emoji="⏮")
-    async def first(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
+    async def first(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ) -> None:
         """Button component to return to the first pagination page."""
         if len(self.pages) == 1:
             button.disabled = True
@@ -103,7 +94,9 @@ class Paginator(discord.ui.View):
         return await self.change_page(itx)
 
     @discord.ui.button(label="Back", emoji="◀")
-    async def back(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
+    async def back(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ) -> None:
         """Button component to go back to the last pagination page."""
         if len(self.pages) == 1:
             button.disabled = True
@@ -115,8 +108,8 @@ class Paginator(discord.ui.View):
         return await self.change_page(itx)
 
     async def change_page(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Change the current page in paginator."""
         self.page_number.label = f"{self._curr_page + 1}/{len(self.pages)}"
-        # self._update_end_time()
         try:
             if isinstance(self.pages[self._curr_page], str):
                 await itx.response.edit_message(
@@ -124,7 +117,9 @@ class Paginator(discord.ui.View):
                     view=self,
                 )
             else:
-                await itx.response.edit_message(content=self.end_time, embed=self.pages[self._curr_page], view=self)
+                await itx.response.edit_message(
+                    content=self.end_time, embed=self.pages[self._curr_page], view=self
+                )
         except discord.errors.InteractionResponded:
             if isinstance(self.pages[self._curr_page], str):
                 await itx.edit_original_response(
@@ -132,14 +127,17 @@ class Paginator(discord.ui.View):
                     view=self,
                 )
             else:
-                await itx.edit_original_response(content=self.end_time, embed=self.pages[self._curr_page], view=self)
+                await itx.edit_original_response(
+                    content=self.end_time, embed=self.pages[self._curr_page], view=self
+                )
 
     @discord.ui.button(label="...")
     async def page_number(
         self,
         itx: discord.Interaction[core.Genji],
         button: discord.ui.Button,
-    ):
+    ) -> None:
+        """Button component to open page number selection modal."""
         modal = PageNumberModal(len(self.pages))
         await itx.response.send_modal(modal)
         await modal.wait()
@@ -148,7 +146,9 @@ class Paginator(discord.ui.View):
         await self.change_page(itx)
 
     @discord.ui.button(label="Next", emoji="▶")
-    async def next(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
+    async def next(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ) -> None:
         """Button component to go to the next pagination page."""
         if len(self.pages) == 1:
             button.disabled = True
@@ -160,7 +160,9 @@ class Paginator(discord.ui.View):
         return await self.change_page(itx)
 
     @discord.ui.button(label="Last", emoji="⏭")
-    async def last(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
+    async def last(
+        self, itx: discord.Interaction[core.Genji], button: discord.ui.Button
+    ) -> None:
         """Button component to go to the last pagination page."""
         if len(self.pages) == 1:
             button.disabled = True
@@ -170,15 +172,18 @@ class Paginator(discord.ui.View):
 
 
 class PageNumberModal(discord.ui.Modal):
+    """Page number selector modal."""
+
     number = discord.ui.TextInput(label="Number")
     value = None
 
-    def __init__(self, limit: int):
+    def __init__(self, limit: int) -> None:
         super().__init__(title="Choose a page...")
         self.limit = limit
         self.number.placeholder = f"Must be an integer in range 1 - {self.limit}"
 
-    async def on_submit(self, itx: discord.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Page number selection modal callback."""
         await itx.response.defer(ephemeral=True, thinking=True)
 
         try:
@@ -191,5 +196,8 @@ class PageNumberModal(discord.ui.Modal):
         if self.value:
             await itx.delete_original_response()
 
-    async def on_error(self, itx: discord.Interaction[core.Genji], error: Exception) -> None:
+    async def on_error(
+        self, itx: discord.Interaction[core.Genji], error: Exception
+    ) -> None:
+        """Error handler for Page number selection modal."""
         await errors.on_app_command_error(itx, error)

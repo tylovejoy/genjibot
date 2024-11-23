@@ -196,7 +196,6 @@ class SequenceCache(Generic[T]):
 
     def add_many(self, objs: list[T]):
         """Add many objects (T) to the SequenceCache."""
-
         _objs: list[T] = []
         for obj in objs:
             if getattr(obj, self.key_value) in self.keys:

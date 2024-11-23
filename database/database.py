@@ -58,16 +58,17 @@ class Database:
         query: str,
         *args: typing.Any,
     ) -> typing.Generator[None, None, DotRecord]:
-        """
-        The get_query_handler function is a helper function
+        """The get_query_handler function is a helper function
         that takes in a model and query string.
         It then returns the results of the query as an array of records.
+
         Args:
             query (str) Specify the query that will be executed
             *args (Any) Pass in any additional arguments that are
                 needed to be passed into the query
         Yields:
             DotRecords
+
         """
         if self.pool is None:
             raise errors.DatabaseConnectionError()
@@ -95,14 +96,15 @@ class Database:
         query: str,
         *args: typing.Any,
     ):
-        """
-        The set_query_handler function takes a query string
+        """The set_query_handler function takes a query string
         and an arbitrary number of arguments.
         It then executes the given query with the given arguments.
         Used for INSERT queries.
+
         Args:
             query (str) Store the query string
             *args (Any) Pass any additional arguments to the query
+
         """
         if self.pool is None:
             raise errors.DatabaseConnectionError()
@@ -116,14 +118,15 @@ class Database:
         query: str,
         *args: typing.Any,
     ):
-        """
-        The set_query_handler function takes a query string
+        """The set_query_handler function takes a query string
         and an arbitrary number of arguments.
         It then executes the given query with the given arguments.
         Used for INSERT queries.
+
         Args:
             query (str) Store the query string
             *args (Any) Pass any additional arguments to the query
+
         """
         if self.pool is None:
             raise errors.DatabaseConnectionError()

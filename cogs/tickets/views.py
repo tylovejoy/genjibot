@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from .utils import TICKET_CHANNEL, MODMAIL_ROLE
+from .utils import MODMAIL_ROLE, TICKET_CHANNEL
 
 if TYPE_CHECKING:
     import core
@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 class TicketStart(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        ...
 
     @discord.ui.button(
         label="Click me to get help from a Sensei!",
@@ -46,7 +45,7 @@ class TicketStartModal(discord.ui.Modal):
         if self.subject.value is None:
             return
 
-        await itx.response.send_message(content=f"Creating ticket...", ephemeral=True)
+        await itx.response.send_message(content="Creating ticket...", ephemeral=True)
         channel: discord.TextChannel = itx.client.get_channel(TICKET_CHANNEL)
         thread = await channel.create_thread(
             name=f"{itx.user.display_name[:10]} | {self.subject.value[:80]}",

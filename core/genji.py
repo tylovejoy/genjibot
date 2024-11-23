@@ -8,7 +8,6 @@ import discord
 from discord.ext import commands
 
 import cogs
-import core
 from utils import cache
 from views import PlaytestVoting
 
@@ -45,8 +44,7 @@ class Genji(commands.Bot):
         self.analytics_buffer.append((event, user_id, timestamp, data))
 
     async def setup_hook(self) -> None:
-        """
-        The setup_hook function is called when the bot is starting up.
+        """The setup_hook function is called when the bot is starting up.
         It's responsible for loading all the cogs that are in
         the initial_extensions list. This function is also used
         to start a connection with the database,
@@ -57,16 +55,15 @@ class Genji(commands.Bot):
 
         Returns:
             None
-        """
 
+        """
         for ext in cogs.EXTENSIONS + ["jishaku", "core.events"]:
             log.info(f"Loading {ext}...")
             await self.load_extension(ext)
 
     @staticmethod
     def _generate_intents() -> discord.Intents:
-        """
-        The _generate_intents function generates the intents for the bot.
+        """The _generate_intents function generates the intents for the bot.
         This is used to generate a discord.Intents object that can be passed into
         the Bot constructor as an argument.
 
@@ -74,6 +71,7 @@ class Genji(commands.Bot):
 
         Returns:
             Intents
+
         """
         intents = discord.Intents(
             guild_messages=True,

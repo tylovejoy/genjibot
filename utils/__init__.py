@@ -9,12 +9,4 @@
 # from utils.utils import *
 
 
-from . import cache
-from . import constants
-from . import embeds
-from . import errors
-from . import formatter
-from . import maps
-from . import ranks
-from . import records
-from . import utils
+from . import cache, constants, embeds, errors, formatter, maps, ranks, records, utils

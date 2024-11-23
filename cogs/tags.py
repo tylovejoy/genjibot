@@ -4,11 +4,10 @@ import typing
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 
 import cogs
 import views
-from utils import utils, embeds, constants, errors
+from utils import constants, embeds, errors, utils
 
 if typing.TYPE_CHECKING:
     import core

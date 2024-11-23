@@ -24,23 +24,28 @@ class DatabaseConnectionError(Exception):
     """Connection failed. This will be logged. Try again later."""
 
 
-class IncorrectRecordFormatError(BaseParkourException, app_commands.errors.AppCommandError):
+class IncorrectRecordFormatError(
+    BaseParkourException, app_commands.errors.AppCommandError
+):
     """Record must be in XXXX.xx format e.g. 1569.33, 567.01, 10.50, etc."""
 
 
-class IncorrectCodeFormatError(BaseParkourException, app_commands.errors.AppCommandError):
+class IncorrectCodeFormatError(
+    BaseParkourException, app_commands.errors.AppCommandError
+):
     """Map code must be a valid Overwatch share code."""
 
 
-class IncorrectURLFormatError(BaseParkourException, app_commands.errors.AppCommandError):
+class IncorrectURLFormatError(
+    BaseParkourException, app_commands.errors.AppCommandError
+):
     """The given URL is invalid."""
 
 
 class InvalidFiltersError(BaseParkourException):
-    """
-    You must choose _at least_ **one** filter
-    (map name, map type, or creator, mechanics, official, difficulty)
-    """
+    """You must choose _at least_ **one** filter
+    (map name, map type, or creator, mechanics, official, difficulty).
+    """  # noqa: D205
 
 
 class InvalidMapNameError(BaseParkourException, app_commands.errors.AppCommandError):
@@ -95,7 +100,8 @@ class MaxMapsInPlaytest(BaseParkourException):
 
 class MaxWeeklyMapsInPlaytest(BaseParkourException):
     """You have reached the maximum amount of maps (2) submitted within the last week.
-    Focus on getting your maps verified before submitting more!"""
+    Focus on getting your maps verified before submitting more!
+    """
 
 
 class CreatorDoesntExist(BaseParkourException):
@@ -148,8 +154,7 @@ class InvalidFakeUser(BaseParkourException, app_commands.errors.AppCommandError)
 
 
 class InvalidMedals(BaseParkourException, app_commands.errors.AppCommandError):
-    """
-    Medals are incorrectly formatted.
+    """Medals are incorrectly formatted.
     Make sure gold is faster than silver and silver is faster than bronze
     """
 
@@ -216,7 +221,11 @@ async def on_app_command_error(
             "This message will delete in "
             f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
         )
-        edit = itx.edit_original_response if itx.response.is_done() else itx.response.send_message
+        edit = (
+            itx.edit_original_response
+            if itx.response.is_done()
+            else itx.response.send_message
+        )
         embed = embeds.ErrorEmbed(
             description=(
                 f"{content}\n"
@@ -239,10 +248,16 @@ async def on_app_command_error(
         if args:
             args[-1] = "┗" + args[-1][1:]
         args_name = "**Args:**\n" + "".join(args)
-        formatted_tb = "".join(traceback.format_exception(None, exception, exception.__traceback__))
+        formatted_tb = "".join(
+            traceback.format_exception(None, exception, exception.__traceback__)
+        )
 
         if len(formatted_tb) < 1850:
-            await channel.send(f"{command_name}{args_name}{channel_name}{user_name}\n```py\n" + formatted_tb + "\n```")
+            await channel.send(
+                f"{command_name}{args_name}{channel_name}{user_name}\n```py\n"
+                + formatted_tb
+                + "\n```"
+            )
         else:
             await channel.send(
                 f"{command_name} {args_name} {channel_name} {user_name}",

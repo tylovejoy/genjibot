@@ -10,7 +10,7 @@ from discord.ext import commands
 import cogs
 import database
 import views
-from utils import constants, records, maps, ranks, embeds, errors, utils
+from utils import constants, embeds, errors, maps, ranks, records, utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -50,8 +50,7 @@ class Maps(commands.Cog):
         silver: app_commands.Transform[float, records.RecordTransformer] | None = None,
         bronze: app_commands.Transform[float, records.RecordTransformer] | None = None,
     ) -> None:
-        """
-        Submit your map to get playtested.
+        """Submit your map to get playtested.
 
         Args:
             itx: Interaction
@@ -63,6 +62,7 @@ class Maps(commands.Cog):
             gold: Gold medal time (must be the fastest time)
             silver: Silver medal time (must be between gold and bronze)
             bronze: Bronze medal time (must be the slowest time)
+
         """
         medals = None
         if gold and silver and bronze:
@@ -87,7 +87,9 @@ class Maps(commands.Cog):
         minimum_rating=constants.ALL_STARS_CHOICES,
         difficulty=[app_commands.Choice(name=x, value=x) for x in ranks.DIFFICULTIES],
     )
-    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
+    @app_commands.guilds(
+        discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554)
+    )
     async def random_map(
         self,
         itx: discord.Interaction[core.Genji],
@@ -99,7 +101,9 @@ class Maps(commands.Cog):
         embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
 
-        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
+        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(
+            getattr(difficulty, "value", None), None
+        )
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
 
@@ -137,7 +141,9 @@ class Maps(commands.Cog):
         restrictions=cogs.map_restrictions_autocomplete,
         map_code=cogs.map_codes_autocomplete,
     )
-    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
+    @app_commands.guilds(
+        discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554)
+    )
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
@@ -145,16 +151,19 @@ class Maps(commands.Cog):
         difficulty: app_commands.Choice[str] | None = None,
         map_code: app_commands.Transform[str, records.MapCodeTransformer] | None = None,
         creator: app_commands.Transform[int, records.CreatorTransformer] | None = None,
-        mechanics: (app_commands.Transform[str, maps.MapMechanicsTransformer] | None) = None,
-        restrictions: (app_commands.Transform[str, maps.MapRestrictionsTransformer] | None) = None,
+        mechanics: (
+            app_commands.Transform[str, maps.MapMechanicsTransformer] | None
+        ) = None,
+        restrictions: (
+            app_commands.Transform[str, maps.MapRestrictionsTransformer] | None
+        ) = None,
         map_type: app_commands.Transform[str, maps.MapTypeTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         only_playtest: bool = False,
         only_maps_with_medals: bool = False,
         minimum_rating: app_commands.Choice[int] | None = None,
     ) -> None:
-        """
-        Search for maps based on various filters.
+        """Search for maps based on various filters.
 
         Args:
             itx: Interaction
@@ -169,12 +178,15 @@ class Maps(commands.Cog):
             completed: Show completed maps, non completed maps or all
             only_playtest: Show only playtest maps
             only_maps_with_medals: Show only maps that have medals
+
         """
         await itx.response.defer(ephemeral=True)
         embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
 
-        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(getattr(difficulty, "value", None), None)
+        ranges = ranks.TOP_DIFFICULTIES_RANGES.get(
+            getattr(difficulty, "value", None), None
+        )
         low_range = None if ranges is None else ranges[0]
         high_range = None if ranges is None else ranges[1]
 
@@ -227,9 +239,14 @@ class Maps(commands.Cog):
             """
               WITH
                 completions AS (
-                  SELECT map_code, record, verified
+                    SELECT DISTINCT ON (map_code)
+                        map_code,
+                        record,
+                        verified,
+                        inserted_at
                     FROM records
-                   WHERE user_id = $10
+                    WHERE user_id = $10
+                    ORDER BY map_code, inserted_at DESC
                 )
             
             SELECT
@@ -336,12 +353,12 @@ class Maps(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ):
-        """
-        View guides that have been submitted for a particular map.
+        """View guides that have been submitted for a particular map.
 
         Args:
             map_code: Overwatch share code
             itx: Interaction
+
         """
         await itx.response.defer(ephemeral=False)
         if map_code not in itx.client.cache.maps.keys:
@@ -370,13 +387,13 @@ class Maps(commands.Cog):
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         url: app_commands.Transform[str, records.URLTransformer],
     ):
-        """
-        Add a guide for a particular map.
+        """Add a guide for a particular map.
 
         Args:
             map_code: Overwatch share code
             itx: Interaction
             url: URL for guide
+
         """
         await itx.response.defer(ephemeral=True)
         if map_code not in itx.client.cache.maps.keys:

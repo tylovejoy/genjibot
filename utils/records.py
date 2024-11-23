@@ -11,8 +11,8 @@ from discord import Embed, app_commands
 
 import cogs
 import database
-from . import errors, constants, embeds, ranks, utils
 
+from . import constants, embeds, errors, ranks, utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -130,14 +130,14 @@ def time_convert(string: str) -> float:
 
 
 def pretty_record(record: decimal.Decimal | float) -> str:
-    """
-    The pretty_record property takes the record time for a given
+    """The pretty_record property takes the record time for a given
     document and returns a string representation of that time.
     The function is used to display the record times in an easily
     readable format on the leaderboard page.
 
     Returns:
         A string
+
     """
     record = float(round(record, 2))
     negative = "-" if record < 0 else ""
@@ -179,11 +179,10 @@ def icon_generator(record: asyncpg.Record, medals: tuple[float, float, float]) -
                 icon = constants.BRONZE_WR
             else:
                 icon = constants.FULLY_VERIFIED_BRONZE
+        elif record.get("rank_num", 0) == 1:
+            icon = constants.NON_MEDAL_WR
         else:
-            if record.get("rank_num", 0) == 1:
-                icon = constants.NON_MEDAL_WR
-            else:
-                icon = constants.FULLY_VERIFIED
+            icon = constants.FULLY_VERIFIED
     elif record["record"] != "Completion":
         icon = constants.PARTIAL_VERIFIED
     return icon
@@ -296,12 +295,11 @@ def pr_records_embed(
 
 
 def make_ordinal(n: int) -> str:
-    """
-    Convert an integer into its ordinal representation::
-        make_ordinal(0)   => '0th'
-        make_ordinal(3)   => '3rd'
-        make_ordinal(122) => '122nd'
-        make_ordinal(213) => '213th'
+    """Convert an integer into its ordinal representation::
+    make_ordinal(0)   => '0th'
+    make_ordinal(3)   => '3rd'
+    make_ordinal(122) => '122nd'
+    make_ordinal(213) => '213th'
     """
     n = int(n)
     suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]

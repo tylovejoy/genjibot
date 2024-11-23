@@ -65,17 +65,22 @@ class ErrorEmbed(GenjiEmbed):
             self.set_footer(text="If you have any questions, message nebula#6662")
 
 
-def set_embed_thumbnail_maps(map_name: str, embed: discord.Embed) -> discord.Embed | GenjiEmbed:
-    """
+def set_embed_thumbnail_maps(
+    map_name: str, embed: discord.Embed
+) -> discord.Embed | GenjiEmbed:
+    """Set embed thumbnail.
+
     The embed_thumbnail_setter function takes a map name
     and an embed object as parameters.
     It then uses the map name to search for a thumbnail image
     and sets that image as the embed's thumbnail.
+
     Args:
         map_name (str): Set the map name to be used in the embed
         embed (discord.Embed): Set the thumbnail of the embed
     Returns:
         The embed object with the thumbnail set to a map's image
+
     """
     map_name = re.sub(r"[:'\s]", "", map_name).lower()
     embed.set_thumbnail(url=f"http://bkan0n.com/assets/images/maps/{map_name}.png")
@@ -83,10 +88,10 @@ def set_embed_thumbnail_maps(map_name: str, embed: discord.Embed) -> discord.Emb
 
 
 def record_embed(data: dict[str, typing.Any]):
-    if data.get("record", None) and data["record"] == COMPLETION_PLACEHOLDER:
+    if data.get("record") and data["record"] == COMPLETION_PLACEHOLDER:
         data["record"] = "Completion"
 
-    if not data.get("video", None):
+    if not data.get("video"):
         description = (
             f"┣ `   Code ` {data['map_code']}\n"
             f"┣ `   Diff ` {ranks.convert_num_to_difficulty(data['difficulty'])}\n"

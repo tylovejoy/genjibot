@@ -15,7 +15,7 @@ import database
 import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
 from cogs.tickets.views import TicketStart
-from utils import errors, constants, maps, records, ranks, cache, embeds, utils, models
+from utils import cache, constants, embeds, errors, maps, ranks, records, utils
 from utils.records import icon_generator
 
 if typing.TYPE_CHECKING:
@@ -33,8 +33,7 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        """
-        The on_ready function is called when the bot
+        """The on_ready function is called when the bot
         is ready to receive and process commands.
         It prints a string containing the name of the bot,
         its owner, and which version of discord.py it's using.
@@ -95,7 +94,9 @@ class BotEvents(commands.Cog):
                     continue
                 try:
                     data = maps.MapSubmission(
-                        creator=await records.transform_user(self.bot, x.creator_ids[0]),
+                        creator=await records.transform_user(
+                            self.bot, x.creator_ids[0]
+                        ),
                         map_code=x.map_code,
                         map_name=x.map_name,
                         checkpoint_count=x.checkpoints,
@@ -118,9 +119,11 @@ class BotEvents(commands.Cog):
                             message_id=x.message_id,
                         )
                         self.bot.playtest_views[x.message_id] = view
-                except Exception as e:
+                except Exception:
                     ...
-            queue = [x async for x in self.bot.database.get("SELECT * FROM polls_info;")]
+            queue = [
+                x async for x in self.bot.database.get("SELECT * FROM polls_info;")
+            ]
             for x in queue:
                 self.bot.add_view(
                     views.PollView(
@@ -139,7 +142,7 @@ class BotEvents(commands.Cog):
             view = TicketStart()
             self.bot.add_view(view, message_id=1120076353597886565)
 
-            log.debug(f"Added persistent views.")
+            log.debug("Added persistent views.")
             self.bot.persistent_views_added = True
 
     @commands.Cog.listener()
@@ -177,8 +180,12 @@ class BotEvents(commands.Cog):
             (map_maker := member.guild.get_role(constants.Roles.MAP_MAKER)) is not None
             and map_maker not in member.roles
         ):
-            await member.add_roles(map_maker, reason="User rejoined. Re-granting map maker.")
-        if (ninja := member.guild.get_role(constants.Roles.NINJA)) is not None and ninja not in member.roles:
+            await member.add_roles(
+                map_maker, reason="User rejoined. Re-granting map maker."
+            )
+        if (
+            ninja := member.guild.get_role(constants.Roles.NINJA)
+        ) is not None and ninja not in member.roles:
             await member.add_roles(ninja, reason="User joined. Granting Ninja.")
 
         await utils.auto_role(self.bot, member)
@@ -269,14 +276,18 @@ class BotEvents(commands.Cog):
         await itx.client.database.execute(query, "record", json_data)
 
     @commands.Cog.listener()
-    async def on_newsfeed_role(self, client: core.Genji, user: discord.Member, roles: list[discord.Role]):
+    async def on_newsfeed_role(
+        self, client: core.Genji, user: discord.Member, roles: list[discord.Role]
+    ):
         nickname = client.cache.users[user.id].nickname
         embed = embeds.GenjiEmbed(
             title=f"{nickname} got promoted!",
             description="\n".join([f"{x.mention}" for x in roles]),
             color=discord.Color.green(),
         )
-        await client.get_guild(constants.GUILD_ID).get_channel(constants.NEWSFEED).send(embed=embed)
+        await client.get_guild(constants.GUILD_ID).get_channel(constants.NEWSFEED).send(
+            embed=embed
+        )
         data = {
             "user": {
                 "user_id": user.id,
@@ -328,11 +339,13 @@ class BotEvents(commands.Cog):
     ):
         if value == "archive":
             description = (
-                "This map will not appear in the map search command.\n" "You cannot submit records for archived maps."
+                "This map will not appear in the map search command.\n"
+                "You cannot submit records for archived maps."
             )
         else:
             description = (
-                "This map will now appear in the map search command " "and be eligible for record submissions."
+                "This map will now appear in the map search command "
+                "and be eligible for record submissions."
             )
         embed = embeds.GenjiEmbed(
             title=f"{map_code} has been {value}d.",
@@ -343,7 +356,9 @@ class BotEvents(commands.Cog):
             guide_txt = ""
             medals_txt = ""
             if map_data.get("guide") and None not in map_data.get("guide"):
-                guides = [f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)]
+                guides = [
+                    f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)
+                ]
                 guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
             if map_data.gold:
                 medals_txt = (
@@ -409,17 +424,19 @@ class BotEvents(commands.Cog):
                         LEFT JOIN playtest p ON m.map_code = p.map_code AND p.is_author = TRUE
                     WHERE m.map_code = $1
                 """,
-                values.get("Code", None) or map_code,
+                values.get("Code") or map_code,
             )
 
             await thread.edit(
                 name=(
-                    f"{values.get('Code', None) or map_code} | {ranks.convert_num_to_difficulty(row.difficulty)} "
+                    f"{values.get('Code') or map_code} | {ranks.convert_num_to_difficulty(row.difficulty)} "
                     f"| {row.map_name} | {row.checkpoints} CPs"
                 )
             )
             await thread.send(embed=embed)
-            original = await itx.guild.get_channel(constants.PLAYTEST).fetch_message(message_id)
+            original = await itx.guild.get_channel(constants.PLAYTEST).fetch_message(
+                message_id
+            )
             embed = None
             for k, v in values.items():
                 embed = self.edit_embed(original.embeds[0], k, v)

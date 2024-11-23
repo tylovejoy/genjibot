@@ -9,10 +9,12 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
-from cogs.rank_card.utils import RANKS, RankCardBuilder
-from utils import constants, utils, records
+from cogs.rank_card.utils import RankCardBuilder
+from utils import constants, records, utils
 
 if typing.TYPE_CHECKING:
+    import asyncpg
+
     import core
 
 
@@ -23,12 +25,19 @@ class RankCard(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="rank-card")
-    @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=968951072599187476))
+    @app_commands.guilds(
+        discord.Object(id=constants.GUILD_ID), discord.Object(id=968951072599187476)
+    )
     @app_commands.autocomplete(user=cogs.users_autocomplete)
     async def rank_card(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[discord.Member | utils.FakeUser, records.AllUserTransformer] | None),
+        user: (
+            app_commands.Transform[
+                discord.Member | utils.FakeUser, records.AllUserTransformer
+            ]
+            | None
+        ),
     ) -> None:
         await itx.response.defer(ephemeral=True)
         if not user or user.id == itx.user.id:
@@ -38,6 +47,7 @@ class RankCard(commands.Cog):
         completions = await utils.get_completions_data(
             itx.client, user.id, include_beginner=True, include_archived=False
         )
+
         world_records = await self._get_world_record_count(user.id)
         maps = await self._get_maps_count(user.id)
         playtests = await self._get_playtests_count(user.id)
@@ -79,7 +89,7 @@ class RankCard(commands.Cog):
                 attachments=[discord.File(fp=image_binary, filename="rank_card.png")],
             )
 
-    async def _get_map_totals(self):
+    async def _get_map_totals(self) -> list[asyncpg.Record]:
         query = """
             WITH ranges ("range", "name") AS (
                  VALUES  ('[0,0.59)'::numrange, 'Beginner'),

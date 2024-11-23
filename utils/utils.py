@@ -8,10 +8,13 @@ import typing
 import discord
 from thefuzz import fuzz
 
-from utils import constants, cache, ranks
+from utils import cache, constants
+from utils.maps import DIFF_TO_RANK
+from utils.models import RankDetail
 
 if typing.TYPE_CHECKING:
     import core
+    import database
 
 
 _emoji_numbers = {
@@ -28,16 +31,22 @@ _emoji_numbers = {
 }
 
 
-async def delete_interaction(itx: discord.Interaction[core.Genji], *, minutes: int | float):
+async def delete_interaction(
+    itx: discord.Interaction[core.Genji], *, minutes: float
+) -> None:
     """Delete an itx message after x minutes. Fails silently.
+
     Args:
         itx (discord.Interaction): Interaction to find original message.
         minutes (int): Minutes (use 0 for no delay)
+
     """
     if minutes < 0:
         raise ValueError("Time cannot be negative.")
     await asyncio.sleep(60 * minutes)
-    with contextlib.suppress(discord.HTTPException, discord.NotFound, discord.Forbidden):
+    with contextlib.suppress(
+        discord.HTTPException, discord.NotFound, discord.Forbidden
+    ):
         await itx.delete_original_response()
 
 
@@ -51,7 +60,7 @@ def fuzz_multiple(string: str, iterable: typing.Iterable[str]) -> list[str]:
     """Fuzz a value."""
     values = [(val, fuzz.partial_ratio(string, val)) for val in iterable]
     values = sorted(values, key=operator.itemgetter(1), reverse=True)[:10]
-    values = list(map(lambda x: x[0], values))
+    values = [x[0] for x in values]
     return values
 
 
@@ -262,7 +271,7 @@ async def get_completions_data(
 
 
 class FakeUser:
-    def __init__(self, id_: int, data: cache.UserData):
+    def __init__(self, id_: int, data: cache.UserData) -> None:
         self.id = id_
         self.nickname = data.nickname
         self.mention = data.nickname
@@ -273,19 +282,24 @@ class FakeAvatar:
     url: str = "https://cdn.discordapp.com/embed/avatars/2.png"
 
 
-def wrap_string_with_percent(string: str):
+def wrap_string_with_percent(string: str) -> str | None:
+    """Wrap a string with percent characters for use in LIKE/ILIKE SQL queries.."""
     if not string:
         return
     return "%" + string + "%"
 
 
-def split_nth_iterable(*, current: int, iterable: list[typing.Any], split: int):
+def split_nth_iterable(*, current: int, iterable: list[typing.Any], split: int) -> bool:
+    """Determine if the current iteration should be split at the nth (split) position."""
     return (
-        (current != 0 and current % split == 0) or (current == 0 and len(iterable) == 1) or current == len(iterable) - 1
+        (current != 0 and current % split == 0)
+        or (current == 0 and len(iterable) == 1)
+        or current == len(iterable) - 1
     )
 
 
-def convert_to_emoji_number(number):
+def convert_to_emoji_number(number: int) -> str:
+    """Convert a integer to the emoji version of that number."""
     # Check if the number is within the range 0-9
     if number in _emoji_numbers:
         return _emoji_numbers[number]
