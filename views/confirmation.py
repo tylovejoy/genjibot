@@ -30,9 +30,7 @@ class ConfirmButton(discord.ui.Button):
         self.view.value = True
         self.view.clear_items()
         with contextlib.suppress(discord.HTTPException):
-            await self.view.original_itx.edit_original_response(
-                content=self.view.confirm_msg, view=self.view
-            )
+            await self.view.original_itx.edit_original_response(content=self.view.confirm_msg, view=self.view)
         self.view.stop()
 
 
@@ -95,10 +93,7 @@ class Confirm(discord.ui.View):
         self.add_item(self.reject)
 
     async def map_submit_enable(self) -> None:
-        values = [
-            getattr(getattr(self, x, None), "values", True)
-            for x in ["map_type", "difficulty"]
-        ]
+        values = [getattr(getattr(self, x, None), "values", True) for x in ["map_type", "difficulty"]]
         if all(values):
             self.confirm.disabled = False
             await self.original_itx.edit_original_response(view=self)
@@ -176,9 +171,7 @@ class ButtonBase(discord.ui.Button):
     async def callback(self, itx: discord.Interaction[core.Genji]) -> None:
         await itx.response.defer(ephemeral=True)
         if self.view.itx.user != itx.user:
-            await itx.followup.send(
-                "You are not allowed to use this button.", ephemeral=True
-            )
+            await itx.followup.send("You are not allowed to use this button.", ephemeral=True)
             return
 
         self.view.value = self.value
@@ -191,9 +184,7 @@ class ButtonBase(discord.ui.Button):
                 f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
             )
 
-        await self.view.itx.edit_original_response(
-            content=self.view.confirmation_message, view=self.view
-        )
+        await self.view.itx.edit_original_response(content=self.view.confirmation_message, view=self.view)
         if not self.view.value:
             await utils.delete_interaction(self.view.itx, minutes=1)
         self.view.stop()
@@ -293,9 +284,7 @@ class ConfirmMechanicsMixin(ConfirmBaseView):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.mechanics = views.MechanicsSelect(
-            copy.deepcopy(self.itx.client.cache.map_mechanics.options)
-        )
+        self.mechanics = views.MechanicsSelect(copy.deepcopy(self.itx.client.cache.map_mechanics.options))
         self.add_item(self.mechanics)
 
 
@@ -304,9 +293,7 @@ class ConfirmRestrictionsMixin(ConfirmBaseView):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.restrictions = views.RestrictionsSelect(
-            copy.deepcopy(self.itx.client.cache.map_restrictions.options)
-        )
+        self.restrictions = views.RestrictionsSelect(copy.deepcopy(self.itx.client.cache.map_restrictions.options))
         self.add_item(self.restrictions)
 
 
@@ -315,9 +302,7 @@ class ConfirmMapTypeMixin(ConfirmBaseView):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.map_type = views.MapTypeSelect(
-            copy.deepcopy(self.itx.client.cache.map_types.options)
-        )
+        self.map_type = views.MapTypeSelect(copy.deepcopy(self.itx.client.cache.map_types.options))
         self.add_item(self.map_type)
 
     async def map_submit_enable(self) -> bool:

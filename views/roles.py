@@ -8,9 +8,7 @@ if typing.TYPE_CHECKING:
     import core
 
 
-async def add_remove_roles(
-    itx: discord.Interaction[core.Genji], role: discord.Role
-) -> bool:
+async def add_remove_roles(itx: discord.Interaction[core.Genji], role: discord.Role) -> bool:
     """Add or remove roles (toggle-like behavior)."""
     if role in itx.user.roles:
         await itx.user.remove_roles(role)
@@ -25,9 +23,7 @@ async def execute_button(itx: discord.Interaction[core.Genji], role_id: int) -> 
     await itx.response.defer(ephemeral=True)
     role = itx.guild.get_role(role_id)
     res = await add_remove_roles(itx, role)
-    await itx.followup.send(
-        f"{role.name} {'added' if res else 'removed'}", ephemeral=True
-    )
+    await itx.followup.send(f"{role.name} {'added' if res else 'removed'}", ephemeral=True)
 
 
 class AnnouncementRoles(discord.ui.View):
@@ -42,9 +38,7 @@ class AnnouncementRoles(discord.ui.View):
         custom_id="gen_announce_role",
         row=0,
     )
-    async def gen_announce_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def gen_announce_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1073292414271356938)
 
@@ -54,9 +48,7 @@ class AnnouncementRoles(discord.ui.View):
         custom_id="patch_announce_role",
         row=0,
     )
-    async def patch_announce_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def patch_announce_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1073292274877878314)
 
@@ -73,9 +65,7 @@ class RegionRoles(discord.ui.View):
         custom_id="na_role",
         row=0,
     )
-    async def na_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def na_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1072934825981386893)
 
@@ -85,9 +75,7 @@ class RegionRoles(discord.ui.View):
         custom_id="eu_role",
         row=0,
     )
-    async def eu_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def eu_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1072934890032615445)
 
@@ -97,9 +85,7 @@ class RegionRoles(discord.ui.View):
         custom_id="asia_role",
         row=0,
     )
-    async def asia_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def asia_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1072934956227100803)
 
@@ -109,9 +95,7 @@ class RegionRoles(discord.ui.View):
         custom_id="oce_role",
         row=1,
     )
-    async def oce_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def oce_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1073285809505046699)
 
@@ -121,9 +105,7 @@ class RegionRoles(discord.ui.View):
         custom_id="sa_role",
         row=1,
     )
-    async def sa_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def sa_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1073285860239360060)
 
@@ -133,9 +115,7 @@ class RegionRoles(discord.ui.View):
         custom_id="africa_role",
         row=1,
     )
-    async def africa_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def africa_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1073285906422845600)
 
@@ -152,9 +132,7 @@ class ConsoleRoles(discord.ui.View):
         style=discord.ButtonStyle.grey,
         custom_id="console_role",
     )
-    async def console_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def console_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1072935043766427718)
 
@@ -164,8 +142,6 @@ class ConsoleRoles(discord.ui.View):
         style=discord.ButtonStyle.grey,
         custom_id="pc_role",
     )
-    async def pc_role(
-        self, itx: discord.Interaction[core.Genji], button: discord.Button
-    ) -> None:
+    async def pc_role(self, itx: discord.Interaction[core.Genji], button: discord.Button) -> None:
         """Role callback."""
         await execute_button(itx, 1072935061202141204)
