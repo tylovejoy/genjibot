@@ -13,9 +13,7 @@ if typing.TYPE_CHECKING:
 
 
 class TicketSystem(commands.Cog):
-    """Ticket System"""
-
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
 
     async def cog_load(self) -> None:

@@ -10,8 +10,6 @@ import asyncpg
 import discord
 from discord.ext import commands
 
-import core
-import database
 import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
 from cogs.tickets.views import TicketStart
@@ -19,6 +17,8 @@ from utils import cache, constants, embeds, errors, maps, ranks, records, utils
 from utils.records import icon_generator
 
 if typing.TYPE_CHECKING:
+    import database
+
     from .genji import Genji
 
 log = logging.getLogger(__name__)
@@ -27,13 +27,15 @@ ASCII_LOGO = r""""""
 
 
 class BotEvents(commands.Cog):
-    def __init__(self, bot: Genji):
+    def __init__(self, bot: Genji) -> None:
         self.bot = bot
         bot.tree.on_error = errors.on_app_command_error
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        """The on_ready function is called when the bot
+        """Call upon ready.
+
+        The on_ready function is called when the bot
         is ready to receive and process commands.
         It prints a string containing the name of the bot,
         its owner, and which version of discord.py it's using.
@@ -142,7 +144,7 @@ class BotEvents(commands.Cog):
             self.bot.persistent_views_added = True
 
     @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
+    async def on_member_join(self, member: discord.Member) -> None:
         # Add user to DB
         with contextlib.suppress(asyncpg.UniqueViolationError):
             await self.bot.database.set(
@@ -182,49 +184,20 @@ class BotEvents(commands.Cog):
 
         await utils.auto_skill_role(self.bot, member.guild, member)
 
-    @commands.Cog.listener()
-    async def on_guild_join(self, guild: discord.Guild):
-        # members = [(member.id, member.name[:25]) for member in guild.members]
-        # await self.bot.database.set_many(
-        #     "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
-        #     [(_id, nick) for _id, nick in members],
-        # )
-        ...
-
-    @commands.Cog.listener()
-    async def on_thread_update(self, before: discord.Thread, after: discord.Thread):
-        # if before.parent_id not in self.bot.keep_alives:
-        #     return
-        #
-        # if after.archived and not after.locked:
-        #     await after.edit(archived=False)
-        #     log.debug(f"Auto-unarchived thread: {after.id}")
-        ...
-
-    # async def newsfeed_worker(
-    #     self, data: dict, guild: discord.Guild, db: database.Database
-    # ):
-    #
-    #     query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-    #     await db.execute(query, "record", data)
-    #
-    #     channel = guild.get_channel(utils.NEWSFEED)
-    #     await channel.send(embed=embed)
-
     async def newsfeed_record(
         self,
         guild: discord.Guild,
         record: database.DotRecord,
         medals: tuple[float, float, float],
-    ): ...
+    ) -> None: ...
 
     @commands.Cog.listener()
     async def on_newsfeed_record(
         self,
-        itx: discord.Interaction[core.Genji],
+        itx: discord.Interaction[Genji],
         record: asyncpg.Record,
         medals: tuple[float, float, float],
-    ):
+    ) -> None:
         if not record["video"]:
             return
         icon = icon_generator(record, medals)
@@ -268,7 +241,7 @@ class BotEvents(commands.Cog):
         await itx.client.database.execute(query, "record", json_data)
 
     @commands.Cog.listener()
-    async def on_newsfeed_role(self, client: core.Genji, user: discord.Member, roles: list[discord.Role]):
+    async def on_newsfeed_role(self, client: Genji, user: discord.Member, roles: list[discord.Role]) -> None:
         nickname = client.cache.users[user.id].nickname
         embed = embeds.GenjiEmbed(
             title=f"{nickname} got promoted!",
@@ -290,11 +263,11 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_guide(
         self,
-        itx: discord.Interaction[core.Genji],
+        itx: discord.Interaction[Genji],
         user: discord.Member,
         url: str,
         map_code: str,
-    ):
+    ) -> None:
         nickname = itx.client.cache.users[user.id].nickname
         embed = embeds.GenjiEmbed(
             title=f"{nickname} has posted a guide for {map_code}",
@@ -320,11 +293,11 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_archive(
         self,
-        itx: discord.Interaction[core.Genji],
+        itx: discord.Interaction[Genji],
         map_code: str,
         value: str,
-        map_data: dict = None,
-    ):
+        map_data: dict | None = None,
+    ) -> None:
         if value == "archive":
             description = (
                 "This map will not appear in the map search command.\n" "You cannot submit records for archived maps."
@@ -379,12 +352,12 @@ class BotEvents(commands.Cog):
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(
         self,
-        itx: discord.Interaction[core.Genji],
+        itx: discord.Interaction[Genji],
         map_code: str,
         values: dict[str, str],
         thread_id: int | None = None,
         message_id: int | None = None,
-    ):
+    ) -> None:
         description = ">>> "
         for k, v in values.items():
             description += f"`{k}` {v}\n"
@@ -455,4 +428,5 @@ class BotEvents(commands.Cog):
 
 
 async def setup(bot: Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(BotEvents(bot))

@@ -16,14 +16,15 @@ if typing.TYPE_CHECKING:
 class Personal(commands.Cog):
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    async def settings(self, itx: discord.Interaction[core.Genji]):
+    async def settings(self, itx: discord.Interaction[core.Genji]) -> None:
         """Change various settings like notifications and your display name."""
         await itx.response.defer(ephemeral=True)
-        data = await itx.client.database.get_row("SELECT flags FROM users WHERE user_id = $1", itx.user.id)
-        flags = data.flags
+        query = "SELECT flags FROM users WHERE user_id = $1;"
+        flags = await itx.client.database.fetchval(query, itx.user.id)
         view = views.SettingsView(itx, flags)
         await itx.edit_original_response(view=view)
 
 
-async def setup(bot: core.Genji):
+async def setup(bot: core.Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(Personal(bot))

@@ -57,7 +57,7 @@ class VerificationView(discord.ui.View):
         await self.verification(itx, False, modal.reason.value)
 
     @staticmethod
-    async def _fetch_record_by_hidden_id(db: database.Database, hidden_id: int) -> models.Record:
+    async def _fetch_record_by_hidden_id(db: database.Database, hidden_id: int) -> models.Record | None:
         query = """
             SELECT
                 rq.*, m.official
@@ -65,7 +65,10 @@ class VerificationView(discord.ui.View):
             LEFT JOIN maps m on rq.map_code = m.map_code
             WHERE hidden_id=$1
         """
-        return models.Record(**await db.fetchrow(query, hidden_id))
+        rows = await db.fetchrow(query, hidden_id)
+        if not rows:
+            return None
+        return models.Record(**rows)
 
     @staticmethod
     async def _fetch_medals(db: database.Database, map_code: str) -> asyncpg.Record:
@@ -143,6 +146,8 @@ class VerificationView(discord.ui.View):
     ) -> None:
         """Verify a record."""
         search = await self._fetch_record_by_hidden_id(itx.client.database, itx.message.id)
+        if not search:
+            raise ValueError
         if search.user_id == itx.user.id:
             await itx.followup.send(content="You cannot verify your own submissions.")
             return

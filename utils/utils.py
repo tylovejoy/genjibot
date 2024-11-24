@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import operator
 import typing
 
@@ -15,6 +16,9 @@ from utils.models import RankDetail
 if typing.TYPE_CHECKING:
     import core
     import database
+
+
+log = logging.getLogger(__name__)
 
 
 _emoji_numbers = {
@@ -210,9 +214,9 @@ def determine_skill_rank_roles_to_give(
         base_rank_name = DIFF_TO_RANK[row.difficulty]
         base_rank = discord.utils.get(guild.roles, name=base_rank_name)
 
-        bronze = (discord.utils.get(guild.roles, name=f"{base_rank_name} +"),)
-        silver = (discord.utils.get(guild.roles, name=f"{base_rank_name} ++"),)
-        gold = (discord.utils.get(guild.roles, name=f"{base_rank_name} +++"),)
+        bronze = discord.utils.get(guild.roles, name=f"{base_rank_name} +")
+        silver = discord.utils.get(guild.roles, name=f"{base_rank_name} ++")
+        gold = discord.utils.get(guild.roles, name=f"{base_rank_name} +++")
 
         # Base rank
         if row.rank_met:
@@ -243,7 +247,7 @@ async def grant_skill_rank_roles(
     bot: core.Genji,
 ) -> None:
     """Grant skill rank roles to a Discord server Member."""
-    new_roles = user.roles[1:]
+    new_roles = user.roles
     for a in roles_to_grant:
         if a not in new_roles:
             new_roles.append(a)

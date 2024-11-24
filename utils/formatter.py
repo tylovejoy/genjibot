@@ -2,7 +2,7 @@ import typing
 
 
 class Formatter:
-    def __init__(self, data: dict[str, typing.Any | None]):
+    def __init__(self, data: dict[str, typing.Any | None]) -> None:
         self.values = data
 
     @staticmethod

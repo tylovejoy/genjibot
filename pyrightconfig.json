@@ -1,0 +1,12 @@
+{
+  "pythonVersion": "3.11",
+  "exclude": [
+    "__pycache__",
+    ".venv",
+    "venv1",
+    ".github",
+    ".idea",
+    "venv-linux"
+  ],
+  "typeCheckingMode": "basic"
+}

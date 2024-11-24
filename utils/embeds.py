@@ -19,7 +19,7 @@ class GenjiEmbed(discord.Embed):
         description: str | None = None,
         thumbnail: str | None = None,
         image: str | None = None,
-    ):
+    ) -> None:
         if not color:
             color = discord.Color.from_rgb(1, 1, 1)
 
@@ -35,7 +35,7 @@ class GenjiEmbed(discord.Embed):
         else:
             self.set_image(url=image)
 
-    def add_description_field(self, name: str, value: str):
+    def add_description_field(self, name: str, value: str) -> None:
         if not self.description:
             self.description = ""
         self.description += f"```{name}```{value}\n"  # \u001b[{format};{color}m
@@ -47,7 +47,7 @@ class ErrorEmbed(GenjiEmbed):
         *,
         description: str,
         unknown: bool = False,
-    ):
+    ) -> None:
         if unknown:
             super().__init__(
                 title="Uh oh! Something went wrong.",
@@ -85,7 +85,8 @@ def set_embed_thumbnail_maps(map_name: str, embed: discord.Embed) -> discord.Emb
     return embed
 
 
-def record_embed(data: dict[str, typing.Any]):
+def record_embed(data: dict[str, typing.Any]) -> discord.Embed:
+    """Create record embed."""
     if data.get("record") and data["record"] == COMPLETION_PLACEHOLDER:
         data["record"] = "Completion"
 

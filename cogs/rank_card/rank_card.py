@@ -19,9 +19,7 @@ if typing.TYPE_CHECKING:
 
 
 class RankCard(commands.Cog):
-    """Rank Card"""
-
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
 
     @app_commands.command(name="rank-card")
@@ -46,6 +44,7 @@ class RankCard(commands.Cog):
         rank = utils.find_highest_rank(rank_data)
 
         background = await self._get_background_choice(user.id)
+
         data = {
             "rank": rank,
             "name": itx.client.cache.users[user.id].nickname,
@@ -93,8 +92,8 @@ class RankCard(commands.Cog):
                          ('[5.88,7.65)'::numrange, 'Very Hard'),
                          ('[7.65,9.41)'::numrange, 'Extreme'),
                          ('[9.41,10.0]'::numrange, 'Hell')
-            ), map_data AS 
-            (SELECT avg(difficulty) as difficulty FROM maps m 
+            ), map_data AS
+            (SELECT avg(difficulty) as difficulty FROM maps m
             LEFT JOIN map_ratings mr ON m.map_code = mr.map_code WHERE m.official = TRUE
                     AND m.archived = FALSE GROUP BY m.map_code)
             SELECT name, count(name) as total FROM map_data md
@@ -103,38 +102,38 @@ class RankCard(commands.Cog):
         """
         return await self.bot.database.fetch(query)
 
-    async def _get_world_record_count(self, user_id: int):
+    async def _get_world_record_count(self, user_id: int) -> int:
         query = """
-            WITH all_records AS (SELECT 
-                user_id, r.map_code, record, rank() OVER (PARTITION BY r.map_code ORDER BY record) as pos
-            
-            
-            FROM records r
-            LEFT JOIN maps m on r.map_code = m.map_code
-            WHERE m.official = TRUE AND record < 99999999 AND video IS NOT NULL)
+            WITH all_records AS (
+                SELECT
+                    user_id,
+                    r.map_code,
+                    record,
+                    rank() OVER (
+                        PARTITION BY r.map_code
+                        ORDER BY record
+                    ) as pos
+                FROM records r
+                LEFT JOIN maps m on r.map_code = m.map_code
+                WHERE m.official = TRUE AND record < 99999999 AND video IS NOT NULL
+            )
             SELECT count(*) FROM all_records WHERE user_id = $1 AND pos = 1
-        
         """
-        row = await self.bot.database.get_row(query, user_id)
-        return row.count
+        return await self.bot.database.fetchval(query, user_id)
 
-    async def _get_maps_count(self, user_id: int):
+    async def _get_maps_count(self, user_id: int) -> int:
         query = """
-            SELECT count(*) FROM maps LEFT JOIN map_creators mc on maps.map_code = mc.map_code WHERE user_id = $1 AND official=TRUE
+            SELECT count(*)
+            FROM maps
+            LEFT JOIN map_creators mc ON maps.map_code = mc.map_code
+            WHERE user_id = $1 AND official = TRUE
         """
-        row = await self.bot.database.get_row(query, user_id)
-        return row.count
+        return await self.bot.database.fetchval(query, user_id)
 
-    async def _get_playtests_count(self, user_id):
+    async def _get_playtests_count(self, user_id: int) -> int:
         query = "SELECT amount FROM playtest_count WHERE user_id = $1"
-        row = await self.bot.database.get_row(query, user_id)
-        if not row:
-            return 0
-        return row.amount
+        return await self.bot.database.fetchval(query, user_id) or 0
 
-    async def _get_background_choice(self, user_id: int):
+    async def _get_background_choice(self, user_id: int) -> int:
         query = "SELECT value FROM background WHERE user_id = $1"
-        row = await self.bot.database.get_row(query, user_id)
-        if not row:
-            return 1
-        return row.value
+        return await self.bot.database.fetchval(query, user_id) or 1

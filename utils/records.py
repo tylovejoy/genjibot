@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import datetime
-import decimal
 import re
 import typing
 
-import asyncpg
 import discord
 from discord import Embed, app_commands
 
 import cogs
-import database
 
 from . import constants, embeds, errors, ranks, utils
 
 if typing.TYPE_CHECKING:
+    import decimal
+
+    import asyncpg
+
     import core
+    import database
 
 
 CODE_VERIFICATION = re.compile(r"^[A-Z0-9]{4,6}$")
@@ -74,6 +76,7 @@ class AllUserTransformer(app_commands.Transformer):
 
 
 async def transform_user(client: core.Genji, value: str) -> utils.FakeUser | discord.Member:
+    """Transform user."""
     guild = client.get_guild(constants.GUILD_ID)
     try:
         value = int(value)
@@ -106,7 +109,7 @@ class URLTransformer(app_commands.Transformer):
             value = "https://" + value
         try:
             async with itx.client.session.get(value) as resp:
-                if resp.status != 200:
+                if resp.status != 200:  # noqa: PLR2004
                     raise errors.IncorrectURLFormatError
                 return str(resp.url)
         except Exception:
@@ -130,13 +133,12 @@ def time_convert(string: str) -> float:
 
 
 def pretty_record(record: decimal.Decimal | float) -> str:
-    """The pretty_record property takes the record time for a given
+    """Convert Decimal | float to a time formatted string.
+
+    The pretty_record property takes the record time for a given
     document and returns a string representation of that time.
     The function is used to display the record times in an easily
     readable format on the leaderboard page.
-
-    Returns:
-        A string
 
     """
     record = float(round(record, 2))
@@ -147,12 +149,12 @@ def pretty_record(record: decimal.Decimal | float) -> str:
 
     if dt.hour == 0 and dt.minute == 0:
         hour_remove = 6
-        if dt.second < 10:
+        if dt.second < 10:  # noqa: PLR2004
             hour_remove += 1
 
     elif dt.hour == 0:
         hour_remove = 3
-        if dt.minute < 10:
+        if dt.minute < 10:  # noqa: PLR2004
             hour_remove = 4
 
     if dt.microsecond == 0:
@@ -162,23 +164,15 @@ def pretty_record(record: decimal.Decimal | float) -> str:
 
 
 def icon_generator(record: asyncpg.Record, medals: tuple[float, float, float]) -> str:
+    """Generate icon for embed."""
     icon = ""
     if record["video"] and record["record"] != "Completion":
         if record["record"] < medals[0] != 0:
-            if record.get("rank_num", 0) == 1:
-                icon = constants.GOLD_WR
-            else:
-                icon = constants.FULLY_VERIFIED_GOLD
+            icon = constants.GOLD_WR if record.get("rank_num", 0) == 1 else constants.FULLY_VERIFIED_GOLD
         elif record["record"] < medals[1] != 0:
-            if record.get("rank_num", 0) == 1:
-                icon = constants.SILVER_WR
-            else:
-                icon = constants.FULLY_VERIFIED_SILVER
+            icon = constants.SILVER_WR if record.get("rank_num", 0) == 1 else constants.FULLY_VERIFIED_SILVER
         elif record["record"] < medals[2] != 0:
-            if record.get("rank_num", 0) == 1:
-                icon = constants.BRONZE_WR
-            else:
-                icon = constants.FULLY_VERIFIED_BRONZE
+            icon = constants.BRONZE_WR if record.get("rank_num", 0) == 1 else constants.FULLY_VERIFIED_BRONZE
         elif record.get("rank_num", 0) == 1:
             icon = constants.NON_MEDAL_WR
         else:
@@ -193,6 +187,7 @@ def all_levels_records_embed(
     title: str,
     legacy: bool = False,
 ) -> list[Embed | embeds.GenjiEmbed]:
+    """Generate embed for All Levels Record."""
     embed_list = []
     embed = embeds.GenjiEmbed(title=title)
     for i, record in enumerate(records):
@@ -242,8 +237,9 @@ def pr_records_embed(
     records: list[database.DotRecord],
     title: str,
 ) -> list[Embed | embeds.GenjiEmbed]:
+    """Generate embed for PR Record."""
     embed_list = []
-    embed = embeds.GenjiEmbed(title=title)
+    _embed = embeds.GenjiEmbed(title=title)
     for i, record in enumerate(records):
         if float(record.record) == constants.COMPLETION_PLACEHOLDER:
             record.record = "Completion"
@@ -269,13 +265,13 @@ def pr_records_embed(
                 f"{icon_generator(record, medals)}\n "
                 f"┣ `Video` [Link]({record.video})\n┃\n"
             )
-        embed.add_field(
+        _embed.add_field(
             name=f"{cur_code}",
             value="┗".join(description[:-3].rsplit("┣", 1)),
             inline=False,
         )
         if utils.split_nth_iterable(current=i, iterable=records, split=10):
-            embed.add_field(
+            _embed.add_field(
                 name="Legend",
                 value=(
                     f"{constants.PARTIAL_VERIFIED} Completion\n"
@@ -289,13 +285,14 @@ def pr_records_embed(
                     f"{constants.GOLD_WR} Gold Medal w/ World Record\n"
                 ),
             )
-            embed_list.append(embed)
-            embed = embed.GenjiEmbed(title=title)
+            embed_list.append(_embed)
+            _embed = embeds.GenjiEmbed(title=title)
     return embed_list
 
 
 def make_ordinal(n: int) -> str:
-    """Convert an integer into its ordinal representation::
+    """Convert an integer into its ordinal representation.
+
     make_ordinal(0)   => '0th'
     make_ordinal(3)   => '3rd'
     make_ordinal(122) => '122nd'
@@ -303,6 +300,6 @@ def make_ordinal(n: int) -> str:
     """
     n = int(n)
     suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
-    if 11 <= (n % 100) <= 13:
+    if 11 <= (n % 100) <= 13:  # noqa: PLR2004
         suffix = "th"
     return str(n) + suffix

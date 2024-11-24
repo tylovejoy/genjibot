@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class TicketStart(discord.ui.View):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(timeout=None)
 
     @discord.ui.button(
@@ -20,14 +20,15 @@ class TicketStart(discord.ui.View):
         style=discord.ButtonStyle.grey,
         emoji="🆘",
     )
-    async def create_ticket(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button):
+    async def create_ticket(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
+        """Create ticket process."""
         modal = TicketStartModal()
         await itx.response.send_modal(modal)
         await modal.wait()
 
 
 class TicketStartModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             title="Create Ticket",
             timeout=3600,
@@ -41,7 +42,8 @@ class TicketStartModal(discord.ui.Modal):
         max_length=100,
     )
 
-    async def on_submit(self, itx: discord.Interaction[core.Genji]):
+    async def on_submit(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Create ticket after modal submission."""
         if self.subject.value is None:
             return
 
@@ -75,10 +77,11 @@ class TicketStartModal(discord.ui.Modal):
 
 
 class CloseTicketView(discord.ui.View):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(timeout=None)
 
     @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.red, custom_id="close_ticket")
-    async def close_ticket(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button):
+    async def close_ticket(self, itx: discord.Interaction[core.Genji], button: discord.ui.Button) -> None:
+        """Close ticket thread."""
         assert isinstance(itx.channel, discord.Thread)
         await itx.channel.edit(locked=True, archived=True)

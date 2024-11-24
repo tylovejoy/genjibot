@@ -6,7 +6,6 @@ import typing
 import discord
 from discord.ext import commands
 
-
 if typing.TYPE_CHECKING:
     import core
 
@@ -23,7 +22,8 @@ class Test(commands.Cog):
         guilds: commands.Greedy[discord.Object],
         spec: typing.Literal["~", "*", "^"] | None = None,
     ) -> None:
-        """
+        """Sync commands to Discord.
+
         ?sync -> global sync
         ?sync ~ -> sync current guild
         ?sync * -> copies all global app commands to current guild and syncs
@@ -67,27 +67,27 @@ class Test(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def xx(self, ctx: commands.Context[core.Genji]):
+    async def xx(self, ctx: commands.Context[core.Genji]) -> None:
         members = [(member.id, member.name[:25]) for member in ctx.guild.members]
         await ctx.bot.database.set_many(
             "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
-            [(_id, nick) for _id, nick in members],
+            members,
         )
         await ctx.send("done")
 
     @commands.command()
     @commands.is_owner()
-    async def xxx(self, ctx: commands.Context[core.Genji]):
+    async def xxx(self, ctx: commands.Context[core.Genji]) -> None:
         members = [(member.id, member.name[:25]) for member in ctx.guild.members]
         await ctx.bot.database.set_many(
             "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
-            [(_id, nick) for _id, nick in members],
+            members,
         )
         await ctx.send("done")
 
     @commands.command()
     @commands.is_owner()
-    async def placeholder(self, ctx: commands.Context[core.Genji]):
+    async def placeholder(self, ctx: commands.Context[core.Genji]) -> None:
         await ctx.send("placeholder")
 
     @commands.command()
@@ -96,27 +96,16 @@ class Test(commands.Cog):
         self,
         ctx: commands.Context[core.Genji],
         level: typing.Literal["debug", "info", "DEBUG", "INFO"],
-    ):
+    ) -> None:
         log.setLevel(level.upper())
         await ctx.message.delete()
-
-    # @app_commands.command(name="test")
-    # @app_commands.guilds(discord.Object(id=utils.GUILD_ID))
-    # async def testing_slash(self, itx: discord.Interaction[core.Genji]) -> None:
-    #     command = itx.client.tree.get_app_command("submit-record", guild=utils.GUILD_ID)
-    #
-    #     embed = utils.GenjiEmbed(
-    #         title="Test Help", description=f"Use this comman {command.mention}"
-    #     )
-    #
-    #     await itx.response.send_message(embed=embed)
 
     @commands.command()
     @commands.is_owner()
     async def close(
         self,
         ctx: commands.Context[core.Genji],
-    ):
+    ) -> None:
         await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
         await ctx.channel.send("Bot will be down for a few minutes!")
         await ctx.message.delete()
@@ -126,14 +115,14 @@ class Test(commands.Cog):
     async def open(
         self,
         ctx: commands.Context[core.Genji],
-    ):
+    ) -> None:
         await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
         await ctx.channel.send("Back online!")
         await ctx.message.delete()
 
     @commands.command()
     @commands.is_owner()
-    async def enlarge(self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji | str):
+    async def enlarge(self, ctx: commands.Context[core.Genji], emoji: discord.PartialEmoji | str) -> None:
         if isinstance(emoji, discord.PartialEmoji):
             await ctx.send(emoji.url)
         else:
@@ -141,7 +130,7 @@ class Test(commands.Cog):
 
     @commands.command()
     @commands.cooldown(rate=1, per=100000, type=commands.BucketType.guild)
-    async def download_maps(self, ctx: commands.Context[core.Genji]):
+    async def download_maps(self, ctx: commands.Context[core.Genji]) -> None:
         f = await ctx.bot.database.copy_from_query(
             """WITH
                 required      AS (
@@ -155,17 +144,14 @@ class Test(commands.Cog):
                     FROM playtest
                    WHERE is_author = TRUE
                 ),
-            
                 playtest_avgs AS
                   (
                     SELECT p.map_code, count(p.value) - 1 AS count, required_votes
-            
                       FROM
                         playtest p
                           RIGHT JOIN required rv ON p.map_code = rv.map_code
                      GROUP BY p.map_code, required_votes
                   ),
-            
                 all_maps      AS (
                   SELECT
                     map_name,
@@ -206,28 +192,23 @@ class Test(commands.Cog):
                          ('[7.65,9.41)'::numrange, 'Extreme'),
                          ('[9.41,10.0]'::numrange, 'Hell')
             )
-            
             SELECT
-              am.map_code, 
-              creator_ids 
-              --am.map_name, map_type, am.description, playtesting, am.archived, guide, mechanics, restrictions, am.checkpoints, difficulty, quality, am.gold, am.silver, am.bronze
+              am.map_code,
+              creator_ids
               FROM
                 all_maps am
                   LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
                   LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
                   INNER JOIN ranges r ON r.range @> am.difficulty
              GROUP BY
-               am.map_code, 
-               creator_ids 
-               --am.map_name, map_type, am.description, am.playtesting, am.archived, guide, mechanics, restrictions, am.checkpoints, creator_ids, difficulty, quality, am.gold, am.silver, am.bronze, p.thread_id, pa.count, pa.required_votes
-            
-            
-            -- ORDER BY
-             --  difficulty, quality DESC"""
+               am.map_code,
+               creator_ids
+             """
         )
 
         await ctx.send(file=discord.File(fp=f, filename="test.csv"))
 
 
-async def setup(bot: core.Genji):
+async def setup(bot: core.Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(Test(bot))

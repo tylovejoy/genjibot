@@ -4,6 +4,7 @@ import typing
 
 import discord
 from discord import app_commands
+from discord.ext import commands
 
 import cogs
 import views
@@ -13,9 +14,7 @@ if typing.TYPE_CHECKING:
     import core
 
 
-class Tags(discord.ext.commands.GroupCog, group_name="tag"):
-    """Tags"""
-
+class Tags(commands.GroupCog, group_name="tag"):
     @app_commands.command()
     @app_commands.autocomplete(name=cogs.tags_autocomplete)
     @app_commands.checks.cooldown(3, 30, key=lambda i: (i.guild_id, i.user.id))
@@ -40,18 +39,15 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
 
             return
 
-        tag = [
-            x
-            async for x in itx.client.database.get(
-                "SELECT * FROM tags WHERE name=$1",
-                name,
-            )
-        ][0]
-        await itx.edit_original_response(content=discord.utils.escape_mentions(f"**{tag.name}**\n\n{tag.value}"))
+        query = "SELECT * FROM tags WHERE name = $1;"
+        row = await itx.client.database.fetchrow(query, name)
+        if row is None:
+            raise ValueError
+        await itx.edit_original_response(content=discord.utils.escape_mentions(f"**{row['name']}**\n\n{row['value']}"))
 
     @app_commands.command()
-    async def create(self, itx: discord.Interaction[core.Genji]):
-        """Create a tag"""
+    async def create(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Create a tag."""
         if (
             itx.guild.get_role(constants.TAG_MAKER) not in itx.user.roles
             and itx.guild.get_role(constants.STAFF) not in itx.user.roles
@@ -61,5 +57,6 @@ class Tags(discord.ext.commands.GroupCog, group_name="tag"):
         await itx.response.send_modal(modal)
 
 
-async def setup(bot: core.Genji):
+async def setup(bot: core.Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(Tags(bot), guilds=[discord.Object(id=constants.GUILD_ID)])

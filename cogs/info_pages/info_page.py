@@ -12,9 +12,7 @@ if typing.TYPE_CHECKING:
 
 
 class InfoPage(commands.Cog):
-    """Info page"""
-
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
 
     @commands.command()

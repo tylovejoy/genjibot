@@ -15,8 +15,8 @@ if typing.TYPE_CHECKING:
     from core import Genji
 
 
-class BaseParkourException(Exception):
-    def __init__(self, additional_info: str = ""):
+class BaseParkourError(Exception):
+    def __init__(self, additional_info: str = "") -> None:
         super().__init__(self.__doc__ + "\n" + additional_info)
 
 
@@ -24,153 +24,154 @@ class DatabaseConnectionError(Exception):
     """Connection failed. This will be logged. Try again later."""
 
 
-class IncorrectRecordFormatError(BaseParkourException, app_commands.errors.AppCommandError):
+class IncorrectRecordFormatError(BaseParkourError, app_commands.errors.AppCommandError):
     """Record must be in XXXX.xx format e.g. 1569.33, 567.01, 10.50, etc."""
 
 
-class IncorrectCodeFormatError(BaseParkourException, app_commands.errors.AppCommandError):
+class IncorrectCodeFormatError(BaseParkourError, app_commands.errors.AppCommandError):
     """Map code must be a valid Overwatch share code."""
 
 
-class IncorrectURLFormatError(BaseParkourException, app_commands.errors.AppCommandError):
+class IncorrectURLFormatError(BaseParkourError, app_commands.errors.AppCommandError):
     """The given URL is invalid."""
 
 
-class InvalidFiltersError(BaseParkourException):
+class InvalidFiltersError(BaseParkourError):
     """You must choose _at least_ **one** filter
     (map name, map type, or creator, mechanics, official, difficulty).
     """  # noqa: D205
 
 
-class InvalidMapNameError(BaseParkourException, app_commands.errors.AppCommandError):
+class InvalidMapNameError(BaseParkourError, app_commands.errors.AppCommandError):
     """Invalid map name given. Please make sure to use the autocompleted map names."""
 
 
-class InvalidMapCodeError(BaseParkourException, app_commands.errors.AppCommandError):
+class InvalidMapCodeError(BaseParkourError, app_commands.errors.AppCommandError):
     """Invalid map code given. Please make sure to use the autocompleted map codes."""
 
 
-class InvalidMapLevelError(BaseParkourException, app_commands.errors.AppCommandError):
+class InvalidMapLevelError(BaseParkourError, app_commands.errors.AppCommandError):
     """Invalid map level given. Please make sure to use the autocompleted map levels."""
 
 
-class InvalidMapTypeError(BaseParkourException, app_commands.errors.AppCommandError):
+class InvalidMapTypeError(BaseParkourError, app_commands.errors.AppCommandError):
     """Invalid map name given. Please make sure to use the autocompleted map types."""
 
 
-class RecordNotFasterError(BaseParkourException, app_commands.errors.AppCommandError):
+class RecordNotFasterError(BaseParkourError, app_commands.errors.AppCommandError):
     """Record must be faster than your previous submission."""
 
 
-class NoMapsFoundError(BaseParkourException, app_commands.errors.AppCommandError):
+class NoMapsFoundError(BaseParkourError, app_commands.errors.AppCommandError):
     """No maps have been found with the given filters."""
 
 
-class NoRecordsFoundError(BaseParkourException, app_commands.errors.AppCommandError):
+class NoRecordsFoundError(BaseParkourError, app_commands.errors.AppCommandError):
     """No records have been found."""
 
 
-class NoCompletionFoundError(BaseParkourException):
+class NoCompletionFoundError(BaseParkourError):
     """You cannot rate a map without a completion."""
 
 
-class CannotRateOwnMap(BaseParkourException):
+class CannotRateOwnMapError(BaseParkourError):
     """You cannot rate your own map."""
 
 
-class NoPermissionsError(BaseParkourException, app_commands.errors.AppCommandError):
+class NoPermissionsError(BaseParkourError, app_commands.errors.AppCommandError):
     """You do not have permission to do this action."""
 
 
-class CreatorAlreadyExists(BaseParkourException):
+class CreatorAlreadyExistsError(BaseParkourError):
     """Creator already associated with this map."""
 
 
-class MaxMapsInPlaytest(BaseParkourException):
+class MaxMapsInPlaytestError(BaseParkourError):
     """You have reached the maximum total amount (5) of maps in playtest.
     Try to engage other members to playtest your map in order to get verified and submit more maps.
-    """
+    """  # noqa: D205
 
 
-class MaxWeeklyMapsInPlaytest(BaseParkourException):
+class MaxWeeklyMapsInPlaytestError(BaseParkourError):
     """You have reached the maximum amount of maps (2) submitted within the last week.
     Focus on getting your maps verified before submitting more!
-    """
+    """  # noqa: D205, D400
 
 
-class CreatorDoesntExist(BaseParkourException):
+class CreatorDoesntExistError(BaseParkourError):
     """Creator is not associated with this map."""
 
 
-class MapExistsError(BaseParkourException, app_commands.errors.AppCommandError):
-    """This map code already exists!"""
+class MapExistsError(BaseParkourError, app_commands.errors.AppCommandError):
+    """This map code already exists!"""  # noqa: D400, D404
 
 
-class NoGuidesExistError(BaseParkourException, app_commands.errors.AppCommandError):
+class NoGuidesExistError(BaseParkourError, app_commands.errors.AppCommandError):
     """No guides exist for this map code."""
 
 
-class GuideExistsError(BaseParkourException, app_commands.errors.AppCommandError):
-    """This guide has already been submitted."""
+class GuideExistsError(BaseParkourError, app_commands.errors.AppCommandError):
+    """This guide has already been submitted."""  # noqa: D404
 
 
-class OutOfRangeError(BaseParkourException, app_commands.errors.AppCommandError):
+class OutOfRangeError(BaseParkourError, app_commands.errors.AppCommandError):
     """Choice is out of range."""
 
 
-class InvalidInteger(BaseParkourException, app_commands.errors.AppCommandError):
+class InvalidIntegerError(BaseParkourError, app_commands.errors.AppCommandError):
     """Choice must be a valid integer."""
 
 
-class UserNotFoundError(BaseParkourException, app_commands.errors.AppCommandError):
+class UserNotFoundError(BaseParkourError, app_commands.errors.AppCommandError):
     """User does not exist."""
 
 
-class RankTooLowError(BaseParkourException, app_commands.errors.AppCommandError):
+class RankTooLowError(BaseParkourError, app_commands.errors.AppCommandError):
     """Your rank is too low to do this action."""
 
 
-class VideoNoRecord(BaseParkourException, app_commands.errors.AppCommandError):
+class VideoNoRecordError(BaseParkourError, app_commands.errors.AppCommandError):
     """If you add a video, you must submit a time record as well. Please submit again with the `record` argument."""
 
 
-class TemporaryMultiBan(BaseParkourException, app_commands.errors.AppCommandError):
+class TemporaryMultiBanError(BaseParkourError, app_commands.errors.AppCommandError):
     """Recently an exploit for multiclimb has been going viral.
     We are forced to take some temporary measures to deal with this situation.
     For now, we are **NOT** verifying **ANY** completion for maps that allow multiclimbing.
 
     This means that for now **ONLY maps that have the multi banned will be verified.**
-    """
+    """  # noqa: D205
 
 
-class InvalidFakeUser(BaseParkourException, app_commands.errors.AppCommandError):
-    """This fake user does not exist."""
+class InvalidFakeUserError(BaseParkourError, app_commands.errors.AppCommandError):
+    """This fake user does not exist."""  # noqa: D404
 
 
-class InvalidMedals(BaseParkourException, app_commands.errors.AppCommandError):
+class InvalidMedalsError(BaseParkourError, app_commands.errors.AppCommandError):
     """Medals are incorrectly formatted.
-    Make sure gold is faster than silver and silver is faster than bronze
-    """
+    Make sure gold is faster than silver and silver is faster than bronze.
+    """  # noqa: D205
 
 
-class ArchivedMap(BaseParkourException, app_commands.errors.AppCommandError):
+class ArchivedMapError(BaseParkourError, app_commands.errors.AppCommandError):
     """Map has been archived. Records cannot be submitted."""
 
 
-class CannotVerifyOwnRecords(BaseParkourException, app_commands.errors.AppCommandError):
+class CannotVerifyOwnRecordsError(BaseParkourError, app_commands.errors.AppCommandError):
     """You cannot verify your own records/submissions."""
 
 
-class WrongCompletionChannel(BaseParkourException, app_commands.errors.AppCommandError):
-    """You can only submit in <#1072898844339224627>"""
+class WrongCompletionChannelError(BaseParkourError, app_commands.errors.AppCommandError):
+    """You can only submit in <#1072898844339224627>."""
 
 
 async def on_app_command_error(
     itx: discord.Interaction[Genji],
     error: app_commands.errors.CommandInvokeError | Exception,
-):
+) -> None:
+    """Handle app command errors."""
     exception = getattr(error, "original", error)
-    if isinstance(exception, BaseParkourException):
+    if isinstance(exception, BaseParkourError):
         embed = embeds.ErrorEmbed(description=str(exception))
         content = (
             "This message will delete in "
@@ -239,8 +240,8 @@ async def on_app_command_error(
             args[-1] = "┗" + args[-1][1:]
         args_name = "**Args:**\n" + "".join(args)
         formatted_tb = "".join(traceback.format_exception(None, exception, exception.__traceback__))
-
-        if len(formatted_tb) < 1850:
+        discord_text_limit_minus_extra_text = 1850
+        if len(formatted_tb) < discord_text_limit_minus_extra_text:
             await channel.send(f"{command_name}{args_name}{channel_name}{user_name}\n```py\n" + formatted_tb + "\n```")
         else:
             await channel.send(

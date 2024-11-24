@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class ConfirmButton(discord.ui.Button):
-    def __init__(self, disabled=False):
+    def __init__(self, disabled: bool = False) -> None:
         super().__init__(
             label="Yes, the information I have entered is correct.",
             emoji=constants.CONFIRM_EMOJI,
@@ -24,7 +24,7 @@ class ConfirmButton(discord.ui.Button):
         )
 
     async def callback(self, itx: discord.Interaction[core.Genji]) -> None:
-        """Confirmation button callback."""
+        """Confirm button callback."""
         if self.view.original_itx.user != itx.user:
             return
         self.view.value = True

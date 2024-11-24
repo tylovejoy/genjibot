@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class Tasks(commands.Cog):
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
         self.cache.start()
         log.info("Start- Updating global names...")
@@ -24,22 +24,22 @@ class Tasks(commands.Cog):
         # self._playtest_expiration_warning.start()
         # self._playtest_expiration.start()
 
-    @tasks.loop(hours=12)
-    async def _update_global_names(self):
+    @tasks.loop(hours=1)
+    async def _update_global_names(self) -> None:
         await self.bot.wait_until_ready()
         global_names = [(u.id, u.name) for u in self.bot.users if u.global_name is not None]
         query = """
-            INSERT INTO user_global_names (user_id, global_name) 
-            VALUES ($1, $2) 
-            ON CONFLICT (user_id) DO UPDATE 
-            SET global_name = excluded.global_name 
+            INSERT INTO user_global_names (user_id, global_name)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id) DO UPDATE
+            SET global_name = excluded.global_name
             WHERE user_global_names.global_name != excluded.global_name
         """
         log.info("Updating global names...")
         await self.bot.database.executemany(query, global_names)
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
-    async def _playtest_auto_approve(self):
+    async def _playtest_auto_approve(self) -> None:
         query = """
       WITH
         playtest_vote_counts       AS (
@@ -80,41 +80,41 @@ class Tasks(commands.Cog):
         )
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
-    async def _playtest_expiration(self):
+    async def _playtest_expiration(self) -> None:
         query = """
-  WITH
-    playtest_vote_counts       AS (
-      SELECT count(*) - 1 AS votes, map_code
-        FROM playtest
-       GROUP BY map_code
-    ),
-    playtest_no_votes          AS (
-      SELECT map_code
-        FROM playtest_vote_counts
-       WHERE votes = 0
-    ),
-    author_playtest            AS (
-      SELECT map_code, user_id, thread_id, message_id
-        FROM playtest
-       WHERE
-         is_author = TRUE AND map_code IN (
-         SELECT map_code
-           FROM playtest_no_votes
-       )
-    )
-SELECT ap.map_code, ap.user_id, thread_id, message_id
-  FROM
-    author_playtest ap
-      LEFT JOIN map_submission_dates msd ON ap.user_id = msd.user_id AND msd.map_code = ap.map_code
- WHERE
-   date < now() - INTERVAL '4 weeks'
+              WITH
+                playtest_vote_counts       AS (
+                  SELECT count(*) - 1 AS votes, map_code
+                    FROM playtest
+                   GROUP BY map_code
+                ),
+                playtest_no_votes          AS (
+                  SELECT map_code
+                    FROM playtest_vote_counts
+                   WHERE votes = 0
+                ),
+                author_playtest            AS (
+                  SELECT map_code, user_id, thread_id, message_id
+                    FROM playtest
+                   WHERE
+                     is_author = TRUE AND map_code IN (
+                     SELECT map_code
+                       FROM playtest_no_votes
+                   )
+                )
+            SELECT ap.map_code, ap.user_id, thread_id, message_id
+              FROM
+                author_playtest ap
+                  LEFT JOIN map_submission_dates msd ON ap.user_id = msd.user_id AND msd.map_code = ap.map_code
+             WHERE
+               date < now() - INTERVAL '4 weeks'
         """
         async for row in self.bot.database.get(query):
             await self.bot.playtest_views[row.message_id].time_limit_deletion()
             self.bot.playtest_views.pop(row.message_id)
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
-    async def _playtest_expiration_warning(self):
+    async def _playtest_expiration_warning(self) -> None:
         query = """
           WITH
             playtest_vote_counts       AS (
@@ -147,10 +147,7 @@ SELECT ap.map_code, ap.user_id, thread_id, message_id
         map_codes = []
         async for row in self.bot.database.get(query):
             creator = guild.get_member(row.user_id)
-            if creator:
-                mention = creator.mention
-            else:
-                mention = self.bot.cache.users[row.user_id].nickname
+            mention = creator.mention if creator else self.bot.cache.users[row.user_id].nickname
             message = (
                 f"Hey there, {mention}!\n\n"
                 f"Friendly reminder that your map **{row.map_code}** will be scheduled for deletion in "
@@ -164,7 +161,7 @@ SELECT ap.map_code, ap.user_id, thread_id, message_id
         )
 
     @tasks.loop(hours=24, count=1)
-    async def cache(self):
+    async def cache(self) -> None:
         maps = [
             x
             async for x in self.bot.database.get(
@@ -238,10 +235,11 @@ SELECT ap.map_code, ap.user_id, thread_id, message_id
     async def refresh_cache(
         self,
         ctx: commands.Context[core.Genji],
-    ):
+    ) -> None:
         self.bot.cache.refresh_cache()
         await ctx.message.delete()
 
 
-async def setup(bot: core.Genji):
+async def setup(bot: core.Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(Tasks(bot))

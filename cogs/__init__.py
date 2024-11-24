@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import functools
 import pkgutil
 import typing
@@ -25,6 +26,7 @@ def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
         string2 (str): String 2 to compare
     Returns:
         True if string2 is in string1
+
     """
     if string1 is None or string2 is None:
         return False
@@ -37,47 +39,51 @@ async def _autocomplete(
 ) -> list[app_commands.Choice[str]]:
     if not choices:  # Quietly ignore empty choices
         return []
-    if current == "":
-        response = choices[:25]
-    else:
-        response = [x for x in choices if case_ignore_compare(x.name, current)][:25]
-    return response
+    return choices[:25] if current == "" else [x for x in choices if case_ignore_compare(x.name, current)][:25]
 
 
 async def creator_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for creator names."""
     return await _autocomplete(current, itx.client.cache.users.creator_choices)
 
 
 async def map_codes_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for map codes."""
     current = current.replace("O", "0").replace("o", "0")
     return await _autocomplete(current, itx.client.cache.maps.choices)
 
 
 async def map_name_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for map names."""
     return await _autocomplete(current, itx.client.cache.map_names.choices)
 
 
 async def map_type_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for map types."""
     return await _autocomplete(current, itx.client.cache.map_types.choices)
 
 
 async def map_mechanics_autocomplete(
     itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for map mechanics."""
     return await _autocomplete(current, itx.client.cache.map_mechanics.choices)
 
 
 async def map_restrictions_autocomplete(
     itx: discord.Interaction[core.Genji], current: str
 ) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for map restrictions."""
     return await _autocomplete(current, itx.client.cache.map_restrictions.choices)
 
 
 async def tags_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for tags."""
     return await _autocomplete(current, itx.client.cache.tags.choices)
 
 
 async def users_autocomplete(itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+    """Run autocompletion for users."""
     return await _autocomplete(current, itx.client.cache.users.choices)
 
 
@@ -92,19 +98,22 @@ async def submit_map_(
         itx: Interaction
         data: MapSubmission obj
         mod: Mod command
+
     """
     await itx.response.defer(ephemeral=True)
 
-    if data.medals:
-        if not 0 < data.gold < data.silver < data.bronze:
-            raise errors.InvalidMedals
+    if data.medals and not 0 < data.gold < data.silver < data.bronze:
+        raise errors.InvalidMedalsError
 
-    if await _check_max_limit(itx) >= 5:
-        raise errors.MaxMapsInPlaytest()
+    max_maps = 5
+    weekly_limit = 2
+
+    if await _check_max_limit(itx) >= max_maps:
+        raise errors.MaxMapsInPlaytestError()
     count, date = await _check_weekly_limit(itx)
-    if count >= 2:
+    if count >= weekly_limit:
         date = date + timedelta(weeks=1)
-        raise errors.MaxWeeklyMapsInPlaytest(
+        raise errors.MaxWeeklyMapsInPlaytestError(
             "You will be able to submit again "
             f"{discord.utils.format_dt(date, 'R')}"
             f"| {discord.utils.format_dt(date, 'F')}"
@@ -121,22 +130,28 @@ async def submit_map_(
     await view.start()
 
 
-async def _check_weekly_limit(itx: discord.Interaction[core.Genji]):
+async def _check_weekly_limit(
+    itx: discord.Interaction[core.Genji],
+) -> tuple[int, datetime.datetime | None]:
     query = """
         SELECT count(*), min(date) as date
           FROM map_submission_dates
          WHERE
            user_id = $1 AND date BETWEEN now() - INTERVAL '1 weeks' AND now();
     """
-    row = await itx.client.database.get_row(query, itx.user.id)
+    row = await itx.client.database.fetchrow(query, itx.user.id)
+    if not row:
+        return 0, None
     return row.get("count", 0), row.get("date", None)
 
 
-async def _check_max_limit(itx: discord.Interaction[core.Genji]):
+async def _check_max_limit(itx: discord.Interaction[core.Genji]) -> int:
     query = """
         SELECT count(*) FROM playtest WHERE is_author = TRUE AND user_id = $1;
     """
-    row = await itx.client.database.get_row(query, itx.user.id)
+    row = await itx.client.database.fetchrow(query, itx.user.id)
+    if not row:
+        return 0
     return row.get("count", 0)
 
 
@@ -145,7 +160,8 @@ async def map_submission_first_step(
     itx: discord.Interaction[core.Genji],
     mod: bool,
     view: views.ConfirmMapSubmission,
-):
+) -> None:
+    """Start map submission process."""
     data.set_extras(
         map_types=view.map_type.values,
         mechanics=view.mechanics.values,
@@ -176,7 +192,8 @@ async def map_submission_second_step(
     embed: discord.Embed,
     itx: discord.Interaction[core.Genji],
     mod: bool,
-):
+) -> None:
+    """Create playtest thread."""
     if not mod:
         embed.title = "Calling all Playtesters!"
         view = views.PlaytestVoting(
@@ -229,10 +246,11 @@ async def add_creator_(
     creator: int,
     itx: discord.Interaction[core.Genji],
     map_code: str,
-):
+) -> None:
+    """Add creator data."""
     await itx.response.defer(ephemeral=True)
     if creator in itx.client.cache.maps[map_code].user_ids:
-        raise errors.CreatorAlreadyExists
+        raise errors.CreatorAlreadyExistsError
     await itx.client.database.set(
         "INSERT INTO map_creators (map_code, user_id) VALUES ($1, $2)",
         map_code,
@@ -248,10 +266,16 @@ async def add_creator_(
     )
 
 
-async def remove_creator_(creator, itx, map_code, checks: bool = False):
+async def remove_creator_(
+    creator: int,
+    itx: discord.Interaction[core.Genji],
+    map_code: str,
+    checks: bool = False,
+) -> None:
+    """Remove creator data."""
     await itx.response.defer(ephemeral=True)
     if creator not in itx.client.cache.maps[map_code].user_ids:
-        raise errors.CreatorDoesntExist
+        raise errors.CreatorDoesntExistError
     await itx.client.database.set(
         "DELETE FROM map_creators WHERE map_code = $1 AND user_id = $2;",
         map_code,

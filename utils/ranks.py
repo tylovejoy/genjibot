@@ -20,10 +20,13 @@ DIFFICULTIES_EXT = [
     "Hell",
 ]
 
-DIFFICULTIES = [x for x in filter(lambda y: not ("-" in y or "+" in y), DIFFICULTIES_EXT)]
+DIFFICULTIES = list(filter(lambda y: not ("-" in y or "+" in y), DIFFICULTIES_EXT))
 
 
-def generate_difficulty_ranges(top_level=False) -> dict[str, tuple[float, float]]:
+def generate_difficulty_ranges(
+    top_level: bool = False,
+) -> dict[str, tuple[float, float]]:
+    """Generate ranges between difficulties."""
     ranges = {}
     range_length = 10 / len(DIFFICULTIES_EXT)
     cur_range = 0
@@ -58,20 +61,8 @@ ALL_DIFFICULTY_RANGES_MIDPOINT = {k: round((v[0] + v[1]) / 2, 2) for k, v in DIF
 DIFFICULTIES_CHOICES = [app_commands.Choice(name=x, value=x) for x in DIFFICULTIES_EXT]
 
 
-def allowed_difficulties(rank_number: int) -> list[str]:
-    ranks: list[str] = []
-    if rank_number >= 4:
-        ranks += DIFFICULTIES_EXT[0:10]
-    if rank_number >= 5:
-        ranks += DIFFICULTIES_EXT[10:13]
-    if rank_number >= 6:
-        ranks += DIFFICULTIES_EXT[13:16]
-    if rank_number >= 7:
-        ranks += DIFFICULTIES_EXT[16:19]
-    return ranks
-
-
-def convert_num_to_difficulty(value: float | int) -> str:
+def convert_num_to_difficulty(value: float) -> str:
+    """Convert value to difficulty."""
     res = "Hell"
     for diff, _range in DIFFICULTIES_RANGES.items():
         if float(_range[0]) <= float(value) + 0.01 < float(_range[1]):

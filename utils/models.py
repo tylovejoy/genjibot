@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import datetime
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 import discord
 import msgspec
 
 from . import constants, ranks, records
+
+if TYPE_CHECKING:
+    import datetime
 
 
 class _EmbedFormatter:
@@ -36,7 +39,7 @@ class _EmbedFormatter:
 
 
 class EmbedDataStrategy(ABC):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.extra_params = kwargs
 
     @abstractmethod
@@ -49,7 +52,7 @@ class EmbedDataStrategy(ABC):
 
 
 class CompletionLeaderboardStrategy(EmbedDataStrategy):
-    def __init__(self, *, map_code: str, difficulty: str, legacy: bool = False):
+    def __init__(self, *, map_code: str, difficulty: str, legacy: bool = False) -> None:
         super().__init__(map_code=map_code, difficulty=difficulty, legacy=legacy)
         self.map_code = map_code
         self.difficulty = difficulty
@@ -70,7 +73,7 @@ class CompletionLeaderboardStrategy(EmbedDataStrategy):
 
 
 class PersonalRecordStrategy(EmbedDataStrategy):
-    def __init__(self, *, user_nickname: str, filter_type: str):
+    def __init__(self, *, user_nickname: str, filter_type: str) -> None:
         super().__init__(user_nickname=user_nickname, filter_type=filter_type)
         self.user_nickname = user_nickname
         self.filter_type = filter_type
@@ -88,7 +91,7 @@ class PersonalRecordStrategy(EmbedDataStrategy):
 
 
 class RecordSubmissionStrategy(EmbedDataStrategy):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def create_embed_data(self, record: Record) -> dict:
@@ -163,20 +166,11 @@ class Record(msgspec.Struct, kw_only=True):
             return icon
         if self.video and not self.completion:
             if self.record < self.gold:
-                if self.rank_num == 1:
-                    icon = constants.GOLD_WR
-                else:
-                    icon = constants.FULLY_VERIFIED_GOLD
+                icon = constants.GOLD_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_GOLD
             elif self.record < self.silver:
-                if self.rank_num == 1:
-                    icon = constants.SILVER_WR
-                else:
-                    icon = constants.FULLY_VERIFIED_SILVER
+                icon = constants.SILVER_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_SILVER
             elif self.record < self.bronze:
-                if self.rank_num == 1:
-                    icon = constants.BRONZE_WR
-                else:
-                    icon = constants.FULLY_VERIFIED_BRONZE
+                icon = constants.BRONZE_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_BRONZE
             elif self.rank_num == 1:
                 icon = constants.NON_MEDAL_WR
             else:

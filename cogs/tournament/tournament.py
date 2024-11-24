@@ -10,11 +10,12 @@ if TYPE_CHECKING:
 
 
 class TournamentSetup(commands.Cog):
-    def __init__(self, bot: Genji):
+    def __init__(self, bot: Genji) -> None:
         self.bot = bot
 
     @commands.command()
-    async def start(self, ctx: commands.Context):
+    async def start(self, ctx: commands.Context) -> None:
+        """Start Tournament Setup."""
         announcements = await ctx.channel.create_thread(name="Announcements - Tournament Name")
         chat = await ctx.channel.create_thread(name="Chat - Tournament Name")
         submissions = await ctx.channel.create_thread(name="Submissions - Tournament Name")

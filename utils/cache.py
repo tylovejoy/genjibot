@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, Generic, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Iterator, TypeVar
 
 import discord
 from discord import app_commands
@@ -10,11 +10,11 @@ if TYPE_CHECKING:
     import database
 
 
-class DoesNotExist(Exception):
+class DoesNotExistError(Exception):
     """Cache object cannot be removed as it does not exist."""
 
 
-class AlreadyExists(Exception):
+class AlreadyExistsError(Exception):
     """Cache object cannot be added as it already exists."""
 
 
@@ -26,12 +26,12 @@ class SettingFlags(enum.IntFlag):
     DEFAULT = VERIFICATION | PROMOTION
     NONE = 0
 
-    def get_new_flag(self, value: int):
+    def get_new_flag(self, value: int) -> int:
         return self.value ^ value
 
 
 class Cache:
-    def __init__(self):
+    def __init__(self) -> None:
         self.refresh()
 
     def refresh(self) -> None:
@@ -42,7 +42,7 @@ T = TypeVar("T", bound=Cache)
 
 
 class StrCache(Cache):
-    def __init__(self, value: str):
+    def __init__(self, value: str) -> None:
         self.value = value
         super().__init__()
 
@@ -72,7 +72,7 @@ class OptionMixin:
 
 
 class ChoiceOptionStrCache(StrCache, ChoiceMixin, OptionMixin):
-    def __init__(self, value: str):
+    def __init__(self, value: str) -> None:
         super().__init__(value)
 
     def refresh(self) -> None:
@@ -97,121 +97,123 @@ class TagsData(ChoiceOptionStrCache): ...
 
 
 class MapData(Cache, ChoiceMixin):
-    def __init__(self, map_code: str, user_ids: list[int], archived: bool):
+    def __init__(self, map_code: str, user_ids: list[int], archived: bool) -> None:
         self.map_code = map_code
         self.user_ids = user_ids
         self.archived = archived
         super().__init__()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refresh the MapData Choice."""
         self._update_choice(name=self.map_code, value=self.map_code)
 
-    def update_map_code(self, map_code: str):
+    def update_map_code(self, map_code: str) -> None:
         """Update the map code of a particular map."""
         self.map_code = map_code
         self.refresh()
 
-    def add_creator(self, user_id: int):
+    def add_creator(self, user_id: int) -> None:
         """Add a creator to the list of creators."""
         if user_id in self.user_ids:
-            raise AlreadyExists
+            raise AlreadyExistsError
         self.user_ids.append(user_id)
 
-    def remove_creator(self, user_id: int):
-        """Remove a creator from the list of creators"""
+    def remove_creator(self, user_id: int) -> None:
+        """Remove a creator from the list of creators."""
         if user_id not in self.user_ids:
-            raise DoesNotExist
+            raise DoesNotExistError
         self.user_ids.remove(user_id)
 
-    def update_archived(self, value: bool):
+    def update_archived(self, value: bool) -> None:
         """Update if a Map is archived or not."""
         self.archived = value
 
 
 class UserData(Cache, ChoiceMixin):
-    def __init__(self, user_id: int, nickname: str, flags: SettingFlags, is_creator: bool):
+    def __init__(self, user_id: int, nickname: str, flags: SettingFlags, is_creator: bool) -> None:
         self.user_id = user_id
         self.nickname = discord.utils.escape_markdown(nickname)
         self.flags = flags
         self.is_creator = is_creator
         super().__init__()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refresh the UserData Choice."""
         self._update_choice(name=self.nickname, value=str(self.user_id))
 
-    def update_nickname(self, nickname: str):
+    def update_nickname(self, nickname: str) -> None:
         """Update a User nickname."""
         self.nickname = discord.utils.escape_markdown(nickname)
         self.refresh()
 
-    def update_user_id(self, user_id: int):
+    def update_user_id(self, user_id: int) -> None:
         """Update a user ID."""
         self.user_id = user_id
         self.refresh()
 
-    def update_flag(self, flag: SettingFlags):
+    def update_flag(self, flag: SettingFlags) -> None:
         """Update a user's flags."""
         self.flags = self.flags.get_new_flag(flag.value)
 
-    def update_is_creator(self, value: bool):
+    def update_is_creator(self, value: bool) -> None:
         """Update whether user is a creator or not."""
         self.is_creator = value
 
 
 class SequenceCache(Generic[T]):
-    def __init__(self, key_value: str):
+    def __init__(self, key_value: str) -> None:
         self.key_value = key_value
         self.values: list[T] = []
 
-    def __getitem__(self, item: int):
+    def __getitem__(self, item: int) -> T:
+        """Get the item from the cache."""
         return self.find(item)
 
-    def __iter__(self) -> Iterable[T]:
+    def __iter__(self) -> Iterator[T]:
+        """Iterate over the cache."""
         return iter(self.values)
 
     @property
     def keys(self) -> list[str | int]:
-        """A list of keys from this SequenceCache"""
+        """Get list of keys from this SequenceCache."""
         return [getattr(x, self.key_value) for x in self.values]
 
     @property
-    def choices(self):
-        """A list of Choices from this SequenceCache"""
+    def choices(self) -> list[app_commands.Choice[str]]:
+        """Get list of Choices from this SequenceCache."""
         self.values: list[MapData]
         sorted_vals = sorted(self.values, key=lambda x: getattr(x, self.key_value))
         return self._choices(sorted_vals)
 
     @staticmethod
     def _choices(iterable: list[T]) -> list[app_commands.Choice[str]]:
-        """A list of Choices from a specific iterable."""
+        """Get list of Choices from a specific iterable."""
         return [x.choice for x in iterable]
 
-    def add_one(self, obj: T):
+    def add_one(self, obj: T) -> None:
         """Add an object (T) to the SequenceCache."""
         if getattr(obj, self.key_value) in self.values:
-            raise AlreadyExists
+            raise AlreadyExistsError
         self.add_many([obj])
 
-    def add_many(self, objs: list[T]):
+    def add_many(self, objs: list[T]) -> None:
         """Add many objects (T) to the SequenceCache."""
         _objs: list[T] = []
         for obj in objs:
             if getattr(obj, self.key_value) in self.keys:
-                raise AlreadyExists
+                raise AlreadyExistsError
             _objs.append(obj)
         self.values.extend(_objs)
 
-    def remove_one(self, key: str | int):
+    def remove_one(self, key: str | int) -> None:
         """Remove an object (T) from the SequenceCache."""
         if key not in self.keys:
-            raise DoesNotExist
+            raise DoesNotExistError
         found = self.find(key)
         if found:
             self.values.remove(found)
 
-    def clear_all(self):
+    def clear_all(self) -> None:
         """Clear all objects in a SequenceCache."""
         self.values = []
 
@@ -237,46 +239,48 @@ class SequenceCache(Generic[T]):
 
 
 class Users(SequenceCache[UserData]):
-    def __init__(self):
+    def __init__(self) -> None:
         self.key_value = "user_id"
         super().__init__(self.key_value)
 
     @property
     def creator_choices(self) -> list[app_commands.Choice[str]]:
-        """Choices of Users that are also Creators"""
+        """Get Choices of Users that are also Creators."""
         return self._choices(self._find_many(self.values, "is_creator", True))
 
     @property
     def creator_ids(self) -> list[int]:
-        """List of user IDs who are also Creators"""
+        """Get list of user IDs who are also Creators."""
         return [x.user_id for x in self._find_many(self.values, "is_creator", True)]
 
 
 class Maps(SequenceCache[MapData]):
-    def __init__(self):
+    def __init__(self) -> None:
         self.key_value = "map_code"
         super().__init__(self.key_value)
 
-    def __getitem__(self, item: str):
+    def __getitem__(self, item: str) -> MapData:
+        """Find item."""
         return self.find(item)
 
 
 class StrCacheSequence(SequenceCache[T]):
-    def __init__(self):
+    def __init__(self) -> None:
         self.key_value = "value"
         super().__init__(self.key_value)
 
     @property
     def options(self) -> list[discord.SelectOption]:
-        """List of Options in a StrCacheSequence"""
+        """Get list of Options in a StrCacheSequence."""
         return [x.option for x in self.values]
 
     @property
     def list(self) -> list[str]:
-        """List of string values in a StrCacheSequence"""
+        """Get list of string values in a StrCacheSequence."""
         return [x.value for x in self.values]
 
-    def __iter__(self) -> Iterable[str]:
+    def __iter__(self) -> Iterator[MapData]:
+        """Return iterable of values."""
         return iter(self.values)
 
 
@@ -296,7 +300,7 @@ class Tags(StrCacheSequence[TagsData]): ...
 
 
 class GenjiCache:
-    def __init__(self):
+    def __init__(self) -> None:
         self.users: Users[UserData] = Users()
         self.maps: Maps[MapData] = Maps()
         self.map_names: MapNames[MapNamesData] = MapNames()
@@ -315,7 +319,7 @@ class GenjiCache:
         map_mechanics: list[database.DotRecord | None],
         map_restrictions: list[database.DotRecord | None],
         tags: list[database.DotRecord | None],
-    ):
+    ) -> None:
         self.add_users(users)
         self.add_maps(maps)
         self.add_map_names(map_names)
@@ -324,7 +328,7 @@ class GenjiCache:
         self.add_map_restrictions(map_restrictions)
         self.add_tags(tags)
 
-    def refresh_cache(self):
+    def refresh_cache(self) -> None:
         self._refresh(self.users)
         self._refresh(self.maps)
         self._refresh(self.map_names)
@@ -334,11 +338,11 @@ class GenjiCache:
         self._refresh(self.tags)
 
     @staticmethod
-    def _refresh(cls_var: SequenceCache[T]):
+    def _refresh(cls_var: SequenceCache[T]) -> None:
         for x in cls_var:
             x.refresh()
 
-    def add_users(self, users: list[database.DotRecord]):
+    def add_users(self, users: list[database.DotRecord]) -> None:
         _users = [
             UserData(
                 user_id=x.user_id,
@@ -350,7 +354,7 @@ class GenjiCache:
         ]
         self.users.add_many(_users)
 
-    def add_maps(self, maps: list[database.DotRecord]):
+    def add_maps(self, maps: list[database.DotRecord]) -> None:
         _maps = [
             MapData(
                 map_code=x.map_code,
@@ -361,7 +365,7 @@ class GenjiCache:
         ]
         self.maps.add_many(_maps)
 
-    def add_map_names(self, map_names: list[database.DotRecord]):
+    def add_map_names(self, map_names: list[database.DotRecord]) -> None:
         _map_names = [
             MapNamesData(
                 value=x.value,
@@ -370,7 +374,7 @@ class GenjiCache:
         ]
         self.map_names.add_many(_map_names)
 
-    def add_map_types(self, map_types: list[database.DotRecord]):
+    def add_map_types(self, map_types: list[database.DotRecord]) -> None:
         _map_types = [
             MapTypesData(
                 value=x.value,
@@ -379,7 +383,7 @@ class GenjiCache:
         ]
         self.map_types.add_many(_map_types)
 
-    def add_map_mechanics(self, map_mechanics: list[database.DotRecord]):
+    def add_map_mechanics(self, map_mechanics: list[database.DotRecord]) -> None:
         _map_mechanics = [
             MapMechanicsData(
                 value=x.value,
@@ -388,7 +392,7 @@ class GenjiCache:
         ]
         self.map_mechanics.add_many(_map_mechanics)
 
-    def add_map_restrictions(self, map_restrictions: list[database.DotRecord]):
+    def add_map_restrictions(self, map_restrictions: list[database.DotRecord]) -> None:
         _map_restrictions = [
             MapRestrictionsData(
                 value=x.value,
@@ -397,7 +401,7 @@ class GenjiCache:
         ]
         self.map_restrictions.add_many(_map_restrictions)
 
-    def add_tags(self, tags: list[database.DotRecord]):
+    def add_tags(self, tags: list[database.DotRecord]) -> None:
         _tags = [
             TagsData(
                 value=x.value,

@@ -28,7 +28,7 @@ class InfoButton(discord.ui.Button):
         content: discord.Embed,
         emoji: discord.Emoji | discord.PartialEmoji | str | None = None,
         row: int = 0,
-    ):
+    ) -> None:
         super().__init__(
             style=discord.ButtonStyle.grey,
             label=label,
@@ -38,12 +38,13 @@ class InfoButton(discord.ui.Button):
         )
         self.content = content
 
-    async def callback(self, itx: discord.Interaction[core.Genji]):
+    async def callback(self, itx: discord.Interaction[core.Genji]) -> None:
+        """Send embed upon button click."""
         await itx.response.send_message(embed=self.content, ephemeral=True)
 
 
 class CompletionInfoView(discord.ui.View):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(timeout=None)
         self.add_item(InfoButton("How to submit?", COMPLETION_SUBMISSIONS_INFO))
         self.add_item(InfoButton("Submission Rules", COMPLETION_SUBMISSION_RULES))
@@ -52,7 +53,7 @@ class CompletionInfoView(discord.ui.View):
 
 
 class MapInfoView(discord.ui.View):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(timeout=None)
         self.add_item(InfoButton("How to submit?", MAP_SUBMISSIONS_INFO))
         self.add_item(InfoButton("Playtesting Info", MAP_PLAYTESTING_INFO))

@@ -58,7 +58,8 @@ STAR = "★"
 EMPTY_STAR = "☆"
 
 
-def create_stars(rating: int | float | None) -> str:
+def create_stars(rating: float | None) -> str:
+    """Create stars."""
     if not rating:
         return "Unrated"
     filled = math.ceil(rating) * STAR
@@ -188,6 +189,7 @@ class Roles:
 
         Returns:
             int: index for highest rank
+
         """
         ids = [r.id for r in user.roles]
         res = 0

@@ -8,18 +8,16 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
-import database
 import views
 from utils import constants, embeds, errors, maps, ranks, records, utils
 
 if typing.TYPE_CHECKING:
     import core
+    import database
 
 
 class Maps(commands.Cog):
-    """Maps"""
-
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
 
     _map_maker = app_commands.Group(
@@ -50,7 +48,7 @@ class Maps(commands.Cog):
         silver: app_commands.Transform[float, records.RecordTransformer] | None = None,
         bronze: app_commands.Transform[float, records.RecordTransformer] | None = None,
     ) -> None:
-        """Submit your map to get playtested.
+        """Submit your map to get play tested.
 
         Args:
             itx: Interaction
@@ -94,7 +92,7 @@ class Maps(commands.Cog):
         difficulty: app_commands.Choice[str] | None = None,
         minimum_rating: app_commands.Choice[int] | None = None,
         include_completed: bool = False,
-    ):
+    ) -> None:
         await itx.response.defer(ephemeral=True)
         embed = embeds.GenjiEmbed(title="Map Search")
         embed.set_thumbnail(url=None)
@@ -236,7 +234,6 @@ class Maps(commands.Cog):
                     WHERE user_id = $10
                     ORDER BY map_code, inserted_at DESC
                 )
-            
             SELECT
               am.map_name, map_type, am.map_code, am."desc", am.official,
               am.archived, guide, mechanics, restrictions, am.checkpoints,
@@ -271,12 +268,10 @@ class Maps(commands.Cog):
                am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
                am.bronze, c.map_code IS NOT NULL, c.record, verified, p.thread_id, pa.count, pa.required_votes
-            
             HAVING
-              ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
-            
-             ORDER BY
-               difficulty, quality DESC;
+                ($9::bool IS NULL OR c.map_code IS NOT NULL = $9)
+            ORDER BY
+                difficulty, quality DESC;
             """,
             map_code,
             utils.wrap_string_with_percent(map_type),
@@ -313,7 +308,7 @@ class Maps(commands.Cog):
         return embed_list
 
     @staticmethod
-    def display_official(official: bool):
+    def display_official(official: bool) -> str:
         return (
             (
                 "┃<:_:998055526468423700>"
@@ -340,7 +335,7 @@ class Maps(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
+    ) -> None:
         """View guides that have been submitted for a particular map.
 
         Args:
@@ -374,7 +369,7 @@ class Maps(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         url: app_commands.Transform[str, records.URLTransformer],
-    ):
+    ) -> None:
         """Add a guide for a particular map.
 
         Args:
@@ -433,7 +428,7 @@ class Maps(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         quality: app_commands.Choice[int],
-    ):
+    ) -> None:
         await itx.response.defer(ephemeral=True)
         if (
             await itx.client.database.get_row(
@@ -442,7 +437,7 @@ class Maps(commands.Cog):
                 itx.user.id,
             )
         ).get("exists", None):
-            raise errors.CannotRateOwnMap
+            raise errors.CannotRateOwnMapError
 
         row = await itx.client.database.get_row(
             "SELECT exists(SELECT 1 FROM records WHERE map_code = $1 AND user_id = $2)",
@@ -462,16 +457,17 @@ class Maps(commands.Cog):
             return
         await itx.client.database.set(
             """
-            INSERT INTO map_ratings (user_id, map_code, quality) 
-            VALUES ($1, $2, $3) 
-            ON CONFLICT (user_id, map_code) 
-            DO UPDATE SET quality = excluded.quality""",
+                INSERT INTO map_ratings (user_id, map_code, quality)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id, map_code)
+                DO UPDATE SET quality = excluded.quality
+            """,
             itx.user.id,
             map_code,
             quality.value,
         )
 
 
-async def setup(bot):
+async def setup(bot: core.Genji) -> None:
     """Add Cog to Discord bot."""
     await bot.add_cog(Maps(bot))

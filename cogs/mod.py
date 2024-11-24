@@ -10,21 +10,21 @@ from discord.ext import commands
 
 import cogs
 import views
-from database import DotRecord
 from utils import cache, constants, embeds, errors, maps, ranks, records, utils
 from views import GuidesSelect
 
 if typing.TYPE_CHECKING:
     import core
+    from database import DotRecord
+    from views.maps import PlaytestVoting
 
 
 class ModCommands(commands.Cog):
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
 
     async def cog_check(self, ctx: commands.Context[core.Genji]) -> bool:
         return True
-        # return bool(ctx.author.get_role(utils.STAFF))
 
     mod = app_commands.Group(
         name="mod",
@@ -155,16 +155,16 @@ class ModCommands(commands.Cog):
         delete = gold == silver == bronze == 0
 
         if not delete and not 0 < gold < silver < bronze:
-            raise errors.InvalidMedals
+            raise errors.InvalidMedalsError
 
         if delete:
             query = "DELETE FROM map_medals WHERE map_code = $1"
             args = (map_code,)
             content = f"{map_code} medals have been removed.\n"
         else:
-            query = """            
+            query = """
             INSERT INTO map_medals (gold, silver, bronze, map_code)
-            VALUES ($1, $2, $3, $4) 
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT (map_code)
             DO UPDATE SET gold = $1, silver = $2, bronze = $3
             WHERE map_medals.map_code = EXCLUDED.map_code
@@ -197,7 +197,7 @@ class ModCommands(commands.Cog):
             await utils.update_affected_users(itx.client, itx.guild, map_code)
 
     @staticmethod
-    def _edit_medals(embed: discord.Embed, gold, silver, bronze) -> discord.Embed:
+    def _edit_medals(embed: discord.Embed, gold: float, silver: float, bronze: float) -> discord.Embed:
         medals_txt = (
             f"┣ `Medals` "
             f"{constants.FULLY_VERIFIED_GOLD} {gold} | "
@@ -228,7 +228,7 @@ class ModCommands(commands.Cog):
         bronze: float,
         thread_id: int | None = None,
         message_id: int | None = None,
-    ):
+    ) -> None:
         description = "All medals removed."
         if not delete:
             description = f"`Gold` {gold}\n" f"`Silver` {silver}\n" f"`Bronze` {bronze}\n"
@@ -307,8 +307,8 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         member: discord.Member,
         map_code: app_commands.Transform[str, records.MapCodeRecordsTransformer],
-    ):
-        """Remove a record from the database/user
+    ) -> None:
+        """Remove a record from the database/user.
 
         Args:
             itx: Interaction
@@ -363,7 +363,7 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         member: app_commands.Transform[int, records.UserTransformer],
         nickname: app_commands.Range[str, 1, 25],
-    ):
+    ) -> None:
         """Change a user display name.
 
         Args:
@@ -385,8 +385,10 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         fake_user: str,
-    ):
-        """Create a fake user. MAKE SURE THIS USER DOESN'T ALREADY EXIST!
+    ) -> None:
+        """Create a fake user.
+
+        MAKE SURE THIS USER DOESN'T ALREADY EXIST!
 
         Args:
             itx: Discord itx
@@ -429,7 +431,7 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         fake_user: str,
         member: discord.Member,
-    ):
+    ) -> None:
         """Link a fake user to a server member.
 
         Args:
@@ -440,14 +442,16 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
         try:
-            fake_user = int(fake_user)
+            _fake_user = int(fake_user)
         except ValueError:
-            raise errors.InvalidFakeUser
-        if fake_user >= 100000:
-            raise errors.InvalidFakeUser
-        fake_name = await itx.client.database.get_row("SELECT * FROM users WHERE user_id=$1", fake_user)
+            raise errors.InvalidFakeUserError
+
+        fake_member_limit = 100000
+        if _fake_user >= fake_member_limit:
+            raise errors.InvalidFakeUserError
+        fake_name = await itx.client.database.get_row("SELECT * FROM users WHERE user_id=$1", _fake_user)
         if not fake_name:
-            raise errors.InvalidFakeUser
+            raise errors.InvalidFakeUserError
 
         view = views.Confirm(itx, ephemeral=True)
         await itx.edit_original_response(
@@ -457,10 +461,10 @@ class ModCommands(commands.Cog):
         await view.wait()
         if not view.value:
             return
-        await self.link_fake_to_member(itx, fake_user, member)
+        await self.link_fake_to_member(itx, _fake_user, member)
 
     @staticmethod
-    async def link_fake_to_member(itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member):
+    async def link_fake_to_member(itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member) -> None:
         await itx.client.database.set("UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
         await itx.client.database.set("UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
         await itx.client.database.set(
@@ -482,7 +486,7 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         action: app_commands.Choice[str],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
+    ) -> None:
         await itx.response.defer(ephemeral=True)
         row = None
         if action.value == "archive" and itx.client.cache.maps[map_code].archived is False:
@@ -532,7 +536,6 @@ class ModCommands(commands.Cog):
                   LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
              WHERE
                am.map_code = $1
-            
              GROUP BY
                am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
                restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
@@ -563,8 +566,9 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: str,
         value: app_commands.Choice[str],
-    ):
+    ) -> None:
         """Completely change the difficulty of a map.
+
         This will change all votes to the supplied value.
 
         Args:
@@ -619,7 +623,7 @@ class ModCommands(commands.Cog):
             await utils.update_affected_users(itx.client, itx.guild, map_code)
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Difficulty": value.value})
 
-    async def _regex_replace_votes(self, msg, view):
+    async def _regex_replace_votes(self, msg: discord.Message, view: PlaytestVoting) -> tuple[str, str]:
         regex = r"Total Votes: (\d+) / \d+"
         search = re.search(regex, msg.content)
         total_votes = search.group(1)
@@ -634,8 +638,9 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         value: app_commands.Choice[int],
-    ):
+    ) -> None:
         """Completely change the rating of a map.
+
         This will change all votes to the supplied value.
 
         Args:
@@ -668,7 +673,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
+    ) -> None:
         """Change the type of map.
 
         Args:
@@ -720,7 +725,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
+    ) -> None:
         """Change the mechanics of a map.
 
         Args:
@@ -742,7 +747,7 @@ class ModCommands(commands.Cog):
             option.default = option.value in preload_options
 
         select = {
-            "mechanics": views.MechanicsSelect(options + [discord.SelectOption(label="Remove All", value="Remove All")])
+            "mechanics": views.MechanicsSelect([*options, discord.SelectOption(label="Remove All", value="Remove All")])
         }
         view = views.Confirm(itx, proceeding_items=select, ephemeral=True)
         await itx.edit_original_response(
@@ -791,7 +796,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
+    ) -> None:
         """Change the restrictions of a map.
 
         Args:
@@ -813,7 +818,7 @@ class ModCommands(commands.Cog):
 
         select = {
             "restrictions": views.RestrictionsSelect(
-                options + [discord.SelectOption(label="Remove All", value="Remove All")]
+                [*options, discord.SelectOption(label="Remove All", value="Remove All")]
             )
         }
         view = views.Confirm(itx, proceeding_items=select, ephemeral=True)
@@ -866,8 +871,8 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
-    ):
-        """Change the checkpoint count of a map
+    ) -> None:
+        """Change the checkpoint count of a map.
 
         Args:
             itx: Discord itx
@@ -917,8 +922,8 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         new_map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
-        """Change the map code of a map
+    ) -> None:
+        """Change the map code of a map.
 
         Args:
             itx: Discord itx
@@ -976,8 +981,8 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         description: str,
-    ):
-        """Change the description of a map
+    ) -> None:
+        """Change the description of a map.
 
         Args:
             itx: Discord itx
@@ -1026,8 +1031,8 @@ class ModCommands(commands.Cog):
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
         map_name: app_commands.Transform[str, maps.MapNameTransformer],
-    ):
-        """Change the description of a map
+    ) -> None:
+        """Change the description of a map.
 
         Args:
             itx: Discord itx
@@ -1074,7 +1079,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
-    ):
+    ) -> None:
         await itx.response.defer(ephemeral=True)
 
         if await self._check_if_queued(map_code):
@@ -1113,34 +1118,35 @@ class ModCommands(commands.Cog):
         )
         await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
 
-    async def _check_if_queued(self, map_code: str):
-        query = """SELECT EXISTS (SELECT * FROM records_queue WHERE map_code = $1)"""
-        row = await self.bot.database.get_row(query, map_code)
-        return row.exists
+    async def _check_if_queued(self, map_code: str) -> bool:
+        query = """SELECT EXISTS (SELECT * FROM records WHERE map_code = $1 AND verified IS FALSE)"""
+        return await self.bot.database.fetchval(query, map_code)
 
-    async def _remove_medal_entries(self, map_code):
+    async def _remove_medal_entries(self, map_code: str) -> None:
         query = """
             DELETE FROM map_medals WHERE map_code = $1
         """
         await self.bot.database.set(query, map_code)
 
-    async def _update_records_to_completions(self, map_code: str):
+    async def _update_records_to_completions(self, map_code: str) -> None:
         query = """
-            UPDATE records 
+            UPDATE records
             SET video = NULL, verified = FALSE, record = 99999999.99
             WHERE map_code = $1
         """
         await self.bot.database.set(query, map_code)
 
-    async def _insert_legacy_records(self, _records: list[tuple]):
+    async def _insert_legacy_records(self, _records: list[tuple]) -> None:
         query = """
-            INSERT INTO legacy_records (map_code, user_id, record, screenshot, video, message_id, channel_id, medal) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+            INSERT INTO legacy_records (map_code, user_id, record, screenshot, video, message_id, channel_id, medal)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """
         await self.bot.database.set_many(query, _records)
 
     @staticmethod
-    def _format_legacy_records_for_insertion(_records: list[DotRecord]):
+    def _format_legacy_records_for_insertion(
+        _records: list[DotRecord],
+    ) -> list[tuple[str | int, ...]]:
         res = []
         for record in _records:
             if record.gold:
@@ -1165,10 +1171,10 @@ class ModCommands(commands.Cog):
         return res
 
     @staticmethod
-    async def _get_legacy_medal_records(itx, map_code):
+    async def _get_legacy_medal_records(itx: discord.Interaction[core.Genji], map_code: str) -> list[DotRecord]:
         query = """
             WITH all_records AS (
-                SELECT 
+                SELECT
                     verified = TRUE AND record <= gold                       AS gold,
                     verified = TRUE AND record <= silver AND record > gold   AS silver,
                     verified = TRUE AND record <= bronze AND record > silver AS bronze,
@@ -1189,5 +1195,6 @@ class ModCommands(commands.Cog):
         return [record async for record in itx.client.database.get(query, map_code)]
 
 
-async def setup(bot: core.Genji):
+async def setup(bot: core.Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(ModCommands(bot))

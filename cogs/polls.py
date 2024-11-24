@@ -14,7 +14,7 @@ if typing.TYPE_CHECKING:
 
 
 class Polls(commands.Cog):
-    def __init__(self, bot: core.Genji):
+    def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
 
     @app_commands.command(name="poll")
@@ -47,7 +47,7 @@ class Polls(commands.Cog):
         options: list[str | None],
         message_id: int,
         title: str,
-    ):
+    ) -> None:
         query = "INSERT INTO polls_info (user_id, options, message_id, title) VALUES ($1, $2, $3, $4)"
         await itx.client.database.set(
             query,
@@ -58,5 +58,6 @@ class Polls(commands.Cog):
         )
 
 
-async def setup(bot: core.Genji):
+async def setup(bot: core.Genji) -> None:
+    """Add cog to bot."""
     await bot.add_cog(Polls(bot))

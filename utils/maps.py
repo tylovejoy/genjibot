@@ -5,15 +5,16 @@ import json
 import re
 import typing
 
-import asyncpg
 import discord
 from discord import app_commands
 
-import database
 from utils import constants, embeds, formatter, ranks, utils
 
 if typing.TYPE_CHECKING:
+    import asyncpg
+
     import core
+    import database
 
 
 class MapNameTransformer(app_commands.Transformer):
@@ -59,7 +60,8 @@ class MapSubmission:
     restrictions: list[str] | None = None
     difficulty: str | None = None  # base difficulty
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Format map data."""
         return formatter.Formatter(self.to_dict()).format_map()
 
     def to_dict(self) -> dict[str, str]:
@@ -77,50 +79,52 @@ class MapSubmission:
         }
 
     @staticmethod
-    def _remove_nulls(sequence):
+    def _remove_nulls(sequence: typing.Sequence[str] | None) -> typing.Sequence[str]:
+        if sequence is None:
+            return []
         return [x for x in sequence if x is not None]
 
     @property
-    def mechanics_str(self):
+    def mechanics_str(self) -> str | None:
         self.mechanics = self._remove_nulls(self.mechanics)
         if self.mechanics:
             return ", ".join(self.mechanics)
         return None
 
     @property
-    def restrictions_str(self):
+    def restrictions_str(self) -> str | None:
         self.restrictions = self._remove_nulls(self.restrictions)
         if self.restrictions:
             return ", ".join(self.restrictions)
         return None
 
     @property
-    def map_types_str(self):
+    def map_types_str(self) -> str | None:
         self.map_types = self._remove_nulls(self.map_types)
         if self.map_types:
             return ", ".join(self.map_types)
         return None
 
     @property
-    def gold(self):
+    def gold(self) -> float | None:
         if self.medals and self.medals[0]:
             return self.medals[0]
         return None
 
     @property
-    def silver(self):
+    def silver(self) -> float | None:
         if self.medals and self.medals[1]:
             return self.medals[1]
         return None
 
     @property
-    def bronze(self):
+    def bronze(self) -> float | None:
         if self.medals and self.medals[2]:
             return self.medals[2]
         return None
 
     @property
-    def guide_str(self):
+    def guide_str(self) -> str | None:
         all_guides = []
         for count, link in enumerate(self.guides, start=1):
             if link:
@@ -128,7 +132,7 @@ class MapSubmission:
         return ", ".join(all_guides)
 
     @property
-    def medals_str(self):
+    def medals_str(self) -> str:
         formatted_medals = []
 
         if self.gold:
@@ -144,7 +148,7 @@ class MapSubmission:
             return ""
         return " | ".join(formatted_medals)
 
-    def set_extras(self, **args):
+    def set_extras(self, **args) -> None:
         for k, v in args.items():
             setattr(self, k, v)
 
@@ -154,11 +158,11 @@ class MapSubmission:
         thread_id: int,
         thread_msg_id: int,
         new_map_id: int,
-    ):
+    ) -> None:
         await itx.client.database.set(
             """
             INSERT INTO playtest (thread_id, message_id, map_code, user_id, value, is_author, original_msg)
-            VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             """,
             thread_id,
             thread_msg_id,
@@ -169,11 +173,11 @@ class MapSubmission:
             new_map_id,
         )
 
-    async def insert_maps(self, itx: discord.Interaction[core.Genji], mod: bool):
+    async def insert_maps(self, itx: discord.Interaction[core.Genji], mod: bool) -> None:
         await itx.client.database.set(
             """
-            INSERT INTO 
-            maps (map_name, map_type, map_code, "desc", official, checkpoints) 
+            INSERT INTO
+            maps (map_name, map_type, map_code, "desc", official, checkpoints)
             VALUES ($1, $2, $3, $4, $5, $6);
             """,
             self.map_name,
@@ -184,40 +188,40 @@ class MapSubmission:
             self.checkpoint_count,
         )
 
-    async def insert_mechanics(self, itx: discord.Interaction[core.Genji]):
+    async def insert_mechanics(self, itx: discord.Interaction[core.Genji]) -> None:
         mechanics = [(self.map_code, x) for x in self.mechanics]
         await itx.client.database.set_many(
             """
-            INSERT INTO map_mechanics (map_code, mechanic) 
+            INSERT INTO map_mechanics (map_code, mechanic)
             VALUES ($1, $2);
             """,
             mechanics,
         )
 
-    async def insert_restrictions(self, itx: discord.Interaction[core.Genji]):
+    async def insert_restrictions(self, itx: discord.Interaction[core.Genji]) -> None:
         restrictions = [(self.map_code, x) for x in self.restrictions]
         await itx.client.database.set_many(
             """
-            INSERT INTO map_restrictions (map_code, restriction) 
+            INSERT INTO map_restrictions (map_code, restriction)
             VALUES ($1, $2);
             """,
             restrictions,
         )
 
-    async def insert_map_creators(self, itx: discord.Interaction[core.Genji]):
+    async def insert_map_creators(self, itx: discord.Interaction[core.Genji]) -> None:
         await itx.client.database.set(
             """
-            INSERT INTO map_creators (map_code, user_id) 
+            INSERT INTO map_creators (map_code, user_id)
             VALUES ($1, $2);
             """,
             self.map_code,
             self.creator.id,
         )
 
-    async def insert_map_ratings(self, itx: discord.Interaction[core.Genji]):
+    async def insert_map_ratings(self, itx: discord.Interaction[core.Genji]) -> None:
         await itx.client.database.set(
             """
-            INSERT INTO map_ratings (map_code, user_id, difficulty) 
+            INSERT INTO map_ratings (map_code, user_id, difficulty)
             VALUES ($1, $2, $3);
             """,
             self.map_code,
@@ -225,7 +229,7 @@ class MapSubmission:
             ranks.ALL_DIFFICULTY_RANGES_MIDPOINT[self.difficulty],
         )
 
-    async def insert_guide(self, itx: discord.Interaction[core.Genji]):
+    async def insert_guide(self, itx: discord.Interaction[core.Genji]) -> None:
         _guides = [(self.map_code, guide) for guide in self.guides if guide]
         if _guides:
             await itx.client.database.set_many(
@@ -233,7 +237,7 @@ class MapSubmission:
                 _guides,
             )
 
-    async def insert_medals(self, itx: discord.Interaction[core.Genji]):
+    async def insert_medals(self, itx: discord.Interaction[core.Genji]) -> None:
         if self.medals:
             await itx.client.database.set(
                 """
@@ -246,7 +250,7 @@ class MapSubmission:
                 self.map_code,
             )
 
-    async def insert_timestamp(self, itx: discord.Interaction[core.Genji], mod: bool):
+    async def insert_timestamp(self, itx: discord.Interaction[core.Genji], mod: bool) -> None:
         if not mod:
             await itx.client.database.set(
                 """
@@ -257,7 +261,7 @@ class MapSubmission:
                 self.map_code,
             )
 
-    async def insert_all(self, itx: discord.Interaction[core.Genji], mod: bool):
+    async def insert_all(self, itx: discord.Interaction[core.Genji], mod: bool) -> None:
         await self.insert_maps(itx, mod)
         await self.insert_mechanics(itx)
         await self.insert_restrictions(itx)
@@ -269,6 +273,7 @@ class MapSubmission:
 
 
 async def get_map_info(client: core.Genji, message_id: int | None = None) -> list[database.DotRecord | None]:
+    """Get map info."""
     return [
         x
         async for x in client.database.get(
@@ -315,10 +320,11 @@ class MapMetadata:
     COLOR: discord.Color
     IMAGE_URL: str = ""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Post init set up."""
         self.IMAGE_URL = _MAPS_BASE_URL + self._remove_extra_chars(self.NAME) + ".png"
 
-    def _remove_extra_chars(self, string: str):
+    def _remove_extra_chars(self, string: str) -> str:
         return re.sub(r"[\s:()\']", "", string.lower())
 
 
@@ -404,7 +410,8 @@ async def new_map_newsfeed(
     client: core.Genji,
     user_id: int,
     data: MapSubmission,
-):
+) -> None:
+    """Send new map data to newsfeed."""
     nickname = client.cache.users[user_id].nickname
     embed = embeds.GenjiEmbed(
         title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
@@ -438,11 +445,11 @@ async def new_map_newsfeed(
 
 
 class MapEmbedData:
-    def __init__(self, data: asyncpg.Record):
+    def __init__(self, data: asyncpg.Record) -> None:
         self._data = data
 
     @property
-    def _guides(self):
+    def _guides(self) -> str:
         res = ""
         if None not in self._data["guide"]:
             guides = [f"[{i}]({guide})" for i, guide in enumerate(self._data["guide"], 1)]
@@ -450,7 +457,7 @@ class MapEmbedData:
         return res
 
     @property
-    def _medals(self):
+    def _medals(self) -> str:
         res = ""
         if self._data["gold"]:
             res = (
@@ -462,7 +469,7 @@ class MapEmbedData:
         return res
 
     @property
-    def _completed(self):
+    def _completed(self) -> str:
         res = ""
         if self._data["completed"]:
             res = "🗸 Completed"
@@ -471,7 +478,7 @@ class MapEmbedData:
         return res
 
     @property
-    def _playtest(self):
+    def _playtest(self) -> str:
         res = ""
         if not self._data["official"]:
             res = (
@@ -483,46 +490,46 @@ class MapEmbedData:
         return res
 
     @property
-    def _rating(self):
+    def _rating(self) -> str:
         return f"`Rating` {constants.create_stars(self._data['quality'])}" if self._data["quality"] else "Unrated"
 
     @property
-    def _creator(self):
+    def _creator(self) -> str:
         return f"`Creator` {discord.utils.escape_markdown(self._data['creators'])}"
 
     @property
-    def _map(self):
+    def _map(self) -> str:
         return f"`Map` {self._data['map_name']}"
 
     @property
-    def _difficulty(self):
+    def _difficulty(self) -> str:
         return f"`Difficulty` {ranks.convert_num_to_difficulty(self._data['difficulty'])}"
 
     @property
-    def _mechanics(self):
+    def _mechanics(self) -> str | None:
         return f"`Mechanics` {self._data['mechanics']}" if self._data["mechanics"] else None
 
     @property
-    def _restrictions(self):
+    def _restrictions(self) -> str | None:
         return f"`Restrictions` {self._data['restrictions']}" if self._data["restrictions"] else None
 
     @property
-    def _type(self):
+    def _type(self) -> str | None:
         return f"`Type` {self._data['map_type']}" if self._data["map_type"] else None
 
     @property
-    def _checkpoints(self):
+    def _checkpoints(self) -> str | None:
         return f"`Checkpoints` {self._data['checkpoints']}" if self._data["checkpoints"] else None
 
     @property
-    def _description(self):
+    def _description(self) -> str | None:
         return f"`Desc` {self._data['desc']}" if self._data["desc"] else None
 
     @property
-    def name(self):
+    def name(self) -> str:
         return f"{self._data['map_code']} {self._completed}"
 
-    def _non_null_values(self):
+    def _non_null_values(self) -> list:
         values = (
             self._rating,
             self._creator,
@@ -539,7 +546,7 @@ class MapEmbedData:
         return list(filter(None, values))
 
     @property
-    def value(self):
+    def value(self) -> str:
         res = ""
         vals = self._non_null_values()
         last_idx = len(vals) - 1

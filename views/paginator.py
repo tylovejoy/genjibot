@@ -177,7 +177,7 @@ class PageNumberModal(discord.ui.Modal):
             if not 1 <= self.value <= self.limit:
                 raise errors.OutOfRangeError
         except ValueError:
-            raise errors.InvalidInteger
+            raise errors.InvalidIntegerError
 
         if self.value:
             await itx.delete_original_response()

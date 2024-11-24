@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import datetime
 import json
 from typing import TYPE_CHECKING
 
@@ -10,20 +9,22 @@ from discord import InteractionType
 from discord.ext import commands, tasks
 
 if TYPE_CHECKING:
+    import datetime
+
     from core import Genji
 
 
 class AnalyticsTasks(commands.Cog):
-    def __init__(self, bot: Genji):
+    def __init__(self, bot: Genji) -> None:
         super().__init__()
         self.bot = bot
         self.send_info_to_db.start()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         self.send_info_to_db.cancel()
 
     @commands.Cog.listener()
-    async def on_command(self, ctx: commands.Context[Genji]):
+    async def on_command(self, ctx: commands.Context[Genji]) -> None:
         self.bot.log_analytics(
             ctx.command.qualified_name,
             ctx.author.id,
@@ -32,12 +33,12 @@ class AnalyticsTasks(commands.Cog):
         )
 
     @commands.Cog.listener()
-    async def on_interaction(self, itx: discord.Interaction[Genji]):
+    async def on_interaction(self, itx: discord.Interaction[Genji]) -> None:
         if itx.command and itx.type == InteractionType.application_command:
             self.bot.log_analytics(itx.command.name, itx.user.id, itx.created_at, itx.namespace.__dict__)
 
     @tasks.loop(seconds=60)
-    async def send_info_to_db(self):
+    async def send_info_to_db(self) -> None:
         query = """
             INSERT INTO analytics (event, user_id,  date_collected, args)
             VALUES($1, $2, $3, $4)
@@ -53,6 +54,7 @@ class AnalyticsTasks(commands.Cog):
             self.bot.analytics_buffer = []
 
 
-async def setup(bot: Genji):
+async def setup(bot: Genji) -> None:
+    """Add bot cog via extension."""
     bot.analytics_buffer = []
     await bot.add_cog(AnalyticsTasks(bot))
