@@ -480,7 +480,7 @@ class Records(commands.Cog):
             ), ranked_records AS (
                 SELECT
                     *,
-                    RANK() OVER (PARTITION BY map_code ORDER BY record) as rank_num
+                    RANK() OVER (PARTITION BY map_code ORDER BY completion, record) as rank_num
                 FROM map_records
                 WHERE map_records.latest = 1 AND (
                     $1::text IS NULL OR (

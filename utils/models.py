@@ -98,7 +98,7 @@ class RecordSubmissionStrategy(EmbedDataStrategy):
         return {
             "Code": record.map_code,
             "Difficulty": record.difficulty_string,
-            "Time": record.record_screenshot_link + " " + record.icon_generator,
+            "Time": record.record_screenshot_link_submissions + " " + record.icon_generator,
             "Video": record.video_link if record.video else None,
         }
 
@@ -147,6 +147,10 @@ class Record(msgspec.Struct, kw_only=True):
     def record_screenshot_link(self) -> str:
         time = self.record if not self.completion else "Completion"
         return f"[{time}]({self.screenshot})"
+
+    @property
+    def record_screenshot_link_submissions(self) -> str:
+        return f"[{self.record}]({self.screenshot}){'' if not self.completion else ' - Completion'}"
 
     @property
     def placement_string(self) -> str:
