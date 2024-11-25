@@ -173,7 +173,9 @@ class MapSubmission:
             new_map_id,
         )
 
-    async def insert_maps(self, itx: discord.Interaction[core.Genji], mod: bool) -> None:
+    async def insert_maps(
+        self, itx: discord.Interaction[core.Genji], mod: bool
+    ) -> None:
         await itx.client.database.set(
             """
             INSERT INTO
@@ -250,7 +252,9 @@ class MapSubmission:
                 self.map_code,
             )
 
-    async def insert_timestamp(self, itx: discord.Interaction[core.Genji], mod: bool) -> None:
+    async def insert_timestamp(
+        self, itx: discord.Interaction[core.Genji], mod: bool
+    ) -> None:
         if not mod:
             await itx.client.database.set(
                 """
@@ -272,7 +276,9 @@ class MapSubmission:
         await self.insert_timestamp(itx, mod)
 
 
-async def get_map_info(client: core.Genji, message_id: int | None = None) -> list[database.DotRecord | None]:
+async def get_map_info(
+    client: core.Genji, message_id: int | None = None
+) -> list[database.DotRecord | None]:
     """Get map info."""
     return [
         x
@@ -415,7 +421,9 @@ async def new_map_newsfeed(
     nickname = client.cache.users[user_id].nickname
     embed = embeds.GenjiEmbed(
         title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
-        description=(f"Use the command `/map-search map_code:{data.map_code}` to see the details!"),
+        description=(
+            f"Use the command `/map-search map_code:{data.map_code}` to see the details!"
+        ),
         color=getattr(
             MAP_DATA.get(data.map_name, discord.Color.from_str("#000000")),
             "COLOR",
@@ -424,16 +432,20 @@ async def new_map_newsfeed(
     )
     embed.set_image(url=getattr(MAP_DATA.get(data.map_name, None), "IMAGE_URL", None))
     base_thumbnail_url = "https://bkan0n.com/assets/images/genji_ranks/"
-    rank = DIFF_TO_RANK[data.difficulty.replace("+", "").replace("-", "").rstrip()].lower()
+    rank = DIFF_TO_RANK[
+        data.difficulty.replace("+", "").replace("-", "").rstrip()
+    ].lower()
     embed.set_thumbnail(url=f"{base_thumbnail_url}{rank}.png")
-    await client.get_guild(constants.GUILD_ID).get_channel(constants.NEWSFEED).send(embed=embed)
+    await client.get_guild(constants.GUILD_ID).get_channel(constants.NEWSFEED).send(
+        embed=embed
+    )
     data = {
         "user": {
             "user_id": user_id,
             "nickname": nickname,
         },
         "map": {
-            "map_code": data.map_name,
+            "map_code": data.map_code,
             "difficulty": data.difficulty,
             "map_name": data.map_name,
         },
@@ -452,7 +464,9 @@ class MapEmbedData:
     def _guides(self) -> str:
         res = ""
         if None not in self._data["guide"]:
-            guides = [f"[{i}]({guide})" for i, guide in enumerate(self._data["guide"], 1)]
+            guides = [
+                f"[{i}]({guide})" for i, guide in enumerate(self._data["guide"], 1)
+            ]
             res = f"`Guide(s)` {', '.join(guides)}"
         return res
 
@@ -491,7 +505,11 @@ class MapEmbedData:
 
     @property
     def _rating(self) -> str:
-        return f"`Rating` {constants.create_stars(self._data['quality'])}" if self._data["quality"] else "Unrated"
+        return (
+            f"`Rating` {constants.create_stars(self._data['quality'])}"
+            if self._data["quality"]
+            else "Unrated"
+        )
 
     @property
     def _creator(self) -> str:
@@ -503,15 +521,25 @@ class MapEmbedData:
 
     @property
     def _difficulty(self) -> str:
-        return f"`Difficulty` {ranks.convert_num_to_difficulty(self._data['difficulty'])}"
+        return (
+            f"`Difficulty` {ranks.convert_num_to_difficulty(self._data['difficulty'])}"
+        )
 
     @property
     def _mechanics(self) -> str | None:
-        return f"`Mechanics` {self._data['mechanics']}" if self._data["mechanics"] else None
+        return (
+            f"`Mechanics` {self._data['mechanics']}"
+            if self._data["mechanics"]
+            else None
+        )
 
     @property
     def _restrictions(self) -> str | None:
-        return f"`Restrictions` {self._data['restrictions']}" if self._data["restrictions"] else None
+        return (
+            f"`Restrictions` {self._data['restrictions']}"
+            if self._data["restrictions"]
+            else None
+        )
 
     @property
     def _type(self) -> str | None:
@@ -519,7 +547,11 @@ class MapEmbedData:
 
     @property
     def _checkpoints(self) -> str | None:
-        return f"`Checkpoints` {self._data['checkpoints']}" if self._data["checkpoints"] else None
+        return (
+            f"`Checkpoints` {self._data['checkpoints']}"
+            if self._data["checkpoints"]
+            else None
+        )
 
     @property
     def _description(self) -> str | None:
