@@ -236,6 +236,7 @@ class Records(commands.Cog):
             screenshot=cdn_screenshot,
             difficulty=await self._fetch_difficulty(map_code),
             completion=completion,
+            video=video,
         )
         old_record = await self._fetch_record(map_code, itx.user.id)
 
