@@ -162,17 +162,17 @@ class Record(msgspec.Struct, kw_only=True):
     @property
     def icon_generator(self) -> str:
         icon = ""
-        if not self.gold or not self.silver or not self.bronze:
-            return icon
-        if self.video and not self.completion:
-            if self.record < self.gold:
-                icon = constants.GOLD_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_GOLD
-            elif self.record < self.silver:
-                icon = constants.SILVER_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_SILVER
-            elif self.record < self.bronze:
-                icon = constants.BRONZE_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_BRONZE
-            elif self.rank_num == 1:
-                icon = constants.NON_MEDAL_WR
+        if not self.completion and self.video:
+            if self.gold and self.silver and self.bronze:
+                assert self.record
+                if self.record < self.gold:
+                    icon = constants.GOLD_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_GOLD
+                elif self.record < self.silver:
+                    icon = constants.SILVER_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_SILVER
+                elif self.record < self.bronze:
+                    icon = constants.BRONZE_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_BRONZE
+                elif self.rank_num == 1:
+                    icon = constants.NON_MEDAL_WR
             else:
                 icon = constants.FULLY_VERIFIED
         elif not self.completion:
