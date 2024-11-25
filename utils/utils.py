@@ -164,7 +164,7 @@ async def fetch_user_rank_data(
             WHERE r.user_id = $1
               AND m.official = TRUE
               AND ($2 IS TRUE OR m.archived = FALSE)
-            GROUP BY m.map_code, record, gold, silver, bronze, r.verified, medal, r.user_id
+            GROUP BY m.map_code, record, gold, silver, bronze, r.verified, medal, r.user_id, r.video
         ), counts_data AS (
         SELECT
             r.name AS difficulty,
