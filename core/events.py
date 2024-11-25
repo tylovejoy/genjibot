@@ -228,7 +228,7 @@ class BotEvents(commands.Cog):
                 "creators": record["creators"],
             },
             "record": {
-                "record": record["record"],
+                "record": float(record["record"]),
                 "video": record["video"],
             },
             "user": {
