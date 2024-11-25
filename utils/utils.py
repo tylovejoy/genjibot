@@ -248,9 +248,11 @@ async def grant_skill_rank_roles(
 ) -> None:
     """Grant skill rank roles to a Discord server Member."""
     new_roles = user.roles
+    _new_roles_announce = []
     for a in roles_to_grant:
         if a not in new_roles:
             new_roles.append(a)
+            _new_roles_announce.append(a)
     for r in roles_to_remove:
         if r in new_roles:
             new_roles.remove(r)
@@ -267,7 +269,8 @@ async def grant_skill_rank_roles(
     )
     if roles_to_grant:
         response += ", ".join([f"**{x.name}**" for x in roles_to_grant]) + " has been added.\n"
-        bot.dispatch("newsfeed_role", bot, user, roles_to_grant)
+        if _new_roles_announce:
+            bot.dispatch("newsfeed_role", bot, user, _new_roles_announce)
 
     if roles_to_remove:
         response += ", ".join([f"**{x.name}**" for x in roles_to_remove]) + " has been removed.\n"
