@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import cogs
 from utils import cache
+from utils.newsfeed import EventHandler
 
 if typing.TYPE_CHECKING:
     import datetime
@@ -40,6 +41,7 @@ class Genji(commands.Bot):
         self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
         self.analytics_buffer: list[tuple[str, int, datetime.datetime, dict]] = []
+        self.genji_dispatch = EventHandler()
 
     def log_analytics(self, event: str, user_id: int, timestamp: datetime.datetime, data: dict) -> None:
         self.analytics_buffer.append((event, user_id, timestamp, data))
