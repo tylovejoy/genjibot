@@ -283,7 +283,7 @@ class BotEvents(commands.Cog):
             },
             "map": {
                 "map_code": map_code,
-                "url": url,
+                "guide": [url],
             },
         }
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"

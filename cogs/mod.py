@@ -556,6 +556,10 @@ class ModCommands(commands.Cog):
             map_code,
         )
         await itx.edit_original_response(content=f"**{map_code}** has been {action.value}d.")
+        row["map_type"] = row["map_type"].split(", ")
+        row["mechanics"] = row["mechanics"].split(", ")
+        row["restrictions"] = row["restrictions"].split(", ")
+        row["creators"] = row["creators"].split(", ")
         itx.client.dispatch("newsfeed_archive", itx, map_code, action.value, row)
 
     @map.command()
