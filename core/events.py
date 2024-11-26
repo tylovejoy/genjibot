@@ -32,6 +32,26 @@ class BotEvents(commands.Cog):
         bot.tree.on_error = errors.on_app_command_error
 
     @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        if message.channel.id != 975820285343301674:
+            return
+        if "<@1309606801750360186>" not in message.content:
+            return
+        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2)"
+        nickname = self.bot.database.fetch_nickname(message.author.id)
+        data = {
+            "user": {
+                "user_id": message.author.id,
+                "nickname": nickname,
+            },
+            "message": {
+                "content": message.content,
+            },
+        }
+        json_data = json.dumps(data)
+        await self.bot.database.execute(query, "announcement", json_data)
+
+    @commands.Cog.listener()
     async def on_ready(self) -> None:
         """Call upon ready.
 
