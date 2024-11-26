@@ -184,62 +184,6 @@ class BotEvents(commands.Cog):
 
         await utils.auto_skill_role(self.bot, member.guild, member)
 
-    async def newsfeed_record(
-        self,
-        guild: discord.Guild,
-        record: database.DotRecord,
-        medals: tuple[float, float, float],
-    ) -> None: ...
-
-    @commands.Cog.listener()
-    async def on_newsfeed_record(
-        self,
-        itx: discord.Interaction[Genji],
-        record: asyncpg.Record,
-        medals: tuple[float, float, float],
-    ) -> None:
-        if not record["video"]:
-            return
-        icon = icon_generator(record, medals)
-        embed = embeds.GenjiEmbed(
-            url=record["screenshot"],
-            description=(
-                f"**{record['map_name']} by {record['creators']} ({record['map_code']})**\n"
-                f"┣ `Record` {record['record']} {icon}\n"
-                f"┗ `Video` [Link]({record['video']})"
-                if record["video"]
-                else ""
-            ),
-            color=discord.Color.yellow(),
-        )
-
-        if record["rank_num"] == 1:
-            embed.title = f"{record['nickname']} set a new World Record!"
-        elif icon in [constants.PARTIAL_VERIFIED, constants.FULLY_VERIFIED]:
-            return
-        else:
-            embed.title = f"{record['nickname']} got a medal!"
-        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
-
-        data = {
-            "map": {
-                "map_code": record["map_code"],
-                "map_name": record["map_name"],
-                "creators": record["creators"],
-            },
-            "record": {
-                "record": float(record["record"]),
-                "video": record["video"],
-            },
-            "user": {
-                "user_id": record["user_id"],
-                "nickname": record["nickname"],
-            },
-        }
-        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        json_data = json.dumps(data)
-        await itx.client.database.execute(query, "record", json_data)
-
     @commands.Cog.listener()
     async def on_newsfeed_role(self, client: Genji, user: discord.Member, roles: list[discord.Role]) -> None:
         nickname = client.cache.users[user.id].nickname

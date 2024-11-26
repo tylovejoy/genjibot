@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from utils import cache, constants, models, utils
+from utils.newsfeed import NewsfeedEvent
 
 if TYPE_CHECKING:
     import asyncpg
@@ -73,8 +74,18 @@ class VerificationView(discord.ui.View):
     @staticmethod
     async def _fetch_medals(db: database.Database, map_code: str) -> asyncpg.Record:
         query = """
-            SELECT gold, silver, bronze FROM map_medals WHERE map_code = $1;
+            SELECT
+                coalesce(gold, 0),
+                coalesce(silver, 0),
+                coalesce(bronze, 0)
+            FROM map_medals mm RIGHT JOIN maps m ON m.map_code = mm.map_code
+            WHERE m.map_code = 'EF3CT';
         """
+        row = await db.fetchrow(query, map_code)
+        if not row:
+            raise ValueError("Record not found.")
+        for key in row:
+            row["key"] = float(key)
         return await db.fetchrow(query, map_code)
 
     @staticmethod
@@ -160,13 +171,7 @@ class VerificationView(discord.ui.View):
         if verified:
             medals = await self._fetch_medals(itx.client.database, search.map_code)
 
-            if medals:
-                medals = [medals["gold"], medals["silver"], medals["bronze"]]
-                medals = tuple(map(float, medals))
-            else:
-                medals = (0, 0, 0)
-
-            data = self.accepted(itx.user.mention, search, medals)
+            data = self.accepted(itx.user.mention, search)
             await self._verify_record(itx.client.database, itx.message.id, itx.user.id)
             await self._verify_quality_rating(itx.client.database, search.map_code, record_submitter.id)
             if search.official:
@@ -175,8 +180,32 @@ class VerificationView(discord.ui.View):
             newsfeed_data = await self._get_record_for_newsfeed(
                 itx.client.database, record_submitter.id, search.map_code
             )
-            if newsfeed_data:
-                itx.client.dispatch("newsfeed_record", itx, newsfeed_data, medals)
+            if (
+                newsfeed_data
+                and search.video
+                and search.icon_generator not in [constants.PARTIAL_VERIFIED, constants.FULLY_VERIFIED]
+            ):
+                _data = {
+                    "map": {
+                        "map_code": newsfeed_data["map_code"],
+                        "map_name": newsfeed_data["map_name"],
+                        "creators": newsfeed_data["creators"],
+                        "gold": medals["gold"],
+                        "silver": medals["silver"],
+                        "bronze": medals["bronze"],
+                    },
+                    "record": {
+                        "record": float(newsfeed_data["record"]),
+                        "video": newsfeed_data["video"],
+                        "rank_num": newsfeed_data["rank_num"],
+                    },
+                    "user": {
+                        "user_id": newsfeed_data["user_id"],
+                        "nickname": newsfeed_data["nickname"],
+                    },
+                }
+                event = NewsfeedEvent("record", _data)
+                await itx.client.genji_dispatch.handle_event(event, itx.guild, itx.client.database)
 
         else:
             data = self.rejected(itx.user.mention, search, rejection)
@@ -204,7 +233,6 @@ class VerificationView(discord.ui.View):
     def accepted(
         verifier_mention: str,
         search: models.Record,
-        medals: tuple[float, float, float],
     ) -> dict[str, str]:
         """Get data for verified records."""
         if search.completion:

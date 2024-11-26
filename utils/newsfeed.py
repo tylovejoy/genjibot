@@ -78,6 +78,3 @@ class NewMapEmbedBuilder(EmbedBuilder):
         embed.add_field(name="Difficulty", value=map_details["difficulty"], inline=True)
         embed.set_footer(text="Check it out now!")
         return embed
-
-
-
