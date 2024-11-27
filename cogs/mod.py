@@ -9,6 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
+from utils.newsfeed import NewsfeedEvent
 import views
 from utils import cache, constants, embeds, errors, maps, ranks, records, utils
 from views import GuidesSelect
@@ -488,67 +489,40 @@ class ModCommands(commands.Cog):
         map_code: app_commands.Transform[str, records.MapCodeTransformer],
     ) -> None:
         await itx.response.defer(ephemeral=True)
-        row = None
-        if action.value == "archive" and itx.client.cache.maps[map_code].archived is False:
-            value = True
-            row = await itx.client.database.get_row(
-                """
-                  WITH
-                all_maps AS (
-                  SELECT
+        query = """
+            WITH all_maps AS (
+                SELECT
                     map_name,
-                    array_to_string((map_type), ', ') AS map_type,
                     m.map_code,
-                    "desc",
-                    official,
                     archived,
-                    array_agg(DISTINCT url) AS guide,
-                    array_to_string(array_agg(DISTINCT mech.mechanic), ', ') AS mechanics,
-                    array_to_string(array_agg(DISTINCT rest.restriction), ', ') AS restrictions,
-                    checkpoints,
-                    string_agg(DISTINCT (nickname), ', ') AS creators,
-                    coalesce(avg(difficulty), 0) AS difficulty,
-                    coalesce(avg(quality), 0) AS quality,
-                    array_agg(DISTINCT mc.user_id) AS creator_ids,
-                    gold,
-                    silver,
-                    bronze
-                    FROM
-                      maps m
-                        LEFT JOIN map_mechanics mech ON mech.map_code = m.map_code
-                        LEFT JOIN map_restrictions rest ON rest.map_code = m.map_code
-                        LEFT JOIN map_creators mc ON m.map_code = mc.map_code
-                        LEFT JOIN users u ON mc.user_id = u.user_id
-                        LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
-                        LEFT JOIN guides g ON m.map_code = g.map_code
-                        LEFT JOIN map_medals mm ON m.map_code = mm.map_code
-                   GROUP BY
-                     checkpoints, map_name,
-                     m.map_code, "desc", official, map_type, gold, silver, bronze, archived
-                )
-            SELECT
-              am.map_name, map_type, am.map_code, am."desc", am.official,
-              am.archived, guide, mechanics, restrictions, am.checkpoints,
-              creators, difficulty, quality, creator_ids, am.gold, am.silver,
-              am.bronze
-              FROM
-                all_maps am
-                  LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
-             WHERE
-               am.map_code = $1
-             GROUP BY
-               am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
-               restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
-               am.bronze
-                """,
-                map_code,
+                    array_agg(DISTINCT nickname) AS creators,
+                    coalesce(avg(difficulty), 0) AS difficulty
+                FROM maps m
+                LEFT JOIN map_creators mc ON m.map_code = mc.map_code
+                LEFT JOIN users u ON mc.user_id = u.user_id
+                LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
+                GROUP BY map_name, m.map_code, archived
             )
+            SELECT am.map_name, am.map_code, am.archived, creators, difficulty
+            FROM all_maps am
+            LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
+            WHERE am.map_code = $1
+        """
+        row = await itx.client.database.fetchrow(query, map_code)
 
-        elif action.value == "unarchive" and itx.client.cache.maps[map_code].archived is True:
+        if not row:
+            raise ValueError("Map wasn't found.")
+
+        if action.value == "archive" and row["archived"] is False:
+            value = True
+
+        elif action.value == "unarchive" and row["archived"] is True:
             value = False
+
         else:
             await itx.edit_original_response(content=f"**{map_code}** has already been {action.value}d.")
             return
+
         itx.client.cache.maps[map_code].update_archived(value)
         await itx.client.database.set(
             """UPDATE maps SET archived = $1 WHERE map_code = $2""",
@@ -556,11 +530,18 @@ class ModCommands(commands.Cog):
             map_code,
         )
         await itx.edit_original_response(content=f"**{map_code}** has been {action.value}d.")
-        row["map_type"] = row["map_type"].split(", ")
-        row["mechanics"] = row["mechanics"].split(", ")
-        row["restrictions"] = row["restrictions"].split(", ")
-        row["creators"] = row["creators"].split(", ")
         itx.client.dispatch("newsfeed_archive", itx, map_code, action.value, row)
+
+        _data = {
+            "map": {
+                "map_code": row["map_code"],
+                "creators": row["creators"],
+                "difficulty": row["difficulty"],
+                "map_name": row["map_name"],
+            }
+        }
+        event = NewsfeedEvent(action.value, _data)
+        await itx.client.genji_dispatch.handle_event(event, itx.client)
 
     @map.command()
     @app_commands.choices(value=ranks.DIFFICULTIES_CHOICES)

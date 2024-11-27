@@ -254,64 +254,6 @@ class BotEvents(commands.Cog):
         json_data = json.dumps(data)
         await itx.client.database.execute(query, "guide", json_data)
 
-    @commands.Cog.listener()
-    async def on_newsfeed_archive(
-        self,
-        itx: discord.Interaction[Genji],
-        map_code: str,
-        value: str,
-        map_data: dict | None = None,
-    ) -> None:
-        if value == "archive":
-            description = (
-                "This map will not appear in the map search command.\n" "You cannot submit records for archived maps."
-            )
-        else:
-            description = (
-                "This map will now appear in the map search command " "and be eligible for record submissions."
-            )
-        embed = embeds.GenjiEmbed(
-            title=f"{map_code} has been {value}d.",
-            description=description,
-            color=discord.Color.red(),
-        )
-        if value:
-            guide_txt = ""
-            medals_txt = ""
-            if map_data.get("guide") and None not in map_data.get("guide"):
-                guides = [f"[{j}]({guide})" for j, guide in enumerate(map_data.guide, 1)]
-                guide_txt = f"┣ `Guide(s)` {', '.join(guides)}\n"
-            if map_data.gold:
-                medals_txt = (
-                    f"┣ `Medals` "
-                    f"{constants.FULLY_VERIFIED_GOLD} {map_data.gold} | "
-                    f"{constants.FULLY_VERIFIED_SILVER} {map_data.silver} | "
-                    f"{constants.FULLY_VERIFIED_BRONZE} {map_data.bronze}\n"
-                )
-
-            embed.add_description_field(
-                name=f"{map_data.map_code}",
-                value=(
-                    f"┣ `Rating` {constants.create_stars(map_data.quality)}\n"
-                    f"┣ `Creator` {discord.utils.escape_markdown(map_data.creators)}\n"
-                    f"┣ `Map` {map_data.map_name}\n"
-                    f"┣ `Difficulty` {ranks.convert_num_to_difficulty(map_data.difficulty)}\n"
-                    f"┣ `Mechanics` {map_data.mechanics}\n"
-                    f"┣ `Restrictions` {map_data.restrictions}\n"
-                    f"{guide_txt}"
-                    f"┣ `Type` {map_data.map_type}\n"
-                    f"┣ `Checkpoints` {map_data.checkpoints}\n"
-                    f"{medals_txt}"
-                    f"┗ `Desc` {map_data.desc}"
-                ),
-            )
-        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
-        data = {
-            "map": map_data,
-        }
-        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        json_data = json.dumps(data)
-        await itx.client.database.execute(query, value, json_data)
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(

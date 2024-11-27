@@ -8,7 +8,7 @@ import msgspec
 
 import core
 import database
-from utils import constants, embeds, models
+from utils import constants, embeds, models, ranks
 from utils.maps import DIFF_TO_RANK, MAP_DATA
 
 
@@ -115,7 +115,7 @@ class EventHandler:
 
 class RecordEmbedBuilder(EmbedBuilder):
     event_type = "record"
-    def build(self, data: NewsfeedResponse) -> discord.Embed:
+    def build(self, data: dict) -> discord.Embed:
         record = models.Record(**data["map"], **data["user"], **data["record"])
 
         embed = embeds.GenjiEmbed(
@@ -157,3 +157,44 @@ class NewMapEmbedBuilder(EmbedBuilder):
         embed.set_thumbnail(url=f"{base_thumbnail_url}{rank}.png")
 
         return embed
+
+class _ArchivalExtra:
+    event_type: str
+
+    def prepare_embed(self, data: dict, description: str) -> discord.Embed:
+        map_code = data["map"]["map_code"]
+        creators = data["map"]["creators"]
+        map_name = data["map"]["map_name"]
+        difficulty = data["map"]["difficulty"]
+
+        embed = embeds.GenjiEmbed(
+            title=f"{map_code} has been {self.event_type}d.",
+            description=description,
+            color=discord.Color.red(),
+        )
+
+        embed.add_description_field(
+            name=f"{map_code}",
+            value=(
+                f"`Creator` {discord.utils.escape_markdown(creators)}\n"
+                f"`Map` {map_name}\n"
+                f"`Difficulty` {ranks.convert_num_to_difficulty(difficulty)}\n"
+            ),
+        )
+        return embed
+
+class ArchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
+    event_type = "archive"
+    def build(self, data: dict) -> discord.Embed:
+        description = (
+            "This map will not appear in the map search command unless searched by map code.\n"
+            "You cannot submit records for archived maps."
+        )
+        return self.prepare_embed(data, description)
+
+
+class UnarchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
+    event_type = "unarchive"
+    def build(self, data: dict) -> discord.Embed:
+        description = "This map will now appear in the map search command and be eligible for record submissions."
+        return self.prepare_embed(data, description)
