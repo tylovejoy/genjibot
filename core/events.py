@@ -224,36 +224,6 @@ class BotEvents(commands.Cog):
         json_data = json.dumps(data)
         await client.database.execute(query, "role", json_data)
 
-    @commands.Cog.listener()
-    async def on_newsfeed_guide(
-        self,
-        itx: discord.Interaction[Genji],
-        user: discord.Member,
-        url: str,
-        map_code: str,
-    ) -> None:
-        nickname = itx.client.cache.users[user.id].nickname
-        embed = embeds.GenjiEmbed(
-            title=f"{nickname} has posted a guide for {map_code}",
-            url=url,
-            color=discord.Color.orange(),
-        )
-        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
-        await itx.guild.get_channel(constants.NEWSFEED).send(url)
-        data = {
-            "user": {
-                "user_id": user.id,
-                "nickname": nickname,
-            },
-            "map": {
-                "map_code": map_code,
-                "guide": [url],
-            },
-        }
-        query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-        json_data = json.dumps(data)
-        await itx.client.database.execute(query, "guide", json_data)
-
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(

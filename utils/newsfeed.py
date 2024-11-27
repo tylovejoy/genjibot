@@ -108,6 +108,10 @@ class EventHandler:
         channel = bot.get_channel(constants.NEWSFEED)
         assert isinstance(channel, discord.TextChannel)
         await channel.send(embed=embed)
+        if hasattr(builder, "additional_messages"):
+            extra_messages = builder.additional_messages(event.data)
+            for message in extra_messages:
+                await channel.send(content=message)
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
         json_data = json.dumps(event.data)
         await bot.database.execute(query, event.event_type, json_data)
@@ -198,3 +202,23 @@ class UnarchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
     def build(self, data: dict) -> discord.Embed:
         description = "This map will now appear in the map search command and be eligible for record submissions."
         return self.prepare_embed(data, description)
+
+
+class GuideEmbedBuilder(EmbedBuilder):
+    event_type = "guide"
+    def build(self, data: dict) -> discord.Embed:
+        nickname = data["user"]["nickname"]
+        map_code = data["map"]["map_code"]
+        url = data["map"]["guide"][0]
+
+        embed = embeds.GenjiEmbed(
+            title=f"{nickname} has posted a guide for {map_code}",
+            url=url,
+            color=discord.Color.orange(),
+        )
+        return embed
+
+    @staticmethod
+    def additional_messages(data: dict) -> list[str]:
+        """Return any additional messages to be sent alongside the embed."""
+        return [data["map"]["guide"][0]]

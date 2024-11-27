@@ -8,6 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
+from utils.newsfeed import NewsfeedEvent
 import views
 from utils import constants, embeds, errors, maps, ranks, records, utils
 
@@ -409,7 +410,19 @@ class Maps(commands.Cog):
             map_code,
             url,
         )
-        itx.client.dispatch("newsfeed_guide", itx, itx.user, url, map_code)
+        nickname = itx.client.database.fetch_nickname(itx.user.id)
+        _data = {
+            "user": {
+                "user_id": itx.user.id,
+                "nickname": nickname,
+            },
+            "map": {
+                "map_code": map_code,
+                "guide": [url],
+            },
+        }
+        event = NewsfeedEvent("guide", _data)
+        await itx.client.genji_dispatch.handle_event(event, itx.client)
 
     @app_commands.command()
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
