@@ -205,7 +205,7 @@ class VerificationView(discord.ui.View):
                     },
                 }
                 event = NewsfeedEvent("record", _data)
-                await itx.client.genji_dispatch.handle_event(event, itx.guild, itx.client.database)
+                await itx.client.genji_dispatch.handle_event(event, itx.client)
 
         else:
             data = self.rejected(itx.user.mention, search, rejection)

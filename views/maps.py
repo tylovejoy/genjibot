@@ -10,6 +10,7 @@ import discord
 import matplotlib.pyplot as plt
 from discord import ButtonStyle
 
+from utils.newsfeed import NewsfeedEvent
 import views
 from utils import constants, embeds, maps, ranks, records, utils
 
@@ -477,7 +478,19 @@ class PlaytestVoting(discord.ui.View):
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
         self.data.difficulty = await self.get_difficulty(votes)
-        await maps.new_map_newsfeed(self.client, author.id, self.data)
+        nickname = await self.client.database.fetch_nickname(self.data.creator.id)
+        _data = {
+            "user": {
+                "nickname": nickname,
+            },
+            "map": {
+                "map_code": self.data.map_code,
+                "difficulty": self.data.difficulty,
+                "map_name":self. data.map_name,
+            },
+        }
+        event = NewsfeedEvent("new_map", _data)
+        await self.client.genji_dispatch.handle_event(event, self.client)
 
         try:
             await utils.update_affected_users(self.client, author.guild, self.data.map_code)

@@ -406,44 +406,6 @@ DIFF_TO_RANK = {
 }
 
 
-async def new_map_newsfeed(
-    client: core.Genji,
-    user_id: int,
-    data: MapSubmission,
-) -> None:
-    """Send new map data to newsfeed."""
-    nickname = client.cache.users[user_id].nickname
-    embed = embeds.GenjiEmbed(
-        title=f"{nickname} has submitted a new {data.difficulty} map on {data.map_name}!\n",
-        description=(f"Use the command `/map-search map_code:{data.map_code}` to see the details!"),
-        color=getattr(
-            MAP_DATA.get(data.map_name, discord.Color.from_str("#000000")),
-            "COLOR",
-            discord.Color.from_str("#000000"),
-        ),
-    )
-    embed.set_image(url=getattr(MAP_DATA.get(data.map_name, None), "IMAGE_URL", None))
-    base_thumbnail_url = "https://bkan0n.com/assets/images/genji_ranks/"
-    rank = DIFF_TO_RANK[data.difficulty.replace("+", "").replace("-", "").rstrip()].lower()
-    embed.set_thumbnail(url=f"{base_thumbnail_url}{rank}.png")
-    await client.get_guild(constants.GUILD_ID).get_channel(constants.NEWSFEED).send(embed=embed)
-    data = {
-        "user": {
-            "user_id": user_id,
-            "nickname": nickname,
-        },
-        "map": {
-            "map_code": data.map_code,
-            "difficulty": data.difficulty,
-            "map_name": data.map_name,
-        },
-    }
-    query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
-
-    json_data = json.dumps(data)
-    await client.database.execute(query, "new_map", json_data)
-
-
 class MapEmbedData:
     def __init__(self, data: asyncpg.Record) -> None:
         self._data = data

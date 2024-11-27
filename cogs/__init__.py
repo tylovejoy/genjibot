@@ -9,6 +9,7 @@ from datetime import timedelta
 import discord
 from discord import app_commands
 
+from utils.newsfeed import NewsfeedEvent
 import views
 from utils import cache, constants, embeds, errors, maps
 
@@ -236,7 +237,20 @@ async def map_submission_second_step(
         if map_maker not in itx.user.roles:
             await itx.user.add_roles(map_maker, reason="Submitted a map.")
     else:
-        await maps.new_map_newsfeed(itx.client, data.creator.id, data)
+        nickname = await itx.client.database.fetch_nickname(data.creator.id)
+        _data = {
+            "user": {
+                "user_id": data.creator.id,
+                "nickname": nickname,
+            },
+            "map": {
+                "map_code": data.map_code,
+                "difficulty": data.difficulty,
+                "map_name": data.map_name,
+            },
+        }
+        event = NewsfeedEvent("new_map", _data)
+        await itx.client.genji_dispatch.handle_event(event, itx.client)
 
     if not itx.client.cache.users.find(data.creator.id).is_creator:
         itx.client.cache.users.find(data.creator.id).update_is_creator(True)
