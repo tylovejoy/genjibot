@@ -139,7 +139,7 @@ class Record(msgspec.Struct, kw_only=True):
 
     @property
     def difficulty_string(self) -> str:
-        if self.difficulty:
+        if self.difficulty or self.difficulty == 0:
             return ranks.convert_num_to_difficulty(self.difficulty)
         return "In Playtest"
 
