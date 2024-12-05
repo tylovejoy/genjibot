@@ -79,7 +79,7 @@ class VerificationView(discord.ui.View):
                 coalesce(silver, 0),
                 coalesce(bronze, 0)
             FROM map_medals mm RIGHT JOIN maps m ON m.map_code = mm.map_code
-            WHERE m.map_code = 'EF3CT';
+            WHERE m.map_code = $1;
         """
         row = await db.fetchrow(query, map_code)
         if not row:
