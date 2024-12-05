@@ -1,68 +1,16 @@
-import datetime
+from __future__ import annotations
+
 import json
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-import asyncpg
 import discord
-import msgspec
 
-import core
-import database
 from utils import constants, embeds, models, ranks
 from utils.maps import DIFF_TO_RANK, MAP_DATA
 
-
-class NewsfeedRecordResponse(msgspec.Struct):
-    record: float | None = None
-    video: str | None = None
-
-
-class NewsfeedUserResponse(msgspec.Struct):
-    user_id: int | None = None
-    nickname: str | None = None
-    roles: list[str] | None = None
-
-
-class NewsfeedMapResponse(msgspec.Struct):
-    map_name: str | None = None
-    map_type: list[str] | None = None
-    map_code: str | None = None
-    desc: str | None = None
-    official: bool | None = None
-    archived: bool | None = None
-    guide: list[str] | None = None
-    mechanics: list[str] | None = None
-    restrictions: list[str] | None = None
-    checkpoints: int | None = None
-    creators: list[str] | None = None
-    difficulty: str | None = None
-    quality: float | None = None
-    creator_ids: list[int] | None = None
-    gold: float | None = None
-    silver: float | None = None
-    bronze: float | None = None
-
-class NewsfeedDataResponse(msgspec.Struct):
-    map: NewsfeedMapResponse | None = None
-    user: NewsfeedUserResponse | None = None
-    record: NewsfeedRecordResponse | None = None
-
-class NewsfeedResponse(msgspec.Struct):
-    type: str
-    timestamp: datetime.datetime
-    data: NewsfeedDataResponse
-
-def parse_newsfeed_data(data: dict) -> NewsfeedResponse:
-
-
-    user_data = NewsfeedUserResponse(**data.get("user", {})) if "user" in data else None
-    map_data = NewsfeedMapResponse(**data.get("map", {})) if "map" in data else None
-    record_data = NewsfeedRecordResponse(**data.get("record", {})) if "record" in data else None
-
-    _data = NewsfeedDataResponse(map=map_data, user=user_data, record=record_data)
-    msgspec.json.encode(_data)
-    return _data
-    return NewsfeedResponse(type=type_, timestamp=timestamp, data=_data)
+if TYPE_CHECKING:
+    import core
 
 class NewsfeedEvent:
     def __init__(self, event_type: str, data: dict) -> None:
@@ -74,7 +22,7 @@ class EmbedBuilder(ABC):
     event_type: str
 
     @abstractmethod
-    def build(self, data: NewsfeedResponse) -> discord.Embed:
+    def build(self, data: dict) -> discord.Embed:
         """Build a list of embeds based on the event data."""
         raise NotImplementedError
 
@@ -98,20 +46,27 @@ class EventHandler:
             else:
                 raise ValueError(f"EmbedBuilder subclass {cls.__name__} is missing the 'event_type' attribute.")
 
-    async def handle_event(self, event: NewsfeedEvent, bot: core.Genji) -> None:
+    async def handle_event(
+        self,
+        event: NewsfeedEvent,
+        bot: core.Genji,
+        *,
+        channel: discord.TextChannel | discord.Thread | None = None
+    ) -> None:
         """Handle an incoming event and posts to the specified channel."""
         builder = self._registry.get(event.event_type)
         if not builder:
             raise ValueError(f"No handler registered for event type: {event.event_type}")
 
         embed = builder.build(event.data)
-        channel = bot.get_channel(constants.NEWSFEED)
-        assert isinstance(channel, discord.TextChannel)
-        await channel.send(embed=embed)
+        _channel = channel if channel else bot.get_channel(constants.NEWSFEED)
+        assert isinstance(_channel, discord.TextChannel | discord.Thread)
+
+        await _channel.send(embed=embed)
         if hasattr(builder, "additional_messages"):
             extra_messages = builder.additional_messages(event.data)
             for message in extra_messages:
-                await channel.send(content=message)
+                await _channel.send(content=message)
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
         json_data = json.dumps(event.data)
         await bot.database.execute(query, event.event_type, json_data)
@@ -222,3 +177,21 @@ class GuideEmbedBuilder(EmbedBuilder):
     def additional_messages(data: dict) -> list[str]:
         """Return any additional messages to be sent alongside the embed."""
         return [data["map"]["guide"][0]]
+
+
+class MapEditEmbedBuilder(EmbedBuilder):
+    event_type = "map_edit"
+    def build(self, data: dict) -> discord.Embed:
+        description = ">>> "
+        for k, v in values.items():
+            description += f"`{k}` {v}\n"
+
+        embed = embeds.GenjiEmbed(
+            title=f"{map_code} has been changed:",
+            description=description,
+            color=discord.Color.red(),
+        )
+
+    @staticmethod
+    async def additional_actions(data: dict) -> list[str]:
+        ...
