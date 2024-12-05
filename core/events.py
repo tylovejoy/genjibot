@@ -279,8 +279,8 @@ class BotEvents(commands.Cog):
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
         # TODO: missing fields dont get edited
         pattern = re.compile(r"(┣?┗?) `" + field + r"` (.+)(\n?┣?┗?)")
+        assert embed.description
         search = re.search(pattern, embed.description)
-
         if search:
             start_char = search.group(1)
             end_char = search.group(3)
@@ -293,6 +293,7 @@ class BotEvents(commands.Cog):
         else:
             last_field_pattern = re.compile(r"(┣?.+\n)┗")
             last_field = re.search(last_field_pattern, embed.description)
+            assert last_field
             new_field = f"{last_field.group(1)}┣ `{field}` {value}\n┗"
             embed.description = re.sub(
                 last_field_pattern,
