@@ -106,7 +106,32 @@ class RecordSubmissionStrategy(EmbedDataStrategy):
         return "New Submission!"
 
 
-class Map(msgspec.Struct): ...
+class Map(msgspec.Struct, kw_only=True):
+    map_code: str
+    map_name: str
+    checkpoints: int
+    creators: list[int] = msgspec.field(default_factory=list)
+    map_type: list[str] | None = None
+    difficulty: float | None = None
+    mechanics: list[str] = msgspec.field(default_factory=list)
+    restrictions: list[str] = msgspec.field(default_factory=list)
+    gold: float | None = None
+    silver: float | None = None
+    bronze: float | None = None
+    guides: list[str] = msgspec.field(default_factory=list)
+    description: str = ""
+    archived: bool = False
+    playtesting: bool = True
+    votes: int | None = None
+    thread_id: int | None = None
+    completed: bool | None = None
+    medal_type: str | None = None
+    quality: float | None = None
+    submitted_by: int | None = None
+    message_id: int | None = None
+
+    def build_embed(self):
+        ...
 
 
 class Record(msgspec.Struct, kw_only=True):
