@@ -10,9 +10,9 @@ import discord
 import matplotlib.pyplot as plt
 from discord import ButtonStyle
 
-from utils.newsfeed import NewsfeedEvent
 import views
 from utils import constants, embeds, maps, ranks, records, utils
+from utils.newsfeed import NewsfeedEvent
 
 if TYPE_CHECKING:
     import core
@@ -486,7 +486,7 @@ class PlaytestVoting(discord.ui.View):
             "map": {
                 "map_code": self.data.map_code,
                 "difficulty": self.data.difficulty,
-                "map_name":self. data.map_name,
+                "map_name": self.data.map_name,
             },
         }
         event = NewsfeedEvent("new_map", _data)

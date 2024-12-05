@@ -9,9 +9,9 @@ from datetime import timedelta
 import discord
 from discord import app_commands
 
-from utils.newsfeed import NewsfeedEvent
 import views
 from utils import cache, constants, embeds, errors, maps
+from utils.newsfeed import NewsfeedEvent
 
 if typing.TYPE_CHECKING:
     import core

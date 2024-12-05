@@ -12,6 +12,7 @@ from utils.maps import DIFF_TO_RANK, MAP_DATA
 if TYPE_CHECKING:
     import core
 
+
 class NewsfeedEvent:
     def __init__(self, event_type: str, data: dict) -> None:
         self.event_type: str = event_type
@@ -28,7 +29,6 @@ class EmbedBuilder(ABC):
 
 
 class EventHandler:
-
     def __init__(self) -> None:
         self._registry = {}
         self._register_handlers()
@@ -47,11 +47,7 @@ class EventHandler:
                 raise ValueError(f"EmbedBuilder subclass {cls.__name__} is missing the 'event_type' attribute.")
 
     async def handle_event(
-        self,
-        event: NewsfeedEvent,
-        bot: core.Genji,
-        *,
-        channel: discord.TextChannel | discord.Thread | None = None
+        self, event: NewsfeedEvent, bot: core.Genji, *, channel: discord.TextChannel | discord.Thread | None = None
     ) -> None:
         """Handle an incoming event and posts to the specified channel."""
         builder = self._registry.get(event.event_type)
@@ -74,6 +70,7 @@ class EventHandler:
 
 class RecordEmbedBuilder(EmbedBuilder):
     event_type = "record"
+
     def build(self, data: dict) -> discord.Embed:
         record = models.Record(**data["map"], **data["user"], **data["record"])
 
@@ -96,6 +93,7 @@ class RecordEmbedBuilder(EmbedBuilder):
 
 class NewMapEmbedBuilder(EmbedBuilder):
     event_type = "new_map"
+
     def build(self, data: dict) -> discord.Embed:
         nickname = data["user"]["nickname"]
         difficulty = data["map"]["difficulty"]
@@ -116,6 +114,7 @@ class NewMapEmbedBuilder(EmbedBuilder):
         embed.set_thumbnail(url=f"{base_thumbnail_url}{rank}.png")
 
         return embed
+
 
 class _ArchivalExtra:
     event_type: str
@@ -142,8 +141,10 @@ class _ArchivalExtra:
         )
         return embed
 
+
 class ArchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
     event_type = "archive"
+
     def build(self, data: dict) -> discord.Embed:
         description = (
             "This map will not appear in the map search command unless searched by map code.\n"
@@ -154,6 +155,7 @@ class ArchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
 
 class UnarchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
     event_type = "unarchive"
+
     def build(self, data: dict) -> discord.Embed:
         description = "This map will now appear in the map search command and be eligible for record submissions."
         return self.prepare_embed(data, description)
@@ -161,6 +163,7 @@ class UnarchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
 
 class GuideEmbedBuilder(EmbedBuilder):
     event_type = "guide"
+
     def build(self, data: dict) -> discord.Embed:
         nickname = data["user"]["nickname"]
         map_code = data["map"]["map_code"]
@@ -181,6 +184,7 @@ class GuideEmbedBuilder(EmbedBuilder):
 
 class MapEditEmbedBuilder(EmbedBuilder):
     event_type = "map_edit"
+
     def build(self, data: dict) -> discord.Embed:
         description = ">>> "
         for k, v in values.items():
@@ -193,5 +197,4 @@ class MapEditEmbedBuilder(EmbedBuilder):
         )
 
     @staticmethod
-    async def additional_actions(data: dict) -> list[str]:
-        ...
+    async def additional_actions(data: dict) -> list[str]: ...

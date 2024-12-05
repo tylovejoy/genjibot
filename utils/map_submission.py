@@ -56,9 +56,10 @@ class RestrictionsSelect(MapSubmitSelection):
             max_values=len(options),
         )
 
+
 class MapSubmissionView(discord.ui.View):
     def __init__(self, data: Map) -> None:
         super().__init__()
         self._map = data
 
-    def _setup(self):
+    def _setup(self): ...

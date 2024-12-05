@@ -14,11 +14,8 @@ import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
 from cogs.tickets.views import TicketStart
 from utils import cache, constants, embeds, errors, maps, ranks, records, utils
-from utils.records import icon_generator
 
 if typing.TYPE_CHECKING:
-    import database
-
     from .genji import Genji
 
 log = logging.getLogger(__name__)
@@ -223,7 +220,6 @@ class BotEvents(commands.Cog):
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
         json_data = json.dumps(data)
         await client.database.execute(query, "role", json_data)
-
 
     @commands.Cog.listener()
     async def on_newsfeed_map_edit(

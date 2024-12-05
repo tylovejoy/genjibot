@@ -9,9 +9,9 @@ from discord import app_commands
 from discord.ext import commands
 
 import cogs
-from utils.newsfeed import NewsfeedEvent
 import views
 from utils import cache, constants, embeds, errors, maps, ranks, records, utils
+from utils.newsfeed import NewsfeedEvent
 from views import GuidesSelect
 
 if typing.TYPE_CHECKING:

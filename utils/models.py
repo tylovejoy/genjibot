@@ -130,8 +130,7 @@ class Map(msgspec.Struct, kw_only=True):
     submitted_by: int | None = None
     message_id: int | None = None
 
-    def build_embed(self):
-        ...
+    def build_embed(self): ...
 
 
 class Record(msgspec.Struct, kw_only=True):

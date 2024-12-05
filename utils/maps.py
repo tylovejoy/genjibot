@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 import re
 import typing
 
 import discord
 from discord import app_commands
 
-from utils import constants, embeds, formatter, ranks, utils
+from utils import constants, formatter, ranks, utils
 
 if typing.TYPE_CHECKING:
     import asyncpg
