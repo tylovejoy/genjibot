@@ -66,10 +66,10 @@ class VerificationView(discord.ui.View):
             LEFT JOIN maps m on rq.map_code = m.map_code
             WHERE hidden_id=$1
         """
-        rows = await db.fetchrow(query, hidden_id)
-        if not rows:
+        row = await db.fetchrow(query, hidden_id)
+        if not row:
             return None
-        return models.Record(**rows)
+        return models.Record(**row)
 
     @staticmethod
     async def _fetch_medals(db: database.Database, map_code: str) -> asyncpg.Record:
@@ -81,11 +81,6 @@ class VerificationView(discord.ui.View):
             FROM map_medals mm RIGHT JOIN maps m ON m.map_code = mm.map_code
             WHERE m.map_code = $1;
         """
-        row = await db.fetchrow(query, map_code)
-        if not row:
-            raise ValueError("Record not found.")
-        for key in row:
-            row["key"] = float(key)
         return await db.fetchrow(query, map_code)
 
     @staticmethod
