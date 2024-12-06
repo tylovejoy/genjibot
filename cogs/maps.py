@@ -410,7 +410,7 @@ class Maps(commands.Cog):
             map_code,
             url,
         )
-        nickname = itx.client.database.fetch_nickname(itx.user.id)
+        nickname = await itx.client.database.fetch_nickname(itx.user.id)
         _data = {
             "user": {
                 "user_id": itx.user.id,
