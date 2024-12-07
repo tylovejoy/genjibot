@@ -134,7 +134,7 @@ class _ArchivalExtra:
         embed.add_description_field(
             name=f"{map_code}",
             value=(
-                f"`Creator` {discord.utils.escape_markdown(creators)}\n"
+                f"`Creator` {discord.utils.escape_markdown(', '.join(creators))}\n"
                 f"`Map` {map_name}\n"
                 f"`Difficulty` {ranks.convert_num_to_difficulty(difficulty)}\n"
             ),

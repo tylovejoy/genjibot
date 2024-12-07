@@ -270,6 +270,15 @@ class BotEvents(commands.Cog):
             await original.edit(embed=embed)
         else:
             await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
+            data = {
+                "map": {
+                    "map_code": map_code,
+                    **values,
+                }
+            }
+            query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
+            json_data = json.dumps(data)
+            await itx.client.database.execute(query, "map_edit", json_data)
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
