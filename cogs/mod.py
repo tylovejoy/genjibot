@@ -635,9 +635,9 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        view = views.Confirm(itx, f"Updated {map_code} rating to {value}.", ephemeral=True)
+        view = views.Confirm(itx, f"Updated {map_code} quality rating to {value}.", ephemeral=True)
         await itx.edit_original_response(
-            content=f"{map_code} rating to {value}. Is this correct?",
+            content=f"{map_code} quality rating to {value}. Is this correct?",
             view=view,
         )
         await view.wait()
@@ -648,8 +648,8 @@ class ModCommands(commands.Cog):
             value,
             map_code,
         )
-        await itx.edit_original_response(content=f"Updated {map_code} rating to {value}.")
-        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Rating": value.name})
+        await itx.edit_original_response(content=f"Updated {map_code} quality rating to {value}.")
+        itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Quality": value.name})
 
     @map.command(name="map-type")
     @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
