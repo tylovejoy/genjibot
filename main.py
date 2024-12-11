@@ -1,10 +1,14 @@
 import asyncio
 import contextlib
+import json
 import logging
 import os
 
+import aio_pika
 import aiohttp
 import discord
+from aio_pika.abc import AbstractIncomingMessage, AbstractRobustConnection
+from aio_pika.pool import Pool
 
 import core
 import database
@@ -45,6 +49,9 @@ def setup_logging() -> None:
             hdlr.close()
             log.removeHandler(hdlr)
 
+rabbitmq_user = os.getenv("RABBITMQ_DEFAULT_USER")
+rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
+
 
 async def main() -> None:
     """Start the bot instance."""
@@ -54,7 +61,23 @@ async def main() -> None:
             f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
         ) as connection,
     ):
-        bot = core.Genji(session=session, db=database.Database(connection))
+
+        async def get_mq_connection() -> AbstractRobustConnection:
+            return await aio_pika.connect_robust(f"amqp://{rabbitmq_user}:{rabbitmq_pass}@genji-rabbit")
+
+        connection_pool: Pool = Pool(get_mq_connection)
+
+        async def get_mq_channel() -> aio_pika.Channel:
+            async with connection_pool.acquire() as _conn:
+                return await _conn.channel()
+
+        mq_channel_pool: Pool = Pool(get_mq_channel)
+
+        bot = core.Genji(session=session)
+        assert connection
+        bot.database = database.Database(connection)
+        bot.mq_channel_pool = mq_channel_pool
+
         async with bot:
             with contextlib.suppress(discord.errors.ConnectionClosed):
                 await bot.start(os.environ["TOKEN"])
