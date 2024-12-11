@@ -32,7 +32,7 @@ class BotEvents(commands.Cog):
     async def on_message(self, message: discord.Message) -> None:
         if message.channel.id != 975820285343301674:
             return
-        if "<@1309606801750360186>" not in message.content:
+        if "<@&1073292414271356938>" not in message.content:
             return
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2)"
         nickname = self.bot.database.fetch_nickname(message.author.id)
