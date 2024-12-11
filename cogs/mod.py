@@ -535,7 +535,7 @@ class ModCommands(commands.Cog):
             "map": {
                 "map_code": row["map_code"],
                 "creators": row["creators"],
-                "difficulty": row["difficulty"],
+                "difficulty": float(row["difficulty"]),
                 "map_name": row["map_name"],
             }
         }
