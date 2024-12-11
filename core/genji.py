@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import typing
 
@@ -9,6 +10,7 @@ from discord.ext import commands
 import cogs
 from utils import cache
 from utils.newsfeed import EventHandler
+from utils.rabbit.client import Rabbit
 
 if typing.TYPE_CHECKING:
     import datetime
@@ -24,11 +26,13 @@ log = logging.getLogger(__name__)
 class Genji(commands.Bot):
     """Genji bot class inherited from commands.Bot."""
 
+    database: database.Database
+    rabbit: Rabbit
+
     def __init__(
         self,
         *,
         session: aiohttp.ClientSession,
-        db: database.Database,
     ) -> None:
         super().__init__(
             "?",
@@ -36,7 +40,6 @@ class Genji(commands.Bot):
             help_command=None,
         )
         self.session = session
-        self.database = db
         self.cache: cache.GenjiCache = cache.GenjiCache()
         self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
@@ -45,6 +48,10 @@ class Genji(commands.Bot):
 
     def log_analytics(self, event: str, user_id: int, timestamp: datetime.datetime, data: dict) -> None:
         self.analytics_buffer.append((event, user_id, timestamp, data))
+
+    async def _prepare_rabbitmq(self) -> None:
+        await self.wait_until_ready()
+        self.rabbit = Rabbit(self)
 
     async def setup_hook(self) -> None:
         """Execute code during setup.
@@ -65,6 +72,8 @@ class Genji(commands.Bot):
         for ext in [*cogs.EXTENSIONS, "jishaku", "core.events"]:
             log.info(f"Loading {ext}...")
             await self.load_extension(ext)
+
+        self.rabbitmq_task = asyncio.create_task(self._prepare_rabbitmq())
 
     @staticmethod
     def _generate_intents() -> discord.Intents:
