@@ -32,7 +32,7 @@ class BotEvents(commands.Cog):
     async def on_message(self, message: discord.Message) -> None:
         if message.channel.id != 975820285343301674:
             return
-        if "<@1309606801750360186>" not in message.content:
+        if "<@&1073292414271356938>" not in message.content:
             return
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2)"
         nickname = self.bot.database.fetch_nickname(message.author.id)
@@ -270,15 +270,36 @@ class BotEvents(commands.Cog):
             await original.edit(embed=embed)
         else:
             await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
+            _values = self._manually_transform_newsfeed_data(values)
             data = {
                 "map": {
                     "map_code": map_code,
-                    **values,
+                    **_values,
                 }
             }
             query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2);"
             json_data = json.dumps(data)
             await itx.client.database.execute(query, "map_edit", json_data)
+
+    @staticmethod
+    def _manually_transform_newsfeed_data(data: dict[str, typing.Any]) -> dict:
+        _data = {}
+        for k, v in data.items():
+            _k = k.lower()
+            if _k == "code":
+                _data["new_map_code"] = v
+            elif _k == "type":
+                _data["map_type"] = v.split(", ")
+            elif _k in ("mechanics", "restrictions"):
+                _data[_k] = v.split(", ")
+            elif _k == "description":
+                _data["desc"] = v
+            elif _k == "map":
+                _data["map_name"] = v
+            else:
+                _data[_k] = v
+        return _data
+
 
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
