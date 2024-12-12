@@ -1,4 +1,4 @@
-from . import cache, constants, embeds, errors, formatter, maps, ranks, records, utils
+from . import cache, constants, embeds, errors, formatter, map_submission, maps, ranks, records, transformers, utils
 
 __all__ = [
     "cache",
@@ -6,8 +6,10 @@ __all__ = [
     "embeds",
     "errors",
     "formatter",
+    "map_submission",
     "maps",
     "ranks",
     "records",
+    "transformers",
     "utils",
 ]

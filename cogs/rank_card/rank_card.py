@@ -8,9 +8,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import cogs
-from cogs.rank_card.utils import RankCardBuilder
-from utils import constants, records, utils
+from utils import constants, records, transformers, utils
+
+from .utils import RankCardBuilder
 
 if typing.TYPE_CHECKING:
     import asyncpg
@@ -24,7 +24,7 @@ class RankCard(commands.Cog):
 
     @app_commands.command(name="rank-card")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=968951072599187476))
-    @app_commands.autocomplete(user=cogs.users_autocomplete)
+    @app_commands.autocomplete(user=transformers.users_autocomplete)
     async def rank_card(
         self,
         itx: discord.Interaction[core.Genji],

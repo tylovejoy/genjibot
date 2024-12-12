@@ -10,8 +10,9 @@ import discord
 from thefuzz import fuzz
 
 from utils import cache, constants
-from utils.maps import DIFF_TO_RANK
-from utils.models import RankDetail
+
+from .maps import DIFF_TO_RANK
+from .models import RankDetail
 
 if typing.TYPE_CHECKING:
     import core
@@ -357,3 +358,18 @@ def convert_to_emoji_number(number: int) -> str:
             emoji_number += digit
 
     return emoji_number
+
+
+def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
+    """Compare two strings, case-insensitive.
+
+    Args:
+        string1 (str): String 1 to compare
+        string2 (str): String 2 to compare
+    Returns:
+        True if string2 is in string1
+
+    """
+    if string1 is None or string2 is None:
+        return False
+    return string2.casefold() in string1.casefold()

@@ -63,7 +63,7 @@ class MapSubmission:
         """Format map data."""
         return formatter.Formatter(self.to_dict()).format_map()
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, str | None]:
         return {
             "Code": self.map_code,
             "Map": self.map_name,

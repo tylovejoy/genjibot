@@ -8,9 +8,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import cogs
 import views
-from utils import cache, constants, embeds, errors, maps, ranks, records, utils
+from utils import cache, constants, embeds, errors, map_submission, maps, ranks, records, transformers, utils
 from utils.newsfeed import NewsfeedEvent
 from views import GuidesSelect
 
@@ -41,7 +40,7 @@ class ModCommands(commands.Cog):
 
     @map.command(name="remove-guide")
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     async def remove_guide(
         self,
@@ -90,8 +89,8 @@ class ModCommands(commands.Cog):
 
     @map.command(name="add-creator")
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
-        creator=cogs.users_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
+        creator=transformers.users_autocomplete,
     )
     async def add_creator(
         self,
@@ -107,12 +106,12 @@ class ModCommands(commands.Cog):
             creator: User
 
         """
-        await cogs.add_creator_(creator, itx, map_code)
+        await map_submission.add_creator_(creator, itx, map_code)
 
     @map.command(name="remove-creator")
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
-        creator=cogs.users_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
+        creator=transformers.users_autocomplete,
     )
     async def remove_creator(
         self,
@@ -128,11 +127,11 @@ class ModCommands(commands.Cog):
             creator: User
 
         """
-        await cogs.remove_creator_(creator, itx, map_code)
+        await map_submission.remove_creator_(creator, itx, map_code)
 
     @map.command(name="edit-medals")
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     async def edit_medals(
         self,
@@ -249,8 +248,8 @@ class ModCommands(commands.Cog):
 
     @map.command(name="submit-map")
     @app_commands.autocomplete(
-        user=cogs.users_autocomplete,
-        map_name=cogs.map_name_autocomplete,
+        user=transformers.users_autocomplete,
+        map_name=transformers.map_name_autocomplete,
     )
     async def submit_fake_map(
         self,
@@ -284,7 +283,7 @@ class ModCommands(commands.Cog):
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
 
-        map_submission = maps.MapSubmission(
+        submission = maps.MapSubmission(
             creator=user,
             map_code=map_code,
             map_name=map_name,
@@ -293,15 +292,15 @@ class ModCommands(commands.Cog):
             guides=[guide_url],
             medals=medals,
         )
-        await cogs.submit_map_(
+        await map_submission.submit_map_(
             itx,
-            map_submission,
+            submission,
             mod=True,
         )
 
     @mod.command(name="remove-record")
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     async def remove_record(
         self,
@@ -358,7 +357,7 @@ class ModCommands(commands.Cog):
         await utils.auto_skill_role(itx.client, itx.guild, member)
 
     @mod.command(name="change-name")
-    @app_commands.autocomplete(member=cogs.users_autocomplete)
+    @app_commands.autocomplete(member=transformers.users_autocomplete)
     async def change_name(
         self,
         itx: discord.Interaction[core.Genji],
@@ -426,7 +425,7 @@ class ModCommands(commands.Cog):
         )
 
     @mod.command(name="link-member")
-    @app_commands.autocomplete(fake_user=cogs.users_autocomplete)
+    @app_commands.autocomplete(fake_user=transformers.users_autocomplete)
     async def link_member(
         self,
         itx: discord.Interaction[core.Genji],
@@ -481,7 +480,7 @@ class ModCommands(commands.Cog):
             app_commands.Choice(name="unarchive", value="unarchive"),
         ]
     )
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def archive(
         self,
         itx: discord.Interaction[core.Genji],
@@ -544,7 +543,7 @@ class ModCommands(commands.Cog):
 
     @map.command()
     @app_commands.choices(value=ranks.DIFFICULTIES_CHOICES)
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def difficulty(
         self,
         itx: discord.Interaction[core.Genji],
@@ -615,7 +614,7 @@ class ModCommands(commands.Cog):
         return content, total_votes
 
     @map.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.choices(value=constants.ALL_STARS_CHOICES)
     async def rating(
         self,
@@ -652,7 +651,7 @@ class ModCommands(commands.Cog):
         itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Quality": value.name})
 
     @map.command(name="map-type")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def map_type(
         self,
         itx: discord.Interaction[core.Genji],
@@ -704,7 +703,7 @@ class ModCommands(commands.Cog):
             )
 
     @map.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def mechanics(
         self,
         itx: discord.Interaction[core.Genji],
@@ -775,7 +774,7 @@ class ModCommands(commands.Cog):
             )
 
     @map.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def restrictions(
         self,
         itx: discord.Interaction[core.Genji],
@@ -849,7 +848,7 @@ class ModCommands(commands.Cog):
             )
 
     @map.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def checkpoints(
         self,
         itx: discord.Interaction[core.Genji],
@@ -900,7 +899,7 @@ class ModCommands(commands.Cog):
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Checkpoints": checkpoint_count})
 
     @map.command(name="map-code")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def map_code(
         self,
         itx: discord.Interaction[core.Genji],
@@ -959,7 +958,7 @@ class ModCommands(commands.Cog):
         itx.client.cache.maps[map_code].update_map_code(new_map_code)
 
     @map.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     async def description(
         self,
         itx: discord.Interaction[core.Genji],
@@ -1007,8 +1006,8 @@ class ModCommands(commands.Cog):
 
     @map.command(name="map-name")
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
-        map_name=cogs.map_name_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
+        map_name=transformers.map_name_autocomplete,
     )
     async def map_name(
         self,
@@ -1057,7 +1056,7 @@ class ModCommands(commands.Cog):
 
     @map.command()
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     async def convert_legacy(
         self,

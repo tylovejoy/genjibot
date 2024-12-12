@@ -8,9 +8,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import cogs
 import views
-from utils import constants, embeds, errors, models, records, utils
+from utils import constants, embeds, errors, models, records, utils, transformers
 
 if typing.TYPE_CHECKING:
     import asyncpg
@@ -50,7 +49,7 @@ class Records(commands.Cog):
 
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(user=cogs.users_autocomplete)
+    @app_commands.autocomplete(user=transformers.users_autocomplete)
     async def summary(
         self,
         itx: discord.Interaction[core.Genji],
@@ -170,7 +169,7 @@ class Records(commands.Cog):
     @app_commands.command(name="submit-completion")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     @app_commands.choices(
         quality=[
@@ -379,7 +378,7 @@ class Records(commands.Cog):
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     async def legacy_completions(
         self,
@@ -508,7 +507,7 @@ class Records(commands.Cog):
     @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     @app_commands.autocomplete(
-        map_code=cogs.map_codes_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     async def view_records(
         self,
@@ -545,7 +544,7 @@ class Records(commands.Cog):
 
     @app_commands.command(name="personal-records")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(user=cogs.users_autocomplete)
+    @app_commands.autocomplete(user=transformers.users_autocomplete)
     async def personal_records_slash(
         self,
         itx: discord.Interaction[core.Genji],

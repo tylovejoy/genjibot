@@ -7,8 +7,6 @@ import typing
 import discord
 from discord import Embed, app_commands
 
-import cogs
-
 from . import constants, embeds, errors, ranks, utils
 
 if typing.TYPE_CHECKING:
@@ -85,11 +83,11 @@ async def transform_user(client: core.Genji, value: str) -> utils.FakeUser | dis
             return member
         return utils.FakeUser(value, client.cache.users[value])
     except ValueError:
-        member = discord.utils.find(lambda u: cogs.case_ignore_compare(u.name, value), guild.members)
+        member = discord.utils.find(lambda u: utils.case_ignore_compare(u.name, value), guild.members)
         if member:
             return member
         for user in client.cache.users:
-            if cogs.case_ignore_compare(value, user.nickname):
+            if utils.case_ignore_compare(value, user.nickname):
                 return utils.FakeUser(user.user_id, client.cache.users[user.user_id])
 
 
