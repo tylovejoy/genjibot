@@ -300,7 +300,6 @@ class BotEvents(commands.Cog):
                 _data[_k] = v
         return _data
 
-
     @staticmethod
     def edit_embed(embed: discord.Embed, field: str, value: str) -> discord.Embed:
         # TODO: missing fields dont get edited
