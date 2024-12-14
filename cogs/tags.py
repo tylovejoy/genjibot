@@ -6,9 +6,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import cogs
 import views
-from utils import constants, embeds, errors, utils
+from utils import constants, embeds, errors, transformers, utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -16,7 +15,7 @@ if typing.TYPE_CHECKING:
 
 class Tags(commands.GroupCog, group_name="tag"):
     @app_commands.command()
-    @app_commands.autocomplete(name=cogs.tags_autocomplete)
+    @app_commands.autocomplete(name=transformers.tags_autocomplete)
     @app_commands.checks.cooldown(3, 30, key=lambda i: (i.guild_id, i.user.id))
     async def view(
         self,

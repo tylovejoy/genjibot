@@ -7,9 +7,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import cogs
 import views
-from utils import constants, embeds, errors, maps, ranks, records, utils
+from utils import constants, embeds, errors, map_submission, maps, ranks, records, transformers, utils
 from utils.newsfeed import NewsfeedEvent
 
 if typing.TYPE_CHECKING:
@@ -36,7 +35,7 @@ class Maps(commands.Cog):
 
     @app_commands.command(name="submit-map")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(map_name=cogs.map_name_autocomplete)
+    @app_commands.autocomplete(map_name=transformers.map_name_autocomplete)
     async def submit_map(
         self,
         itx: discord.Interaction[core.Genji],
@@ -67,7 +66,7 @@ class Maps(commands.Cog):
         if gold and silver and bronze:
             medals = (gold, silver, bronze)
 
-        map_submission = maps.MapSubmission(
+        submission = maps.MapSubmission(
             itx.user,
             map_code,
             map_name,
@@ -76,9 +75,9 @@ class Maps(commands.Cog):
             medals,
             guides=[guide_url],
         )
-        await cogs.submit_map_(
+        await map_submission.submit_map_(
             itx,
-            map_submission,
+            submission,
         )
 
     @app_commands.command(name="random-map")
@@ -129,12 +128,12 @@ class Maps(commands.Cog):
         difficulty=[app_commands.Choice(name=x, value=x) for x in ranks.DIFFICULTIES],
     )
     @app_commands.autocomplete(
-        map_name=cogs.map_name_autocomplete,
-        map_type=cogs.map_type_autocomplete,
-        creator=cogs.creator_autocomplete,
-        mechanics=cogs.map_mechanics_autocomplete,
-        restrictions=cogs.map_restrictions_autocomplete,
-        map_code=cogs.map_codes_autocomplete,
+        map_name=transformers.map_name_autocomplete,
+        map_type=transformers.map_type_autocomplete,
+        creator=transformers.creator_autocomplete,
+        mechanics=transformers.map_mechanics_autocomplete,
+        restrictions=transformers.map_restrictions_autocomplete,
+        map_code=transformers.map_codes_autocomplete,
     )
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
     async def map_search(
@@ -330,7 +329,7 @@ class Maps(commands.Cog):
         )
 
     @app_commands.command(name="guide")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def view_guide(
         self,
@@ -363,7 +362,7 @@ class Maps(commands.Cog):
         await view.start(itx)
 
     @app_commands.command(name="add-guide")
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def add_guide(
         self,
@@ -425,7 +424,7 @@ class Maps(commands.Cog):
         await itx.client.genji_dispatch.handle_event(event, itx.client)
 
     @app_commands.command()
-    @app_commands.autocomplete(map_code=cogs.map_codes_autocomplete)
+    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.choices(
         quality=[
             app_commands.Choice(
