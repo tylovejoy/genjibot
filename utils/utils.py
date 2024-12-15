@@ -9,6 +9,7 @@ import typing
 import discord
 from thefuzz import fuzz
 
+from database import Database
 from utils import cache, constants
 
 from .maps import DIFF_TO_RANK
@@ -373,3 +374,22 @@ def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
     if string1 is None or string2 is None:
         return False
     return string2.casefold() in string1.casefold()
+
+
+async def db_records_to_options(
+    db: Database,
+    type_: typing.Literal["map_type", "map_name", "mechanics", "restrictions"]
+) -> list[discord.SelectOption]:
+    """Convert database records into SelectMenu options."""
+    if type_ == "map_type":
+        query = "SELECT name FROM all_map_types ORDER BY order_num"
+    elif type_ == "map_name":
+        query = "SELECT name FROM all_map_names ORDER BY name"
+    elif type_ == "mechanics":
+        query = "SELECT name FROM all_map_mechanics ORDER BY order_num"
+    elif type_ == "restrictions":
+        query = "SELECT name FROM all_map_restrictions ORDER BY order_num"
+    else:
+        raise ValueError("Unknown option type.")
+    _records = await db.fetch(query)
+    return [discord.SelectOption(label=r["name"], value=r["name"]) for r in _records]

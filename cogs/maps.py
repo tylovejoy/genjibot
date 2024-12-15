@@ -344,7 +344,7 @@ class Maps(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=False)
-        if map_code not in itx.client.cache.maps.keys:
+        if not self.bot.database.is_valid_map_code(map_code):
             raise errors.InvalidMapCodeError
 
         guides = [
@@ -379,7 +379,7 @@ class Maps(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        if map_code not in itx.client.cache.maps.keys:
+        if not self.bot.database.is_valid_map_code(map_code):
             raise errors.InvalidMapCodeError
 
         guides = [
