@@ -10,7 +10,7 @@ import arsenic
 import discord
 from aio_pika.abc import AbstractIncomingMessage, AbstractRobustConnection
 from aio_pika.pool import Pool
-from arsenic import services, browsers
+from arsenic import browsers, services
 
 import core
 import database
