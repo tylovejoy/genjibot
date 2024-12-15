@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import constants, records, transformers, utils
+from utils import constants, transformers, utils
 
 from .utils import RankCardBuilder
 
@@ -24,15 +24,16 @@ class RankCard(commands.Cog):
 
     @app_commands.command(name="rank-card")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=968951072599187476))
-    @app_commands.autocomplete(user=transformers.users_autocomplete)
     async def rank_card(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[discord.Member | utils.FakeUser, records.AllUserTransformer] | None),
+        user: app_commands.Transform[discord.Member | utils.FakeUser, transformers.AllUserTransformer] | None,
     ) -> None:
         await itx.response.defer(ephemeral=True)
         if not user or user.id == itx.user.id:
             user = itx.user
+
+        assert user
 
         totals = await self._get_map_totals()
         rank_data = await utils.fetch_user_rank_data(itx.client.database, user.id, True, True)
@@ -47,7 +48,7 @@ class RankCard(commands.Cog):
 
         data = {
             "rank": rank,
-            "name": itx.client.cache.users[user.id].nickname,
+            "name": await self.bot.database.fetch_nickname(user.id),
             "bg": background,
             "maps": maps,
             "playtests": playtests,

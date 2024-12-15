@@ -13,7 +13,7 @@ from discord.ext import commands
 import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
 from cogs.tickets.views import TicketStart
-from utils import cache, constants, embeds, errors, maps, ranks, records, utils
+from utils import constants, embeds, errors, maps, ranks, transformers, utils
 
 if typing.TYPE_CHECKING:
     from .genji import Genji
@@ -113,7 +113,7 @@ class BotEvents(commands.Cog):
                     continue
                 try:
                     data = maps.MapSubmission(
-                        creator=await records.transform_user(self.bot, x.creator_ids[0]),
+                        creator=await transformers.transform_user(self.bot, x.creator_ids[0]),
                         map_code=x.map_code,
                         map_name=x.map_name,
                         checkpoint_count=x.checkpoints,
@@ -169,28 +169,17 @@ class BotEvents(commands.Cog):
                 member.id,
                 member.name[:25],
             )
-        if not self.bot.cache.users[member.id]:
-            self.bot.cache.users.add_one(
-                cache.UserData(
-                    user_id=member.id,
-                    nickname=member.name[:25],
-                    flags=cache.SettingFlags.DEFAULT,
-                    is_creator=False,
-                )
-            )
 
-        log.debug(f"Adding user to DB/cache: {member.name}: {member.id}")
-        res = [
-            x
-            async for x in self.bot.database.get(
-                """
-            SELECT * FROM maps
-            LEFT JOIN map_creators mc on maps.map_code = mc.map_code
-            WHERE user_id = $1;
-            """,
-                member.id,
+        log.debug(f"Adding user to database: {member.name}: {member.id}")
+        query = """
+            SELECT EXISTS(
+                SELECT 1 FROM maps
+                LEFT JOIN map_creators mc on maps.map_code = mc.map_code
+                WHERE user_id = $1
             )
-        ]
+        """
+        res = await self.bot.database.fetchval(query, member.id)
+
         if res and (
             (map_maker := member.guild.get_role(constants.Roles.MAP_MAKER)) is not None
             and map_maker not in member.roles
@@ -203,7 +192,7 @@ class BotEvents(commands.Cog):
 
     @commands.Cog.listener()
     async def on_newsfeed_role(self, client: Genji, user: discord.Member, roles: list[discord.Role]) -> None:
-        nickname = client.cache.users[user.id].nickname
+        nickname = await client.database.fetch_nickname(user.id)
         embed = embeds.GenjiEmbed(
             title=f"{nickname} got promoted!",
             description="\n".join([f"{x.mention}" for x in roles]),

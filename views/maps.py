@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from discord import ButtonStyle
 
 import views
-from utils import constants, embeds, maps, ranks, records, utils
+from utils import constants, embeds, maps, ranks, transformers, utils
 from utils.newsfeed import NewsfeedEvent
 
 if TYPE_CHECKING:
@@ -538,7 +538,7 @@ class PlaytestVoting(discord.ui.View):
         data = queue[0]
         return str(
             maps.MapSubmission(
-                creator=await records.transform_user(self.client, data.creator_ids[0]),
+                creator=await transformers.transform_user(self.client, data.creator_ids[0]),
                 map_code=data.map_code,
                 map_name=data.map_name,
                 checkpoint_count=data.checkpoints,
@@ -609,9 +609,9 @@ class PlaytestVoting(discord.ui.View):
             await itx.message.edit(view=self)
 
     async def send_verification_embed(self, itx: discord.Interaction[core.Genji]) -> discord.Message:
+        nickname = await itx.client.database.fetch_nickname(self.data.creator.id)
         embed = embeds.GenjiEmbed(
-            title=f"{itx.client.cache.users[self.data.creator.id].nickname} "
-            f"has marked a map as ready ({self.data.map_code})!",
+            title=f"{nickname} " f"has marked a map as ready ({self.data.map_code})!",
             url=itx.message.jump_url,
             description=(
                 "Click the link to go to the playtest thread.\n"
@@ -694,7 +694,6 @@ class PlaytestVoting(discord.ui.View):
             # TODO: Modal for reason
             await self.send_denial_to_author(author)
         await self.delete_playtest_db_entry()
-        itx.client.cache.maps.remove_one(self.data.map_code)
         itx.client.playtest_views.pop(itx.message.id)
 
     async def delete_playtest_post(self, thread_id: int) -> None:
@@ -859,7 +858,6 @@ class PlaytestVoting(discord.ui.View):
         await self.delete_playtest_post(record.thread_id)
         await self.delete_map_from_db()
         await self.delete_playtest_db_entry()
-        self.client.cache.maps.remove_one(self.data.map_code)
 
 
 class GuidesSelect(discord.ui.Select):

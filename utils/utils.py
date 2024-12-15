@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import enum
 import logging
 import operator
 import typing
@@ -9,7 +10,7 @@ import typing
 import discord
 from thefuzz import fuzz
 
-from utils import cache, constants
+from utils import constants
 
 from .maps import DIFF_TO_RANK
 from .models import RankDetail
@@ -63,17 +64,6 @@ def fuzz_multiple(string: str, iterable: typing.Iterable[str]) -> list[str]:
     values = sorted(values, key=operator.itemgetter(1), reverse=True)[:10]
     values = [x[0] for x in values]
     return values
-
-
-class MapCacheData(typing.TypedDict):
-    user_ids: list[int]
-    archived: bool
-
-
-class UserCacheData(typing.TypedDict):
-    nickname: str
-    alertable: bool
-    flags: int
 
 
 _RANK_THRESHOLD = (10, 10, 10, 10, 7, 3)
@@ -284,8 +274,8 @@ async def grant_skill_rank_roles(
 
     if roles_to_grant or roles_to_remove:
         with contextlib.suppress(discord.errors.HTTPException):
-            flags = cache.SettingFlags(await bot.database.fetch_user_flags(user.id))
-            if cache.SettingFlags.PROMOTION in flags:
+            flags = SettingFlags(await bot.database.fetch_user_flags(user.id))
+            if SettingFlags.PROMOTION in flags:
                 await user.send(response)
 
 
@@ -318,10 +308,10 @@ def find_highest_rank(data: list[RankDetail]) -> str:
 
 
 class FakeUser:
-    def __init__(self, id_: int, data: cache.UserData) -> None:
+    def __init__(self, id_: int, nickname: str) -> None:
         self.id = id_
-        self.nickname = data.nickname
-        self.mention = data.nickname
+        self.nickname = nickname
+        self.mention = nickname
         self.display_avatar = FakeAvatar()
 
 
@@ -373,3 +363,33 @@ def case_ignore_compare(string1: str | None, string2: str | None) -> bool:
     if string1 is None or string2 is None:
         return False
     return string2.casefold() in string1.casefold()
+
+
+async def db_records_to_options(
+    db: database.Database, type_: typing.Literal["map_type", "map_name", "mechanics", "restrictions"]
+) -> list[discord.SelectOption]:
+    """Convert database records into SelectMenu options."""
+    if type_ == "map_type":
+        query = "SELECT name FROM all_map_types ORDER BY order_num"
+    elif type_ == "map_name":
+        query = "SELECT name FROM all_map_names ORDER BY name"
+    elif type_ == "mechanics":
+        query = "SELECT name FROM all_map_mechanics ORDER BY order_num"
+    elif type_ == "restrictions":
+        query = "SELECT name FROM all_map_restrictions ORDER BY order_num"
+    else:
+        raise ValueError("Unknown option type.")
+    _records = await db.fetch(query)
+    return [discord.SelectOption(label=r["name"], value=r["name"]) for r in _records]
+
+
+class SettingFlags(enum.IntFlag):
+    """Enum Integer Flags for various settings."""
+
+    VERIFICATION = enum.auto()
+    PROMOTION = enum.auto()
+    DEFAULT = VERIFICATION | PROMOTION
+    NONE = 0
+
+    def get_new_flag(self, value: int) -> int:
+        return self.value ^ value

@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING
 import discord
 
 import views
-from utils import cache, constants, embeds, errors, maps
+from utils import constants, embeds, errors, maps
 from utils.newsfeed import NewsfeedEvent
 
 if TYPE_CHECKING:
     import core
+    from database import Database
 
 
 async def submit_map_(
@@ -48,7 +49,7 @@ async def submit_map_(
         )
 
     initial_message = f"{data.creator.mention}, " f"fill in additional details to complete map submission!"
-    view = views.ConfirmMapSubmission(
+    view = await views.ConfirmMapSubmission.async_build(
         itx,
         partial_callback=None,
         initial_message=initial_message,
@@ -100,8 +101,9 @@ async def map_submission_first_step(
         title="Map Submission",
         description=str(data),
     )
+    nickname = await itx.client.database.fetch_nickname(data.creator.id)
     embed.set_author(
-        name=itx.client.cache.users[data.creator.id].nickname,
+        name=nickname,
         icon_url=data.creator.display_avatar.url,
     )
     embed = embeds.set_embed_thumbnail_maps(data.map_name, embed)
@@ -152,13 +154,7 @@ async def map_submission_second_step(
 
         await data.insert_playtest(itx, thread.id, thread_msg.id, playtest_message.id)
     await data.insert_all(itx, mod)
-    itx.client.cache.maps.add_one(
-        cache.MapData(
-            map_code=data.map_code,
-            user_ids=[data.creator.id],
-            archived=False,
-        )
-    )
+
     if not mod:
         map_maker = itx.guild.get_role(constants.Roles.MAP_MAKER)
         if map_maker not in itx.user.roles:
@@ -179,8 +175,11 @@ async def map_submission_second_step(
         event = NewsfeedEvent("new_map", _data)
         await itx.client.genji_dispatch.handle_event(event, itx.client)
 
-    if not itx.client.cache.users.find(data.creator.id).is_creator:
-        itx.client.cache.users.find(data.creator.id).update_is_creator(True)
+
+async def is_creator_of_map(db: Database, map_code: str, user_id: int) -> bool:
+    """Check if a user_id is a creator of a particular map."""
+    query = "SELECT EXISTS(SELECT 1 FROM map_creators WHERE map_code = $1 AND user_id = $2)"
+    return await db.fetchval(query, map_code, user_id)
 
 
 async def add_creator_(
@@ -190,20 +189,16 @@ async def add_creator_(
 ) -> None:
     """Add creator data."""
     await itx.response.defer(ephemeral=True)
-    if creator in itx.client.cache.maps[map_code].user_ids:
+    if await is_creator_of_map(itx.client.database, map_code, creator):
         raise errors.CreatorAlreadyExistsError
-    await itx.client.database.set(
+    await itx.client.database.execute(
         "INSERT INTO map_creators (map_code, user_id) VALUES ($1, $2)",
         map_code,
         creator,
     )
-    itx.client.cache.maps[map_code].add_creator(creator)
-    itx.client.cache.users[creator].is_creator = True
+    nickname = await itx.client.database.fetch_nickname(creator)
     await itx.edit_original_response(
-        content=(
-            f"Adding **{itx.client.cache.users[creator].nickname}** "
-            f"to list of creators for map code **{map_code}**."
-        )
+        content=(f"Adding **{nickname}** " f"to list of creators for map code **{map_code}**.")
     )
 
 
@@ -215,17 +210,14 @@ async def remove_creator_(
 ) -> None:
     """Remove creator data."""
     await itx.response.defer(ephemeral=True)
-    if creator not in itx.client.cache.maps[map_code].user_ids:
+    if not await is_creator_of_map(itx.client.database, map_code, creator):
         raise errors.CreatorDoesntExistError
-    await itx.client.database.set(
+    await itx.client.database.execute(
         "DELETE FROM map_creators WHERE map_code = $1 AND user_id = $2;",
         map_code,
         creator,
     )
-    itx.client.cache.maps[map_code].remove_creator(creator)
+    nickname = await itx.client.database.fetch_nickname(creator)
     await itx.edit_original_response(
-        content=(
-            f"Removing **{itx.client.cache.users[creator].nickname}** "
-            f"from list of creators for map code **{map_code}**."
-        )
+        content=(f"Removing **{nickname}** " f"from list of creators for map code **{map_code}**.")
     )

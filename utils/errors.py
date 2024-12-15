@@ -126,6 +126,10 @@ class UserNotFoundError(BaseParkourError, app_commands.errors.AppCommandError):
     """User does not exist."""
 
 
+class FakeUserNotFoundError(BaseParkourError, app_commands.errors.AppCommandError):
+    """Fake user does not exist."""
+
+
 class RankTooLowError(BaseParkourError, app_commands.errors.AppCommandError):
     """Your rank is too low to do this action."""
 
