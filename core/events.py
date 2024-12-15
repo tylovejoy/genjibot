@@ -13,7 +13,7 @@ from discord.ext import commands
 import views
 from cogs.info_pages.views import CompletionInfoView, MapInfoView
 from cogs.tickets.views import TicketStart
-from utils import cache, constants, embeds, errors, maps, ranks, records, utils
+from utils import constants, embeds, errors, maps, ranks, transformers, utils
 
 if typing.TYPE_CHECKING:
     from .genji import Genji
@@ -113,7 +113,7 @@ class BotEvents(commands.Cog):
                     continue
                 try:
                     data = maps.MapSubmission(
-                        creator=await records.transform_user(self.bot, x.creator_ids[0]),
+                        creator=await transformers.transform_user(self.bot, x.creator_ids[0]),
                         map_code=x.map_code,
                         map_name=x.map_name,
                         checkpoint_count=x.checkpoints,
@@ -170,7 +170,7 @@ class BotEvents(commands.Cog):
                 member.name[:25],
             )
 
-        log.debug(f"Adding user to DB/cache: {member.name}: {member.id}")
+        log.debug(f"Adding user to database: {member.name}: {member.id}")
         query = """
             SELECT EXISTS(
                 SELECT 1 FROM maps

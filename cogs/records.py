@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import views
-from utils import constants, embeds, errors, models, records, utils, transformers
+from utils import constants, embeds, errors, models, transformers, utils
 
 if typing.TYPE_CHECKING:
     import asyncpg
@@ -49,20 +49,17 @@ class Records(commands.Cog):
 
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(user=transformers.users_autocomplete)
     async def summary(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[int | discord.Member | utils.FakeUser, records.AllUserTransformer] | None) = None,
+        user: app_commands.Transform[discord.Member | utils.FakeUser, transformers.AllUserTransformer] | None = None,
     ) -> None:
         """Display a summary of your records and associated difficulties/medals."""
         await itx.response.defer(ephemeral=True)
         if not user:
             user = itx.user
 
-        user = user.id if isinstance(user, (discord.Member, utils.FakeUser)) else int(user)
-
-        rows = await utils.fetch_user_rank_data(itx.client.database, user, True, False)
+        rows = await utils.fetch_user_rank_data(itx.client.database, user.id, True, False)
         description = ""
         for row in rows:
             description += (
@@ -168,9 +165,6 @@ class Records(commands.Cog):
 
     @app_commands.command(name="submit-completion")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(
-        map_code=transformers.map_codes_autocomplete,
-    )
     @app_commands.choices(
         quality=[
             app_commands.Choice(
@@ -183,11 +177,11 @@ class Records(commands.Cog):
     async def submit_record(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeRecordsTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeRecordsTransformer],
         screenshot: discord.Attachment,
-        time: app_commands.Transform[float, records.RecordTransformer],
+        time: app_commands.Transform[float, transformers.RecordTransformer],
         quality: app_commands.Choice[int],
-        video: app_commands.Transform[str, records.URLTransformer] | None,
+        video: app_commands.Transform[str, transformers.URLTransformer] | None,
     ) -> None:
         """Submit a record to the database. Video proof is required for full verification.
 
@@ -377,13 +371,10 @@ class Records(commands.Cog):
 
     @app_commands.command()
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(
-        map_code=transformers.map_codes_autocomplete,
-    )
     async def legacy_completions(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeRecordsTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeRecordsTransformer],
     ) -> None:
         await itx.response.defer(ephemeral=True)
         if not await self._check_map_exists(map_code):
@@ -506,13 +497,10 @@ class Records(commands.Cog):
 
     @app_commands.command(name="completions")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(
-        map_code=transformers.map_codes_autocomplete,
-    )
     async def view_records(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeRecordsTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeRecordsTransformer],
         filters: LB_FILTERS = "All",
     ) -> None:
         """View leaderboard/completions for any map in the database.
@@ -544,11 +532,10 @@ class Records(commands.Cog):
 
     @app_commands.command(name="personal-records")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(user=transformers.users_autocomplete)
     async def personal_records_slash(
         self,
         itx: discord.Interaction[core.Genji],
-        user: (app_commands.Transform[int | discord.Member | utils.FakeUser, records.AllUserTransformer] | None) = None,
+        user: app_commands.Transform[discord.Member | utils.FakeUser, transformers.AllUserTransformer] | None = None,
         filters: PR_FILTERS = "All",
     ) -> None:
         """Show all records a specific user has (fully AND partially verified).

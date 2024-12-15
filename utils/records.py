@@ -5,129 +5,19 @@ import re
 import typing
 
 import discord
-from discord import Embed, app_commands
+from discord import Embed
 
-from . import constants, embeds, errors, ranks, utils
+from . import constants, embeds, ranks, utils
 
 if typing.TYPE_CHECKING:
     import decimal
 
     import asyncpg
 
-    import core
     import database
 
 
 CODE_VERIFICATION = re.compile(r"^[A-Z0-9]{4,6}$")
-
-
-class MapCodeTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
-        value = value.upper().replace("O", "0").lstrip().rstrip()
-        if not re.match(CODE_VERIFICATION, value):
-            raise errors.IncorrectCodeFormatError
-        return value
-
-
-class MapCodeSubmitTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
-        value = value.upper().replace("O", "0").lstrip().rstrip()
-        if not re.match(CODE_VERIFICATION, value):
-            raise errors.IncorrectCodeFormatError
-        if value in itx.client.cache.maps.keys:
-            raise errors.MapExistsError
-        return value
-
-
-class MapCodeRecordsTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
-        value = value.upper().replace("O", "0").lstrip().rstrip()
-
-        if value not in itx.client.cache.maps.keys:
-            raise errors.InvalidMapCodeError
-
-        if not re.match(CODE_VERIFICATION, value):
-            raise errors.IncorrectCodeFormatError
-
-        return value
-
-
-class UserTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> int:
-        if value not in map(str, itx.client.cache.users.keys):
-            raise errors.UserNotFoundError
-        return int(value)
-
-
-class CreatorTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> int:
-        user = await transform_user(itx.client, value)
-        if not user or user.id not in itx.client.cache.users.creator_ids:
-            raise errors.UserNotFoundError
-        else:
-            return user.id
-
-
-class AllUserTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> utils.FakeUser | discord.Member:
-        return await transform_user(itx.client, value)
-
-
-async def transform_user(client: core.Genji, value: str) -> utils.FakeUser | discord.Member:
-    """Transform user."""
-    guild = client.get_guild(constants.GUILD_ID)
-    try:
-        value = int(value)
-        member = guild.get_member(value)
-        if member:
-            return member
-        return utils.FakeUser(value, client.cache.users[value])
-    except ValueError:
-        member = discord.utils.find(lambda u: utils.case_ignore_compare(u.name, value), guild.members)
-        if member:
-            return member
-        for user in client.cache.users:
-            if utils.case_ignore_compare(value, user.nickname):
-                return utils.FakeUser(user.user_id, client.cache.users[user.user_id])
-
-
-class RecordTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> float:
-        try:
-            value = time_convert(value)
-        except ValueError:
-            raise errors.IncorrectRecordFormatError
-        return value
-
-
-class URLTransformer(app_commands.Transformer):
-    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
-        value = value.strip()
-        if not value.startswith("https://") and not value.startswith("http://"):
-            value = "https://" + value
-        try:
-            async with itx.client.session.get(value) as resp:
-                if resp.status != 200:  # noqa: PLR2004
-                    raise errors.IncorrectURLFormatError
-                return str(resp.url)
-        except Exception:
-            raise errors.IncorrectURLFormatError
-
-
-def time_convert(string: str) -> float:
-    """Convert HH:MM:SS.ss string into seconds (float)."""
-    negative = -1 if string[0] == "-" else 1
-    time = string.split(":")
-    match len(time):
-        case 1:
-            res = float(time[0])
-        case 2:
-            res = float((int(time[0]) * 60) + (negative * float(time[1])))
-        case 3:
-            res = float((int(time[0]) * 3600) + (negative * (int(time[1]) * 60)) + (negative * float(time[2])))
-        case _:
-            raise ValueError("Failed to match any cases.")
-    return round(res, 2)
 
 
 def pretty_record(record: decimal.Decimal | float) -> str:

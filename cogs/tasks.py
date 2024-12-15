@@ -165,8 +165,6 @@ class Tasks(commands.Cog):
         )
 
 
-
-
 async def setup(bot: core.Genji) -> None:
     """Add cog to bot."""
     await bot.add_cog(Tasks(bot))

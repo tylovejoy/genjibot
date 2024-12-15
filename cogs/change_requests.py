@@ -5,12 +5,11 @@ import typing
 
 import discord.ui
 from discord import Guild, Interaction
-from discord.app_commands import Transform, autocomplete, command, guilds
+from discord.app_commands import Transform, command, guilds
 from discord.ext import commands
 from typing_extensions import TypeAlias
 
-import cogs
-from utils import constants, records
+from utils import constants, transformers
 
 if typing.TYPE_CHECKING:
     from core import Genji
@@ -97,11 +96,10 @@ class ChangeRequests(commands.Cog):
 
     @command()
     @guilds(constants.GUILD_ID)
-    @autocomplete(map_code=cogs.map_codes_autocomplete)
     async def change_request(
         self,
         itx: GenjiItx,
-        map_code: Transform[str, records.MapCodeTransformer],
+        map_code: Transform[str, transformers.MapCodeTransformer],
     ) -> None:
         await itx.response.send_modal(ChangeRequestModal(map_code))
 

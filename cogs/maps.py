@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import views
-from utils import constants, embeds, errors, map_submission, maps, ranks, records, transformers, utils
+from utils import constants, embeds, errors, map_submission, maps, ranks, transformers, utils
 from utils.newsfeed import NewsfeedEvent
 
 if typing.TYPE_CHECKING:
@@ -35,18 +35,17 @@ class Maps(commands.Cog):
 
     @app_commands.command(name="submit-map")
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
-    @app_commands.autocomplete(map_name=transformers.map_name_autocomplete)
     async def submit_map(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeSubmitTransformer],
-        map_name: app_commands.Transform[str, maps.MapNameTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeSubmitTransformer],
+        map_name: app_commands.Transform[str, transformers.MapNameTransformer],
         checkpoint_count: app_commands.Range[int, 1, 500],
         description: str | None = None,
         guide_url: str | None = None,
-        gold: app_commands.Transform[float, records.RecordTransformer] | None = None,
-        silver: app_commands.Transform[float, records.RecordTransformer] | None = None,
-        bronze: app_commands.Transform[float, records.RecordTransformer] | None = None,
+        gold: app_commands.Transform[float, transformers.RecordTransformer] | None = None,
+        silver: app_commands.Transform[float, transformers.RecordTransformer] | None = None,
+        bronze: app_commands.Transform[float, transformers.RecordTransformer] | None = None,
     ) -> None:
         """Submit your map to get play tested.
 
@@ -127,25 +126,17 @@ class Maps(commands.Cog):
         minimum_rating=constants.ALL_STARS_CHOICES,
         difficulty=[app_commands.Choice(name=x, value=x) for x in ranks.DIFFICULTIES],
     )
-    @app_commands.autocomplete(
-        map_name=transformers.map_name_autocomplete,
-        map_type=transformers.map_type_autocomplete,
-        creator=transformers.creator_autocomplete,
-        mechanics=transformers.map_mechanics_autocomplete,
-        restrictions=transformers.map_restrictions_autocomplete,
-        map_code=transformers.map_codes_autocomplete,
-    )
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID), discord.Object(id=868981788968640554))
     async def map_search(
         self,
         itx: discord.Interaction[core.Genji],
-        map_name: app_commands.Transform[str, maps.MapNameTransformer] | None = None,
+        map_name: app_commands.Transform[str, transformers.MapNameTransformer] | None = None,
         difficulty: app_commands.Choice[str] | None = None,
-        map_code: app_commands.Transform[str, records.MapCodeTransformer] | None = None,
-        creator: app_commands.Transform[int, records.CreatorTransformer] | None = None,
-        mechanics: (app_commands.Transform[str, maps.MapMechanicsTransformer] | None) = None,
-        restrictions: (app_commands.Transform[str, maps.MapRestrictionsTransformer] | None) = None,
-        map_type: app_commands.Transform[str, maps.MapTypeTransformer] | None = None,
+        map_code: app_commands.Transform[str, transformers.MapCodeTransformer] | None = None,
+        creator: app_commands.Transform[int, transformers.CreatorTransformer] | None = None,
+        mechanics: (app_commands.Transform[str, transformers.MapMechanicsTransformer] | None) = None,
+        restrictions: (app_commands.Transform[str, transformers.MapRestrictionsTransformer] | None) = None,
+        map_type: app_commands.Transform[str, transformers.MapTypesTransformer] | None = None,
         completed: typing.Literal["All", "Not Completed", "Completed"] = "All",
         only_playtest: bool = False,
         only_maps_with_medals: bool = False,
@@ -329,12 +320,11 @@ class Maps(commands.Cog):
         )
 
     @app_commands.command(name="guide")
-    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def view_guide(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeTransformer],
     ) -> None:
         """View guides that have been submitted for a particular map.
 
@@ -344,7 +334,7 @@ class Maps(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=False)
-        if not self.bot.database.is_valid_map_code(map_code):
+        if not self.bot.database.is_existing_map_code(map_code):
             raise errors.InvalidMapCodeError
 
         guides = [
@@ -362,13 +352,12 @@ class Maps(commands.Cog):
         await view.start(itx)
 
     @app_commands.command(name="add-guide")
-    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.guilds(discord.Object(id=constants.GUILD_ID))
     async def add_guide(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeTransformer],
-        url: app_commands.Transform[str, records.URLTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeTransformer],
+        url: app_commands.Transform[str, transformers.URLTransformer],
     ) -> None:
         """Add a guide for a particular map.
 
@@ -379,7 +368,7 @@ class Maps(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        if not self.bot.database.is_valid_map_code(map_code):
+        if not self.bot.database.is_existing_map_code(map_code):
             raise errors.InvalidMapCodeError
 
         guides = [
@@ -424,7 +413,6 @@ class Maps(commands.Cog):
         await itx.client.genji_dispatch.handle_event(event, itx.client)
 
     @app_commands.command()
-    @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
     @app_commands.choices(
         quality=[
             app_commands.Choice(
@@ -438,7 +426,7 @@ class Maps(commands.Cog):
     async def rate(
         self,
         itx: discord.Interaction[core.Genji],
-        map_code: app_commands.Transform[str, records.MapCodeTransformer],
+        map_code: app_commands.Transform[str, transformers.MapCodeTransformer],
         quality: app_commands.Choice[int],
     ) -> None:
         await itx.response.defer(ephemeral=True)

@@ -5,7 +5,6 @@ import typing
 import discord.ui
 
 import views
-from utils import cache
 
 if typing.TYPE_CHECKING:
     import core
@@ -73,4 +72,3 @@ class TagCreate(discord.ui.Modal, title="Create Tag"):
             self.name.value,
             self.value.value,
         )
-        itx.client.cache.tags.add_one(cache.TagsData(self.name.value))
