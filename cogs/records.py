@@ -217,6 +217,14 @@ class Records(commands.Cog):
         if int(os.environ["GLOBAL_MULTI_BAN"]) == 1:
             await self._check_for_global_multi_ban(map_code)
 
+        map_difficulty = await self.bot.database.fetchval(
+            "SELECT avg(difficulty) FROM map_ratings WHERE map_code = $1 AND verified IS TRUE GROUP BY map_code",
+            map_code,
+        )
+        medium_plus = 4.12
+        if float(map_difficulty) >= medium_plus:
+            raise errors.TemporaryHardOrHigherBanError
+
         nickname = await self.bot.database.fetch_nickname(itx.user.id)
 
         cdn_screenshot = await self._upload_screenshot(screenshot)

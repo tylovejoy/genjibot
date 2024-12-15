@@ -147,6 +147,13 @@ class TemporaryMultiBanError(BaseParkourError, app_commands.errors.AppCommandErr
     """  # noqa: D205
 
 
+class TemporaryHardOrHigherBanError(BaseParkourError, app_commands.errors.AppCommandError):
+    """It's come to our attention that there is a new tech introduced in the new patch named "Save Double".
+
+    This can potentially break many maps above Medium + and we are going to temporarily pause submissions for maps higher than Medium +.
+    """  # noqa: E501
+
+
 class InvalidFakeUserError(BaseParkourError, app_commands.errors.AppCommandError):
     """This fake user does not exist."""  # noqa: D404
 
