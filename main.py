@@ -61,22 +61,9 @@ async def main() -> None:
             f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
         ) as connection,
     ):
-
-        async def get_mq_connection() -> AbstractRobustConnection:
-            return await aio_pika.connect_robust(f"amqp://{rabbitmq_user}:{rabbitmq_pass}@genji-rabbit")
-
-        connection_pool: Pool = Pool(get_mq_connection)
-
-        async def get_mq_channel() -> aio_pika.Channel:
-            async with connection_pool.acquire() as _conn:
-                return await _conn.channel()
-
-        mq_channel_pool: Pool = Pool(get_mq_channel)
-
         bot = core.Genji(session=session)
         assert connection
         bot.database = database.Database(connection)
-        bot.mq_channel_pool = mq_channel_pool
 
         async with bot:
             with contextlib.suppress(discord.errors.ConnectionClosed):
