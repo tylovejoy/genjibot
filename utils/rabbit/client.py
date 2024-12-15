@@ -91,4 +91,3 @@ class Rabbit:
                     return
             event = NewsfeedEvent(x_type, _data)
             await self._bot.genji_dispatch.handle_event(event, self._bot)
-
