@@ -17,7 +17,6 @@ log = logging.getLogger(__name__)
 class Tasks(commands.Cog):
     def __init__(self, bot: core.Genji) -> None:
         self.bot = bot
-        self.cache.start()
         log.info("Start- Updating global names...")
         self._update_global_names.start()
         # self._playtest_auto_approve.start()
@@ -145,99 +144,27 @@ class Tasks(commands.Cog):
             """
         guild = self.bot.get_guild(constants.GUILD_ID)
         map_codes = []
-        async for row in self.bot.database.get(query):
-            creator = guild.get_member(row.user_id)
-            mention = creator.mention if creator else self.bot.cache.users[row.user_id].nickname
+        rows = await self.bot.database.fetch(query)
+        async for row in rows:
+            assert guild
+            creator = guild.get_member(row["user_id"])
+            if not creator:
+                continue
             message = (
-                f"Hey there, {mention}!\n\n"
-                f"Friendly reminder that your map **{row.map_code}** will be scheduled for deletion in "
+                f"Hey there, {creator.mention}!\n\n"
+                f"Friendly reminder that your map **{row['map_code']}** will be scheduled for deletion in "
                 f"**1 week** since there are no votes.\n"
             )
-            await guild.get_thread(row.thread_id).send(message)
-            map_codes.append((row.map_code,))
-        await self.bot.database.set_many(
+            thread = guild.get_thread(row["thread_id"])
+            if thread:
+                await thread.send(message)
+            map_codes.append((row["map_code"],))
+        await self.bot.database.executemany(
             "UPDATE map_submission_dates SET alerted = TRUE WHERE map_code = $1",
             map_codes,
         )
 
-    @tasks.loop(hours=24, count=1)
-    async def cache(self) -> None:
-        maps = [
-            x
-            async for x in self.bot.database.get(
-                """
-                SELECT m.map_code, array_agg(mc.user_id) as user_ids, archived
-                FROM maps m
-                         LEFT JOIN map_creators mc on m.map_code = mc.map_code
-                GROUP BY m.map_code;
-                """,
-            )
-        ]
-        users = [
-            x
-            async for x in self.bot.database.get(
-                """
-                SELECT
-                    user_id,
-                    nickname,
-                    flags,
-                    user_id in (
-                        SELECT DISTINCT user_id FROM map_creators
-                    ) as is_creator
-                FROM users;
-                """,
-            )
-        ]
-        map_names = [
-            x
-            async for x in self.bot.database.get(
-                """SELECT name as value FROM all_map_names ORDER BY 1""",
-            )
-        ]
 
-        map_types = [
-            x
-            async for x in self.bot.database.get(
-                """SELECT name as value FROM all_map_types ORDER BY order_num""",
-            )
-        ]
-        map_mechanics = [
-            x
-            async for x in self.bot.database.get(
-                """SELECT name as value FROM all_map_mechanics ORDER BY order_num""",
-            )
-        ]
-        map_restrictions = [
-            x
-            async for x in self.bot.database.get(
-                """SELECT name as value FROM all_map_restrictions ORDER BY order_num""",
-            )
-        ]
-        tags = [
-            x
-            async for x in self.bot.database.get(
-                """SELECT name as value FROM tags ORDER BY 1""",
-            )
-        ]
-
-        self.bot.cache.setup(
-            users=users,
-            maps=maps,
-            map_names=map_names,
-            map_types=map_types,
-            map_mechanics=map_mechanics,
-            map_restrictions=map_restrictions,
-            tags=tags,
-        )
-
-    @commands.command()
-    @commands.is_owner()
-    async def refresh_cache(
-        self,
-        ctx: commands.Context[core.Genji],
-    ) -> None:
-        self.bot.cache.refresh_cache()
-        await ctx.message.delete()
 
 
 async def setup(bot: core.Genji) -> None:

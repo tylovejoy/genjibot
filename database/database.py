@@ -176,3 +176,7 @@ class Database:
     async def fetch_nickname(self, user_id: int) -> str:
         query = "SELECT nickname FROM users WHERE user_id = $1"
         return await self.fetchval(query, user_id)
+
+    async def is_valid_map_code(self, map_code: str) -> bool:
+        query = "SELECT EXISTS(SELECT map_code FROM maps WHERE map_code = $1)"
+        return await self.fetchval(query, map_code)

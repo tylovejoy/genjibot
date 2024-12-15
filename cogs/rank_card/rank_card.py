@@ -34,6 +34,8 @@ class RankCard(commands.Cog):
         if not user or user.id == itx.user.id:
             user = itx.user
 
+        assert user
+
         totals = await self._get_map_totals()
         rank_data = await utils.fetch_user_rank_data(itx.client.database, user.id, True, True)
 
@@ -47,7 +49,7 @@ class RankCard(commands.Cog):
 
         data = {
             "rank": rank,
-            "name": itx.client.cache.users[user.id].nickname,
+            "name": await self.bot.database.fetch_nickname(user.id),
             "bg": background,
             "maps": maps,
             "playtests": playtests,

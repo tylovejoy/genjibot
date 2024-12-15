@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import re
 import typing
 
@@ -9,8 +8,9 @@ from discord import app_commands
 from discord.ext import commands
 
 import views
-from utils import cache, constants, embeds, errors, map_submission, maps, ranks, records, transformers, utils
+from utils import constants, embeds, errors, map_submission, maps, ranks, records, transformers, utils
 from utils.newsfeed import NewsfeedEvent
+from utils.utils import db_records_to_options
 from views import GuidesSelect
 
 if typing.TYPE_CHECKING:
@@ -372,9 +372,9 @@ class ModCommands(commands.Cog):
             nickname: New nickname
 
         """
-        old = self.bot.cache.users[member].nickname
-        self.bot.cache.users[member].update_nickname(nickname)
-        await self.bot.database.set("UPDATE users SET nickname=$1 WHERE user_id=$2", nickname, member)
+        old = await self.bot.database.fetch_nickname(member)
+        query = "UPDATE users SET nickname = $1 WHERE user_id = $2;"
+        await self.bot.database.execute(query, nickname, member)
         await itx.response.send_message(
             f"Changing {old} ({member}) nickname to {nickname}",
             ephemeral=True,
@@ -405,24 +405,12 @@ class ModCommands(commands.Cog):
         await view.wait()
         if not view.value:
             return
-        value = (
-            await itx.client.database.get_row(
-                "SELECT COALESCE(MAX(user_id) + 1, 1) user_id_ FROM users " "WHERE user_id < 100000 LIMIT 1;"
-            )
-        ).user_id_
-        await itx.client.database.set(
-            "INSERT INTO users (user_id, nickname) VALUES ($1, $2);",
-            value,
-            fake_user,
-        )
-        itx.client.cache.users.add_one(
-            cache.UserData(
-                user_id=value,
-                nickname=fake_user,
-                flags=cache.SettingFlags.NONE,
-                is_creator=True,
-            )
-        )
+
+        fake_user_id_query = "SELECT COALESCE(MAX(user_id) + 1, 1) FROM users WHERE user_id < 100000 LIMIT 1;"
+        user_id = await self.bot.database.fetchval(fake_user_id_query)
+        query = "INSERT INTO users (user_id, nickname) VALUES ($1, $2);"
+        await itx.client.database.execute(query, user_id, fake_user)
+
 
     @mod.command(name="link-member")
     @app_commands.autocomplete(fake_user=transformers.users_autocomplete)
@@ -465,13 +453,9 @@ class ModCommands(commands.Cog):
 
     @staticmethod
     async def link_fake_to_member(itx: discord.Interaction[core.Genji], fake_id: int, member: discord.Member) -> None:
-        await itx.client.database.set("UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
-        await itx.client.database.set("UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
-        await itx.client.database.set(
-            "DELETE FROM users WHERE user_id=$1",
-            fake_id,
-        )
-        itx.client.cache.users[fake_id].update_user_id(member.id)
+        await itx.client.database.execute("UPDATE map_creators SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
+        await itx.client.database.execute("UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
+        await itx.client.database.execute("DELETE FROM users WHERE user_id=$1", fake_id)
 
     @map.command()
     @app_commands.choices(
@@ -522,7 +506,6 @@ class ModCommands(commands.Cog):
             await itx.edit_original_response(content=f"**{map_code}** has already been {action.value}d.")
             return
 
-        itx.client.cache.maps[map_code].update_archived(value)
         await itx.client.database.set(
             """UPDATE maps SET archived = $1 WHERE map_code = $2""",
             value,
@@ -666,7 +649,8 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        select = {"map_type": views.MapTypeSelect(copy.deepcopy(itx.client.cache.map_types.options))}
+        options = await db_records_to_options("map_type")
+        select = {"map_type": views.MapTypeSelect(options)}
         view = views.Confirm(itx, proceeding_items=select, ephemeral=True)
         await itx.edit_original_response(
             content="Select the new map type(s).",
@@ -676,14 +660,14 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
         map_types = view.map_type.values
-        await itx.client.database.set(
+        await itx.client.database.execute(
             "UPDATE maps SET map_type=$1 WHERE map_code=$2",
             map_types,
             map_code,
         )
         await itx.edit_original_response(content=f"Updated {map_code} types to {', '.join(map_types)}.")
         # If playtesting
-        if playtest := await itx.client.database.get_row(
+        if playtest := await itx.client.database.fetchrow(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
         ):
             itx.client.dispatch(
@@ -691,8 +675,8 @@ class ModCommands(commands.Cog):
                 itx,
                 map_code,
                 {"Type": ", ".join(map_types)},
-                playtest.thread_id,
-                playtest.original_msg,
+                playtest["thread_id"],
+                playtest["original_msg"],
             )
         else:
             itx.client.dispatch(
@@ -701,6 +685,16 @@ class ModCommands(commands.Cog):
                 map_code,
                 {"Type": ", ".join(map_types)},
             )
+
+    async def _preload_map_select_menu(self, type_: typing.Literal["mechanics", "restrictions"], map_code: str) -> list[str]:
+        if type_ == "mechanics":
+            query = "SELECT mechanic AS name FROM map_mechanics WHERE map_code = $1"
+        elif type_ == "restrictions":
+            query = ""
+        else:
+            raise ValueError("Unknown type.")
+        rows = await self.bot.database.fetch(query, map_code)
+        return [row["name"] for row in rows]
 
     @map.command()
     @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
@@ -718,14 +712,8 @@ class ModCommands(commands.Cog):
         """
         await itx.response.defer(ephemeral=True)
 
-        preload_options = [
-            row.mechanic
-            async for row in itx.client.database.get(
-                "SELECT mechanic FROM map_mechanics WHERE map_code = $1",
-                map_code,
-            )
-        ]
-        options = copy.deepcopy(itx.client.cache.map_mechanics.options)
+        preload_options = await self._preload_map_select_menu("mechanics", map_code)
+        options = await db_records_to_options("mechanics")
         for option in options:
             option.default = option.value in preload_options
 
@@ -741,10 +729,10 @@ class ModCommands(commands.Cog):
         if not view.value:
             return
         mechanics = view.mechanics.values
-        await itx.client.database.set("DELETE FROM map_mechanics WHERE map_code=$1", map_code)
+        await itx.client.database.execute("DELETE FROM map_mechanics WHERE map_code=$1", map_code)
         if "Remove All" not in mechanics:
             mechanics_args = [(map_code, x) for x in mechanics]
-            await itx.client.database.set_many(
+            await itx.client.database.executemany(
                 "INSERT INTO map_mechanics (map_code, mechanic) VALUES ($1, $2)",
                 mechanics_args,
             )
@@ -754,7 +742,7 @@ class ModCommands(commands.Cog):
 
         await itx.edit_original_response(content=f"Updated {map_code} mechanics: {mechanics}.")
         # If playtesting
-        if playtest := await itx.client.database.get_row(
+        if playtest := await itx.client.database.fetchrow(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
         ):
             itx.client.dispatch(
@@ -762,8 +750,8 @@ class ModCommands(commands.Cog):
                 itx,
                 map_code,
                 {"Mechanics": mechanics},
-                playtest.thread_id,
-                playtest.original_msg,
+                playtest["thread_id"],
+                playtest["original_msg"],
             )
         else:
             itx.client.dispatch(
@@ -788,14 +776,8 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        preload_options = [
-            row.restriction
-            async for row in itx.client.database.get(
-                "SELECT restriction FROM map_restrictions WHERE map_code = $1",
-                map_code,
-            )
-        ]
-        options = copy.deepcopy(itx.client.cache.map_restrictions.options)
+        preload_options = await self._preload_map_select_menu("restrictions", map_code)
+        options = await db_records_to_options("restrictions")
         for option in options:
             option.default = option.value in preload_options
 
@@ -815,10 +797,10 @@ class ModCommands(commands.Cog):
 
         restrictions = view.restrictions.values
 
-        await itx.client.database.set("DELETE FROM map_restrictions WHERE map_code=$1", map_code)
+        await itx.client.database.execute("DELETE FROM map_restrictions WHERE map_code=$1", map_code)
         if "Remove All" not in restrictions:
             restrictions_args = [(map_code, x) for x in restrictions]
-            await itx.client.database.set_many(
+            await itx.client.database.executemany(
                 "INSERT INTO map_restrictions (map_code, restriction) VALUES ($1, $2)",
                 restrictions_args,
             )
@@ -828,7 +810,7 @@ class ModCommands(commands.Cog):
 
         await itx.edit_original_response(content=f"Updated {map_code} restrictions: {restrictions}.")
         # If playtesting
-        if playtest := await itx.client.database.get_row(
+        if playtest := await itx.client.database.fetchrow(
             "SELECT thread_id, original_msg FROM playtest WHERE map_code=$1", map_code
         ):
             itx.client.dispatch(
@@ -836,8 +818,8 @@ class ModCommands(commands.Cog):
                 itx,
                 map_code,
                 {"Restrictions": restrictions},
-                playtest.thread_id,
-                playtest.original_msg,
+                playtest["thread_id"],
+                playtest["original_msg"],
             )
         else:
             itx.client.dispatch(
@@ -915,7 +897,7 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        if new_map_code in itx.client.cache.maps.keys:
+        if self.bot.database.is_valid_map_code(new_map_code):
             raise errors.MapExistsError
 
         view = views.Confirm(itx, f"Updated {map_code} map code to {new_map_code}.", ephemeral=True)
@@ -926,18 +908,18 @@ class ModCommands(commands.Cog):
         await view.wait()
         if not view.value:
             return
-        await itx.client.database.set(
-            "UPDATE maps SET map_code=$1 WHERE map_code=$2",
+        await itx.client.database.execute(
+            "UPDATE maps SET map_code = $1 WHERE map_code = $2",
             new_map_code,
             map_code,
         )
         await itx.edit_original_response(content=f"Updated {map_code} map code to {new_map_code}.")
         # If playtesting
-        if playtest := await itx.client.database.get_row(
+        if playtest := await itx.client.database.fetchrow(
             "SELECT thread_id, original_msg, message_id FROM playtest WHERE map_code=$1",
             map_code,
         ):
-            await itx.client.database.set(
+            await itx.client.database.execute(
                 "UPDATE playtest SET map_code=$1 WHERE map_code=$2",
                 new_map_code,
                 map_code,
@@ -948,14 +930,13 @@ class ModCommands(commands.Cog):
                 itx,
                 map_code,
                 {"Code": new_map_code},
-                playtest.thread_id,
-                playtest.original_msg,
+                playtest["thread_id"],
+                playtest["original_msg"],
             )
 
-            self.bot.playtest_views[playtest.message_id].data.map_code = new_map_code
+            self.bot.playtest_views[playtest["message_id"]].data.map_code = new_map_code
         else:
             itx.client.dispatch("newsfeed_map_edit", itx, map_code, {"Code": new_map_code})
-        itx.client.cache.maps[map_code].update_map_code(new_map_code)
 
     @map.command()
     @app_commands.autocomplete(map_code=transformers.map_codes_autocomplete)
