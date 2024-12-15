@@ -4,7 +4,7 @@ import typing
 
 import discord.ui
 
-from utils import cache
+from utils import utils
 
 if typing.TYPE_CHECKING:
     import core
@@ -28,10 +28,10 @@ class SettingsView(discord.ui.View):
     def __init__(self, original_itx: discord.Interaction[core.Genji], flags: int) -> None:
         super().__init__(timeout=3600)
         self.itx = original_itx
-        self.flags = cache.SettingFlags(flags)
-        self.verification = NotificationButton("Verification", cache.SettingFlags.VERIFICATION in self.flags)
+        self.flags = utils.SettingFlags(flags)
+        self.verification = NotificationButton("Verification", utils.SettingFlags.VERIFICATION in self.flags)
         self.add_item(self.verification)
-        self.promotion = NotificationButton("Promotion", cache.SettingFlags.PROMOTION in self.flags)
+        self.promotion = NotificationButton("Promotion", utils.SettingFlags.PROMOTION in self.flags)
         self.add_item(self.promotion)
 
     @discord.ui.button(label="Change Name", style=discord.ButtonStyle.blurple, row=1)
@@ -53,15 +53,14 @@ class NotificationButton(discord.ui.Button):
     async def callback(self, itx: discord.Interaction[core.Genji]) -> None:
         """Notification button callback."""
         await itx.response.defer(ephemeral=True)
-        self.view.flags ^= getattr(cache.SettingFlags, self.name.upper())
-        self.edit_button(self.name, getattr(cache.SettingFlags, self.name.upper()) in self.view.flags)
+        self.view.flags ^= getattr(utils.SettingFlags, self.name.upper())
+        self.edit_button(self.name, getattr(utils.SettingFlags, self.name.upper()) in self.view.flags)
         await self.view.itx.edit_original_response(view=self.view)
-        await itx.client.database.set(
+        await itx.client.database.execute(
             "UPDATE users SET flags = $1 WHERE user_id = $2;",
             self.view.flags,
             itx.user.id,
         )
-        itx.client.cache.users[itx.user.id].flags = self.view.flags
 
     def edit_button(self, name: str, value: bool) -> None:
         """Edit button."""
@@ -82,9 +81,8 @@ class NameChangeModal(discord.ui.Modal, title="Change Name"):
     async def on_submit(self, itx: discord.Interaction[core.Genji]) -> None:
         """Name change modal callback."""
         await itx.response.send_message(f"You have changed your display name to {self.name}!", ephemeral=True)
-        itx.client.cache.users[itx.user.id].update_nickname(self.name.value)
 
-        await itx.client.database.set(
+        await itx.client.database.execute(
             "UPDATE users SET nickname = $1 WHERE user_id = $2;",
             self.name.value[:25],
             itx.user.id,

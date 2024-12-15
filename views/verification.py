@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from utils import cache, constants, models, utils
+from utils import constants, models, utils
 from utils.newsfeed import NewsfeedEvent
 
 if TYPE_CHECKING:
@@ -207,9 +207,9 @@ class VerificationView(discord.ui.View):
 
         await original_message.edit(content=data["edit"])
         flags = await itx.client.database.fetch_user_flags(record_submitter.id)
-        flags = cache.SettingFlags(flags)
+        flags = utils.SettingFlags(flags)
         with contextlib.suppress(discord.NotFound, discord.Forbidden):
-            if cache.SettingFlags.VERIFICATION in flags:
+            if utils.SettingFlags.VERIFICATION in flags:
                 await record_submitter.send(f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`")
         await itx.message.delete()
 

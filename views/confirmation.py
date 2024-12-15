@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import copy
 import datetime
 from typing import TYPE_CHECKING, Callable
 
@@ -275,60 +274,13 @@ class ConfirmBaseView(discord.ui.View):
 
         await discord.utils.maybe_coroutine(self.partial_callback)
 
-    async def map_submit_enable(self) -> bool:
-        return True
 
-
-class ConfirmMechanicsMixin(ConfirmBaseView):
+class ConfirmMapSubmission(ConfirmBaseView):
+    difficulty: views.DifficultySelect
+    map_type: views.MapTypeSelect
+    restrictions: views.RestrictionsSelect
     mechanics: views.MechanicsSelect
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.mechanics = views.MechanicsSelect(copy.deepcopy(self.itx.client.cache.map_mechanics.options))
-        self.add_item(self.mechanics)
-
-
-class ConfirmRestrictionsMixin(ConfirmBaseView):
-    restrictions: views.RestrictionsSelect
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.restrictions = views.RestrictionsSelect(copy.deepcopy(self.itx.client.cache.map_restrictions.options))
-        self.add_item(self.restrictions)
-
-
-class ConfirmMapTypeMixin(ConfirmBaseView):
-    map_type: views.MapTypeSelect
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.map_type = views.MapTypeSelect(copy.deepcopy(self.itx.client.cache.map_types.options))
-        self.add_item(self.map_type)
-
-    async def map_submit_enable(self) -> bool:
-        return await super().map_submit_enable() and self.map_type.values
-
-
-class ConfirmDifficultyMixin(ConfirmBaseView):
-    difficulty: views.DifficultySelect
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.difficulty = views.DifficultySelect(
-            [discord.SelectOption(label=x, value=x) for x in ranks.DIFFICULTIES_EXT[1:]]
-        )
-        self.add_item(self.difficulty)
-
-    async def map_submit_enable(self) -> bool:
-        return await super().map_submit_enable() and self.difficulty.values
-
-
-class ConfirmMapSubmission(
-    ConfirmMechanicsMixin,
-    ConfirmRestrictionsMixin,
-    ConfirmMapTypeMixin,
-    ConfirmDifficultyMixin,
-):
     def __init__(
         self,
         itx: discord.Interaction[core.Genji],
@@ -347,117 +299,34 @@ class ConfirmMapSubmission(
         )
         self.confirm_button.disabled = True
 
+    @classmethod
+    async def async_build(
+        cls,
+        itx: discord.Interaction[core.Genji],
+        partial_callback: Callable,
+        *,
+        initial_message: str = "Confirm?",
+        confirmation_message: str = "Confirmed.",
+        timeout: int = 300,  # noqa: ASYNC109
+    ) -> ConfirmMapSubmission:
+        inst = cls(
+            itx,
+            partial_callback,
+            initial_message=initial_message,
+            confirmation_message=confirmation_message,
+            timeout=timeout,
+        )
+        map_type_options = await utils.db_records_to_options(itx.client.database, "map_type")
+        inst.map_type = views.MapTypeSelect(map_type_options)
+        mechanics_options = await utils.db_records_to_options(itx.client.database, "mechanics")
+        inst.mechanics = views.MechanicsSelect(mechanics_options)
+        restrictions_options = await utils.db_records_to_options(itx.client.database, "restrictions")
+        inst.restrictions = views.RestrictionsSelect(restrictions_options)
+        difficulty_options = [discord.SelectOption(label=x, value=x) for x in ranks.DIFFICULTIES_EXT[1:]]
+        inst.difficulty = views.DifficultySelect(difficulty_options)
+        return inst
+
     async def map_submit_enable(self) -> None:
-        if await super().map_submit_enable():
+        if self.difficulty.values and self.map_type.values:
             self.confirm_button.disabled = False
             await self.itx.edit_original_response(view=self)
-
-
-class ConfirmMechanics(ConfirmMechanicsMixin):
-    def __init__(
-        self,
-        itx: discord.Interaction[core.Genji],
-        partial_callback: Callable,
-        *,
-        initial_message: str = "Confirm?",
-        confirmation_message: str = "Confirmed.",
-        timeout: int = 300,
-    ) -> None:
-        super().__init__(
-            itx,
-            partial_callback,
-            initial_message=initial_message,
-            confirmation_message=confirmation_message,
-            timeout=timeout,
-        )
-
-
-class ConfirmRestrictions(ConfirmRestrictionsMixin):
-    def __init__(
-        self,
-        itx: discord.Interaction[core.Genji],
-        partial_callback: Callable,
-        *,
-        initial_message: str = "Confirm?",
-        confirmation_message: str = "Confirmed.",
-        timeout: int = 300,
-    ) -> None:
-        super().__init__(
-            itx,
-            partial_callback,
-            initial_message=initial_message,
-            confirmation_message=confirmation_message,
-            timeout=timeout,
-        )
-
-
-class ConfirmDifficulty(ConfirmDifficultyMixin):
-    def __init__(
-        self,
-        itx: discord.Interaction[core.Genji],
-        partial_callback: Callable,
-        *,
-        initial_message: str = "Confirm?",
-        confirmation_message: str = "Confirmed.",
-        timeout: int = 300,
-    ) -> None:
-        super().__init__(
-            itx,
-            partial_callback,
-            initial_message=initial_message,
-            confirmation_message=confirmation_message,
-            timeout=timeout,
-        )
-
-
-class ConfirmMapType(ConfirmMapTypeMixin):
-    def __init__(
-        self,
-        itx: discord.Interaction[core.Genji],
-        partial_callback: Callable,
-        *,
-        initial_message: str = "Confirm?",
-        confirmation_message: str = "Confirmed.",
-        timeout: int = 300,
-    ) -> None:
-        super().__init__(
-            itx,
-            partial_callback,
-            initial_message=initial_message,
-            confirmation_message=confirmation_message,
-            timeout=timeout,
-        )
-
-
-class GiveReasonModalButton(discord.ui.Button):
-    view: Confirm
-    value: str
-
-    def __init__(self) -> None:
-        super().__init__(
-            label="Give Reason",
-            style=discord.ButtonStyle.blurple,
-        )
-
-    async def callback(self, itx: discord.Interaction[core.Genji]) -> None:
-        modal = GiveReasonModal()
-        await itx.response.send_modal(modal)
-        await modal.wait()
-        if not modal.value:
-            return
-        self.view.confirm.disabled = False
-        await self.view.original_itx.edit_original_response(view=self.view)
-        self.value = modal.reason.value
-
-
-class GiveReasonModal(discord.ui.Modal, title="Give Reason"):
-    reason = discord.ui.TextInput(
-        label="Reason",
-        placeholder="Give a reason for denial.",
-        style=discord.TextStyle.long,
-    )
-    value: bool = False
-
-    async def on_submit(self, itx: discord.Interaction[core.Genji]) -> None:
-        await itx.response.defer(ephemeral=True)
-        self.value = True

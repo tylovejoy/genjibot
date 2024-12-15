@@ -7,7 +7,6 @@ import discord
 from discord.ext import commands
 
 import cogs
-from utils import cache
 from utils.newsfeed import EventHandler
 
 if typing.TYPE_CHECKING:
@@ -37,7 +36,6 @@ class Genji(commands.Bot):
         )
         self.session = session
         self.database = db
-        self.cache: cache.GenjiCache = cache.GenjiCache()
         self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
         self.analytics_buffer: list[tuple[str, int, datetime.datetime, dict]] = []

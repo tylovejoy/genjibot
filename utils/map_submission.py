@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from database.database import Database
 import views
-from utils import cache, constants, embeds, errors, maps
+from utils import constants, embeds, errors, maps
 from utils.newsfeed import NewsfeedEvent
 
 if TYPE_CHECKING:
     import core
+    from database import Database
 
 
 async def submit_map_(
@@ -49,7 +49,7 @@ async def submit_map_(
         )
 
     initial_message = f"{data.creator.mention}, " f"fill in additional details to complete map submission!"
-    view = views.ConfirmMapSubmission(
+    view = await views.ConfirmMapSubmission.async_build(
         itx,
         partial_callback=None,
         initial_message=initial_message,
@@ -181,6 +181,7 @@ async def is_creator_of_map(db: Database, map_code: str, user_id: int) -> bool:
     query = "SELECT EXISTS(SELECT 1 FROM map_creators WHERE map_code = $1 AND user_id = $2)"
     return await db.fetchval(query, map_code, user_id)
 
+
 async def add_creator_(
     creator: int,
     itx: discord.Interaction[core.Genji],
@@ -197,10 +198,7 @@ async def add_creator_(
     )
     nickname = await itx.client.database.fetch_nickname(creator)
     await itx.edit_original_response(
-        content=(
-            f"Adding **{nickname}** "
-            f"to list of creators for map code **{map_code}**."
-        )
+        content=(f"Adding **{nickname}** " f"to list of creators for map code **{map_code}**.")
     )
 
 
@@ -221,8 +219,5 @@ async def remove_creator_(
     )
     nickname = await itx.client.database.fetch_nickname(creator)
     await itx.edit_original_response(
-        content=(
-            f"Removing **{nickname}** "
-            f"from list of creators for map code **{map_code}**."
-        )
+        content=(f"Removing **{nickname}** " f"from list of creators for map code **{map_code}**.")
     )
