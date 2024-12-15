@@ -51,6 +51,7 @@ def setup_logging() -> None:
             hdlr.close()
             log.removeHandler(hdlr)
 
+
 rabbitmq_user = os.getenv("RABBITMQ_DEFAULT_USER")
 rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
 
