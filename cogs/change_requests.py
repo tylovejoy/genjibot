@@ -9,8 +9,8 @@ from discord.app_commands import Transform, autocomplete, command, guilds
 from discord.ext import commands
 from typing_extensions import TypeAlias
 
-import cogs
 from utils import constants, records
+from utils.transformers import map_codes_autocomplete
 
 if typing.TYPE_CHECKING:
     from core import Genji
@@ -97,7 +97,7 @@ class ChangeRequests(commands.Cog):
 
     @command()
     @guilds(constants.GUILD_ID)
-    @autocomplete(map_code=cogs.map_codes_autocomplete)
+    @autocomplete(map_code=map_codes_autocomplete)
     async def change_request(
         self,
         itx: GenjiItx,
