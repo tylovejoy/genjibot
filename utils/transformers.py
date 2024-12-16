@@ -50,7 +50,7 @@ class MapNameTransformer(app_commands.Transformer):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         query = "SELECT name FROM all_map_names ORDER BY similarity(name, $1::text) DESC LIMIT 10;"
-        names = await itx.client.database.fetch(query)
+        names = await itx.client.database.fetch(query, current)
         return [app_commands.Choice(name=x, value=x) for (x,) in names]
 
 
@@ -65,7 +65,7 @@ class MapTypesTransformer(app_commands.Transformer):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         query = "SELECT name FROM all_map_types ORDER BY similarity(name, $1::text) DESC LIMIT 10;"
-        types = await itx.client.database.fetch(query)
+        types = await itx.client.database.fetch(query, current)
         return [app_commands.Choice(name=x, value=x) for (x,) in types]
 
 
@@ -80,7 +80,7 @@ class MapMechanicsTransformer(app_commands.Transformer):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         query = "SELECT name FROM all_map_mechanics ORDER BY similarity(name, $1::text) DESC LIMIT 10;"
-        mechanics = await itx.client.database.fetch(query)
+        mechanics = await itx.client.database.fetch(query, current)
         return [app_commands.Choice(name=x, value=x) for (x,) in mechanics]
 
 
@@ -95,7 +95,7 @@ class MapRestrictionsTransformer(app_commands.Transformer):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         query = "SELECT name FROM all_map_restrictions ORDER BY similarity(name, $1::text) DESC LIMIT 10;"
-        restrictions = await itx.client.database.fetch(query)
+        restrictions = await itx.client.database.fetch(query, current)
         return [app_commands.Choice(name=x, value=x) for (x,) in restrictions]
 
 
@@ -169,7 +169,10 @@ class CreatorTransformer(app_commands.Transformer):
             FROM creators ORDER BY similarity(nickname, $1::text) DESC LIMIT 6;
         """
         results = await itx.client.database.fetch(query, current)
-        return [app_commands.Choice(name=f"{row['nick']} ({row['user_id']})", value=row["nick"]) for row in results]
+        return [
+            app_commands.Choice(name=f"{row['nickname']} ({row['user_id']})", value=str(row["user_id"]))
+            for row in results
+        ]
 
 
 class AllUserTransformer(app_commands.Transformer):
@@ -179,7 +182,10 @@ class AllUserTransformer(app_commands.Transformer):
     async def autocomplete(self, itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
         query = "SELECT user_id, nickname FROM USERS ORDER BY similarity(nickname, $1) DESC LIMIT 10;"
         results = await itx.client.database.fetch(query, current)
-        return [app_commands.Choice(name=f"{nick} ({id_})", value=nick) for id_, nick in results]
+        return [
+            app_commands.Choice(name=f"{row['nickname']} ({row['user_id']})", value=str(row["user_id"]))
+            for row in results
+        ]
 
 
 class FakeUserTransformer(app_commands.Transformer):
