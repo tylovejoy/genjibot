@@ -17,6 +17,7 @@ from .tags_paginator import SimplePages
 
 if TYPE_CHECKING:
     from core import Genji
+
     GenjiCtx: TypeAlias = commands.Context[Genji]
     GenjiItx: TypeAlias = discord.Interaction[Genji]
 
@@ -30,9 +31,7 @@ async def check_guild_permissions(ctx: GenjiCtx, perms: dict[str, bool], *, chec
         return False
 
     resolved = ctx.author.guild_permissions
-    return check(
-        getattr(resolved, name, None) == value for name, value in perms.items()
-    )
+    return check(getattr(resolved, name, None) == value for name, value in perms.items())
 
 
 def has_guild_permissions(*, check=all, **perms: bool):
@@ -49,9 +48,7 @@ class TagEntry(TypedDict):
 
 
 class TagAllFlags(commands.FlagConverter):
-    text: bool = commands.flag(
-        default=False, description="Whether to dump the tags as a text file."
-    )
+    text: bool = commands.flag(default=False, description="Whether to dump the tags as a text file.")
 
 
 class TagPageEntry:
@@ -121,9 +118,7 @@ class TagEditModal(discord.ui.Modal, title="Edit Tag"):
 
 
 class TagMakeModal(discord.ui.Modal, title="Create New Tag"):
-    name = discord.ui.TextInput(
-        label="Name", required=True, max_length=100, min_length=1
-    )
+    name = discord.ui.TextInput(label="Name", required=True, max_length=100, min_length=1)
     content = discord.ui.TextInput(
         label="Content",
         required=True,
@@ -146,17 +141,13 @@ class TagMakeModal(discord.ui.Modal, title="Create New Tag"):
             await interaction.response.send_message(str(e), ephemeral=True)
             return
         if self.cog.is_tag_being_made(interaction.guild_id, name):
-            await interaction.response.send_message(
-                "This tag is already being made by someone else.", ephemeral=True
-            )
+            await interaction.response.send_message("This tag is already being made by someone else.", ephemeral=True)
             return
 
         self.ctx.interaction = interaction
         content = str(self.content)
         if len(content) > 2000:
-            await interaction.response.send_message(
-                "Tag content is a maximum of 2000 characters.", ephemeral=True
-            )
+            await interaction.response.send_message("Tag content is a maximum of 2000 characters.", ephemeral=True)
         else:
             await self.cog.create_tag(self.ctx, name, content)
 
@@ -277,9 +268,7 @@ class Tags(commands.Cog):
             await tr.start()
 
             try:
-                await connection.execute(
-                    query, name, content, ctx.author.id, ctx.guild.id
-                )
+                await connection.execute(query, name, content, ctx.author.id, ctx.guild.id)
             except asyncpg.UniqueViolationError:
                 await tr.rollback()
                 await ctx.send("This tag already exists.")
@@ -314,23 +303,15 @@ class Tags(commands.Cog):
 
     # These are hopefully fast enough. Through a query planner these take around ~20ms each.
 
-    async def non_aliased_tag_autocomplete(
-        self, interaction: GenjiItx, current: str
-    ) -> list[app_commands.Choice[str]]:
+    async def non_aliased_tag_autocomplete(self, interaction: GenjiItx, current: str) -> list[app_commands.Choice[str]]:
         query = """SELECT name FROM tags WHERE location_id=$1 AND LOWER(name) % $2 LIMIT 12;"""
-        results: list[tuple[str]] = await self.bot.database.pool.fetch(
-            query, interaction.guild_id, current.lower()
-        )
-        return [app_commands.Choice(name=a, value=a) for a, in results]
+        results: list[tuple[str]] = await self.bot.database.pool.fetch(query, interaction.guild_id, current.lower())
+        return [app_commands.Choice(name=a, value=a) for (a,) in results]
 
-    async def aliased_tag_autocomplete(
-        self, interaction: GenjiItx, current: str
-    ) -> list[app_commands.Choice[str]]:
+    async def aliased_tag_autocomplete(self, interaction: GenjiItx, current: str) -> list[app_commands.Choice[str]]:
         query = """SELECT name FROM tag_lookup WHERE location_id=$1 AND LOWER(name) % $2 LIMIT 12;"""
-        results: list[tuple[str]] = await self.bot.database.pool.fetch(
-            query, interaction.guild_id, current.lower()
-        )
-        return [app_commands.Choice(name=a, value=a) for a, in results]
+        results: list[tuple[str]] = await self.bot.database.pool.fetch(query, interaction.guild_id, current.lower())
+        return [app_commands.Choice(name=a, value=a) for (a,) in results]
 
     async def owned_non_aliased_tag_autocomplete(
         self, interaction: GenjiItx, current: str
@@ -344,7 +325,7 @@ class Tags(commands.Cog):
         results: list[tuple[str]] = await self.bot.database.pool.fetch(
             query, interaction.guild_id, interaction.user.id, current.lower()
         )
-        return [app_commands.Choice(name=a, value=a) for a, in results]
+        return [app_commands.Choice(name=a, value=a) for (a,) in results]
 
     async def owned_aliased_tag_autocomplete(
         self, interaction: GenjiItx, current: str
@@ -358,7 +339,7 @@ class Tags(commands.Cog):
         results: list[tuple[str]] = await self.bot.database.pool.fetch(
             query, interaction.guild_id, interaction.user.id, current.lower()
         )
-        return [app_commands.Choice(name=a, value=a) for a, in results]
+        return [app_commands.Choice(name=a, value=a) for (a,) in results]
 
     @commands.hybrid_group(fallback="get")
     @commands.guild_only()
@@ -411,9 +392,7 @@ class Tags(commands.Cog):
     @tag.command()
     @commands.guild_only()
     @app_commands.rename(new_name="aliased-name", old_name="original-tag")
-    @app_commands.describe(
-        new_name="The name of the alias", old_name="The original tag to alias"
-    )
+    @app_commands.describe(new_name="The name of the alias", old_name="The original tag to alias")
     @app_commands.autocomplete(old_name=non_aliased_tag_autocomplete)
     async def alias(
         self,
@@ -449,9 +428,7 @@ class Tags(commands.Cog):
             if status[-1] == "0":
                 await ctx.send(f'A tag with the name of "{old_name}" does not exist.')
             else:
-                await ctx.send(
-                    f'Tag alias "{new_name}" that points to "{old_name}" successfully created.'
-                )
+                await ctx.send(f'Tag alias "{new_name}" that points to "{old_name}" successfully created.')
 
     @tag.command(ignore_extra=False)
     @commands.guild_only()
@@ -485,9 +462,7 @@ class Tags(commands.Cog):
             ctx.message = name
             name = await converter.convert(ctx, name.content)
         except commands.BadArgument as e:
-            return await ctx.send(
-                f'{e}. Redo the command "{ctx.prefix}tag make" to retry.'
-            )
+            return await ctx.send(f'{e}. Redo the command "{ctx.prefix}tag make" to retry.')
         finally:
             ctx.message = original
 
@@ -506,8 +481,7 @@ class Tags(commands.Cog):
         row = await self.bot.database.pool.fetchrow(query, ctx.guild.id, name.lower())
         if row is not None:
             return await ctx.send(
-                "Sorry. A tag with that name already exists. "
-                f'Redo the command "{ctx.prefix}tag make" to retry.'
+                "Sorry. A tag with that name already exists. " f'Redo the command "{ctx.prefix}tag make" to retry.'
             )
 
         self.add_in_progress_tag(ctx.guild.id, name)
@@ -592,18 +566,14 @@ class Tags(commands.Cog):
             return await ctx.send("Tag content can only be up to 2000 characters")
 
         query = "UPDATE tags SET content=$1 WHERE LOWER(name)=$2 AND location_id=$3 AND owner_id=$4;"
-        status = await self.bot.database.pool.execute(
-            query, content, name, ctx.guild.id, ctx.author.id
-        )
+        status = await self.bot.database.pool.execute(query, content, name, ctx.guild.id, ctx.author.id)
 
         # the status returns UPDATE <count>
         # if the <count> is 0, then nothing got updated
         # probably due to the WHERE clause failing
 
         if status[-1] == "0":
-            await ctx.send(
-                "Could not edit that tag. Are you sure it exists and you own it?"
-            )
+            await ctx.send("Could not edit that tag. Are you sure it exists and you own it?")
         else:
             await ctx.send("Successfully edited tag.")
 
@@ -621,10 +591,7 @@ class Tags(commands.Cog):
         Deleting a tag will delete all of its aliases as well.
         """
 
-        bypass_owner_check = (
-            ctx.author.id == self.bot.owner_id
-            or ctx.author.guild_permissions.manage_messages
-        )
+        bypass_owner_check = ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.manage_messages
         clause = "LOWER(name)=$1 AND location_id=$2"
 
         if bypass_owner_check:
@@ -637,9 +604,7 @@ class Tags(commands.Cog):
         deleted = await self.bot.database.pool.fetchrow(query, *args)
 
         if deleted is None:
-            await ctx.send(
-                "Could not delete tag. Either it does not exist or you do not have permissions to do so."
-            )
+            await ctx.send("Could not delete tag. Either it does not exist or you do not have permissions to do so.")
             return
 
         args.append(deleted[0])
@@ -667,10 +632,7 @@ class Tags(commands.Cog):
         Deleting a tag will delete all of its aliases as well.
         """
 
-        bypass_owner_check = (
-            ctx.author.id == self.bot.owner_id
-            or ctx.author.guild_permissions.manage_messages
-        )
+        bypass_owner_check = ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.manage_messages
         clause = "id=$1 AND location_id=$2"
 
         if bypass_owner_check:
@@ -683,9 +645,7 @@ class Tags(commands.Cog):
         deleted = await self.bot.database.pool.fetchrow(query, *args)
 
         if deleted is None:
-            await ctx.send(
-                "Could not delete tag. Either it does not exist or you do not have permissions to do so."
-            )
+            await ctx.send("Could not delete tag. Either it does not exist or you do not have permissions to do so.")
             return
 
         if bypass_owner_check:
@@ -710,9 +670,7 @@ class Tags(commands.Cog):
 
         owner_id = record["lookup_owner_id"]
         embed.title = record["lookup_name"]
-        embed.timestamp = record["lookup_created_at"].replace(
-            tzinfo=datetime.timezone.utc
-        )
+        embed.timestamp = record["lookup_created_at"].replace(tzinfo=datetime.timezone.utc)
         embed.set_footer(text="Alias created at")
 
         user = self.bot.get_user(owner_id) or (await self.bot.fetch_user(owner_id))
@@ -803,9 +761,7 @@ class Tags(commands.Cog):
 
     @tag.command(name="list")
     @commands.guild_only()
-    @app_commands.describe(
-        member="The member to list tags of, if not given then it shows yours"
-    )
+    @app_commands.describe(member="The member to list tags of, if not given then it shows yours")
     async def _list(self, ctx: GenjiCtx, *, member: discord.User = commands.Author):
         """Lists all the tags that belong to you or someone else."""
 
@@ -819,9 +775,7 @@ class Tags(commands.Cog):
 
         if rows:
             p = TagPages(entries=rows, ctx=ctx)
-            p.embed.set_author(
-                name=member.display_name, icon_url=member.display_avatar.url
-            )
+            p.embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
             await p.start()
         else:
             await ctx.send(f"{member} has no tags.")
@@ -829,9 +783,7 @@ class Tags(commands.Cog):
     @commands.hybrid_command()
     @commands.guild_only()
     @app_commands.guild_only()
-    @app_commands.describe(
-        member="The member to list tags of, if not given then it shows yours"
-    )
+    @app_commands.describe(member="The member to list tags of, if not given then it shows yours")
     async def tags(self, ctx: GenjiCtx, *, member: discord.User = commands.Author):
         """An alias for tag list command."""
         await ctx.invoke(self._list, member=member)
@@ -849,13 +801,8 @@ class Tags(commands.Cog):
                    ORDER BY tags.uses DESC;
                 """
 
-        bypass_owner_check = (
-            ctx.author.id == self.bot.owner_id
-            or ctx.author.guild_permissions.manage_messages
-        )
-        rows = await self.bot.database.pool.fetch(
-            query, ctx.guild.id, bypass_owner_check, ctx.author.id
-        )
+        bypass_owner_check = ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.manage_messages
+        rows = await self.bot.database.pool.fetch(query, ctx.guild.id, bypass_owner_check, ctx.author.id)
         if not rows:
             return await ctx.send("This server has no server-specific tags.")
 
@@ -912,25 +859,19 @@ class Tags(commands.Cog):
         if count == 0:
             return await ctx.send(f"{member} does not have any tags to purge.")
 
-        confirm = await ctx.prompt(
-            f"This will delete {count} tags are you sure? **This action cannot be reversed**."
-        )
+        confirm = await ctx.prompt(f"This will delete {count} tags are you sure? **This action cannot be reversed**.")
         if not confirm:
             return await ctx.send("Cancelling tag purge request.")
 
         query = "DELETE FROM tags WHERE location_id=$1 AND owner_id=$2;"
         await self.bot.database.pool.execute(query, ctx.guild.id, member.id)
 
-        await ctx.send(
-            f"Successfully removed all {count} tags that belong to {member}."
-        )
+        await ctx.send(f"Successfully removed all {count} tags that belong to {member}.")
 
     @tag.command()
     @commands.guild_only()
     @app_commands.describe(query="The tag name to search for")
-    async def search(
-        self, ctx: GenjiCtx, *, query: Annotated[str, commands.clean_content]
-    ):
+    async def search(self, ctx: GenjiCtx, *, query: Annotated[str, commands.clean_content]):
         """Searches for a tag.
 
         The query must be at least 3 characters.
@@ -994,9 +935,7 @@ class Tags(commands.Cog):
     @commands.guild_only()
     @app_commands.describe(member="The member to transfer the tag to")
     @app_commands.autocomplete(tag=aliased_tag_autocomplete)
-    async def transfer(
-        self, ctx: GenjiCtx, member: discord.Member, *, tag: Annotated[str, TagName]
-    ):
+    async def transfer(self, ctx: GenjiCtx, member: discord.Member, *, tag: Annotated[str, TagName]):
         """Transfers a tag to another member.
 
         You must own the tag before doing this.
@@ -1007,13 +946,9 @@ class Tags(commands.Cog):
 
         query = "SELECT id FROM tags WHERE location_id=$1 AND LOWER(name)=$2 AND owner_id=$3;"
 
-        row = await self.bot.database.pool.fetchrow(
-            query, ctx.guild.id, tag.lower(), ctx.author.id
-        )
+        row = await self.bot.database.pool.fetchrow(query, ctx.guild.id, tag.lower(), ctx.author.id)
         if row is None:
-            return await ctx.send(
-                f'A tag with the name of "{tag}" does not exist or is not owned by you.'
-            )
+            return await ctx.send(f'A tag with the name of "{tag}" does not exist or is not owned by you.')
 
         async with self.bot.database.pool.acquire() as conn, conn.transaction():
             query = "UPDATE tags SET owner_id=$1 WHERE id=$2;"
