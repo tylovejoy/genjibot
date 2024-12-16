@@ -46,9 +46,9 @@ class AnalyticsTasks(commands.Cog):
 
         rows: list[tuple[str, int, datetime.datetime, str]] = []
         for raw_event, user_id, timestamp, args in self.bot.analytics_buffer:
-            with contextlib.suppress(KeyError):
+            with contextlib.suppress(KeyError, TypeError):
                 args.pop("screenshot")
-            rows.append((raw_event, user_id, timestamp, json.dumps(args)))
+                rows.append((raw_event, user_id, timestamp, json.dumps(args)))
         if rows:
             await self.bot.database.set_many(query, rows)
             self.bot.analytics_buffer = []
