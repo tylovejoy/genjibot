@@ -180,21 +180,3 @@ class GuideEmbedBuilder(EmbedBuilder):
     def additional_messages(data: dict) -> list[str]:
         """Return any additional messages to be sent alongside the embed."""
         return [data["map"]["guide"][0]]
-
-
-class MapEditEmbedBuilder(EmbedBuilder):
-    event_type = "map_edit"
-
-    def build(self, data: dict) -> discord.Embed:
-        description = ">>> "
-        for k, v in values.items():
-            description += f"`{k}` {v}\n"
-
-        embed = embeds.GenjiEmbed(
-            title=f"{map_code} has been changed:",
-            description=description,
-            color=discord.Color.red(),
-        )
-
-    @staticmethod
-    async def additional_actions(data: dict) -> list[str]: ...
