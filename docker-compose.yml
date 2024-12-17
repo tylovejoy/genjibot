@@ -9,6 +9,7 @@ services:
       - PSQL_HOST=${PSQL_HOST}
       - PYTHON_ENV=${PYTHON_ENV}
       - GLOBAL_MULTI_BAN=${GLOBAL_MULTI_BAN}
+      - GENJI_API_KEY=${GENJI_API_KEY}
     networks:
       - genji-network
 
