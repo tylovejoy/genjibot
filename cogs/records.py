@@ -222,6 +222,9 @@ class Records(commands.Cog):
             map_code,
         )
         medium_plus = 4.12
+        if not map_difficulty:
+            query = "SELECT value FROM playtest WHERE map_code = $1 AND is_author;"
+            map_difficulty = await self.bot.database.fetchval(query, map_code)
         if float(map_difficulty) >= medium_plus:
             raise errors.TemporaryHardOrHigherBanError
 
