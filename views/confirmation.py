@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import logging
 from typing import TYPE_CHECKING, Callable
 
 import discord
@@ -12,6 +13,7 @@ from utils import constants, ranks, utils
 if TYPE_CHECKING:
     import core
 
+log = logging.getLogger(__name__)
 
 class ConfirmButton(discord.ui.Button):
     def __init__(self, disabled: bool = False) -> None:
@@ -316,14 +318,22 @@ class ConfirmMapSubmission(ConfirmBaseView):
             confirmation_message=confirmation_message,
             timeout=timeout,
         )
-        map_type_options = await utils.db_records_to_options(itx.client.database, "map_type")
-        inst.map_type = views.MapTypeSelect(map_type_options)
-        mechanics_options = await utils.db_records_to_options(itx.client.database, "mechanics")
-        inst.mechanics = views.MechanicsSelect(mechanics_options)
-        restrictions_options = await utils.db_records_to_options(itx.client.database, "restrictions")
-        inst.restrictions = views.RestrictionsSelect(restrictions_options)
+        select_map = [
+            ("map_type", views.MapTypeSelect),
+            ("mechanics", views.MechanicsSelect),
+            ("restrictions", views.RestrictionsSelect),
+        ]
+
+        for type_, select_cls in select_map:
+            options = await utils.db_records_to_options(itx.client.database, type_)
+            select = select_cls(options)
+            setattr(inst, type_, select)
+            inst.add_item(select)
+
         difficulty_options = [discord.SelectOption(label=x, value=x) for x in ranks.DIFFICULTIES_EXT[1:]]
         inst.difficulty = views.DifficultySelect(difficulty_options)
+        inst.add_item(inst.difficulty)
+
         return inst
 
     async def map_submit_enable(self) -> None:
