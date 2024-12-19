@@ -70,8 +70,12 @@ class ChangeRequestModal(discord.ui.Modal):
             f"{self.feedback.value}"
         )
         view = ChangeRequestConfirmationView(user_ids, self.map_code)
-        message = await channel.send(content, view=view)
-        await message.create_thread(name=f"CR-{self.map_code} Discussion")
+        message = await channel.send(content)
+        thread = await message.create_thread(name=f"CR-{self.map_code} Discussion")
+        await thread.send(
+            content=f"# {mentions}\n# If you have made the necessary changes, please click the button to confirm.",
+            view=view,
+        )
 
     async def on_error(self, itx: GenjiItx, error: Exception) -> None:
         await itx.response.send_message("Oops! Something went wrong.", ephemeral=True)
@@ -84,6 +88,7 @@ class ChangeRequestConfirmationView(discord.ui.View):
         self.user_ids = user_ids
         self.confirm_button = ChangeRequestConfirmationButton(user_ids, map_code)
         self.add_item(self.confirm_button)
+
 
 class ChangeRequestCloseView(discord.ui.View):
     def __init__(self) -> None:
@@ -117,6 +122,7 @@ class ChangeRequestCloseView(discord.ui.View):
             await thread.send(embed=embed)
             await original_message.delete()
 
+
 class ChangeRequestConfirmationButton(
     discord.ui.DynamicItem[discord.ui.Button],
     template=r"CRC-(?P<map_code>[A-Z0-9]{4,6})-(?P<id0>[0-9]+)-?(?P<id1>[0-9]+)?-?(?P<id2>[0-9]+)?-?(?P<id3>[0-9]+)?",
@@ -135,7 +141,9 @@ class ChangeRequestConfirmationButton(
         self.map_code = map_code
 
     @classmethod
-    async def from_custom_id(cls, itx: GenjiItx, item: discord.ui.Button, match: re.Match[str]) -> ChangeRequestConfirmationButton:
+    async def from_custom_id(
+        cls, itx: GenjiItx, item: discord.ui.Button, match: re.Match[str]
+    ) -> ChangeRequestConfirmationButton:
         ids = []
         for i in range(4):
             m = match["id" + str(i)]
@@ -155,8 +163,8 @@ class ChangeRequestConfirmationButton(
         await itx.response.edit_message(view=self.view)
         assert itx.guild
         modmail = itx.guild.get_role(1120076555293569081)
-        assert modmail and itx.message and itx.message.thread
-        await itx.message.thread.send(
+        assert modmail and isinstance(itx.channel, discord.Thread)
+        await itx.channel.send(
             f"{itx.user.mention} has confirmed that the map has been changed as requested. {modmail.mention}",
             view=ChangeRequestCloseView(),
         )
@@ -167,7 +175,7 @@ class ChangeRequests(commands.Cog):
         self.bot = bot
         self.db = bot.database
 
-    @command()
+    @command(name="change-request")
     @guilds(constants.GUILD_ID)
     async def change_request(
         self,
