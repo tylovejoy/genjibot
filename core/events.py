@@ -32,10 +32,10 @@ class BotEvents(commands.Cog):
     async def on_message(self, message: discord.Message) -> None:
         if message.channel.id != 975820285343301674:
             return
-        if "<@&1073292414271356938>" not in message.content:
+        if message.author.bot:
             return
         query = "INSERT INTO newsfeed (type, data) VALUES ($1, $2)"
-        nickname = self.bot.database.fetch_nickname(message.author.id)
+        nickname = await self.bot.database.fetch_nickname(message.author.id)
         data = {
             "user": {
                 "user_id": message.author.id,
@@ -65,47 +65,24 @@ class BotEvents(commands.Cog):
             f"Owner: {app_info.owner}\n"
         )
         if not self.bot.persistent_views_added:
-            queue = [
-                x.hidden_id
-                async for x in self.bot.database.get(
-                    "SELECT hidden_id FROM records WHERE verified = FALSE;",
-                )
+            verification_query = "SELECT hidden_id FROM records WHERE verified = FALSE;"
+            rows = await self.bot.database.fetch(verification_query)
+            for row in rows:
+                self.bot.add_view(views.VerificationView(), message_id=row["hidden_id"])
+
+            role_configs = [
+                (views.AnnouncementRoles, 1073294355613360129, "**Announcement Pings**"),
+                (views.RegionRoles, 1073294377050460253, "**Regions**"),
+                (views.ConsoleRoles, 1073294381311873114, "**Platform**"),
             ]
-            for x in queue:
-                self.bot.add_view(views.VerificationView(), message_id=x)
 
-            view = views.AnnouncementRoles()
-            self.bot.add_view(view, message_id=1073294355613360129)
-            await (
-                self.bot.get_channel(constants.ROLE_REACT)
-                .get_partial_message(1073294355613360129)
-                .edit(
-                    content="**Announcement Pings**",
-                    view=view,
-                )
-            )
+            channel = self.bot.get_channel(constants.ROLE_REACT)
+            assert channel and isinstance(channel, discord.TextChannel)
 
-            view = views.RegionRoles()
-            self.bot.add_view(view, message_id=1073294377050460253)
-            await (
-                self.bot.get_channel(constants.ROLE_REACT)
-                .get_partial_message(1073294377050460253)
-                .edit(
-                    content="**Regions**",
-                    view=view,
-                )
-            )
-
-            view = views.ConsoleRoles()
-            self.bot.add_view(view, message_id=1073294381311873114)
-            await (
-                self.bot.get_channel(constants.ROLE_REACT)
-                .get_partial_message(1073294381311873114)
-                .edit(
-                    content="**Platform**",
-                    view=view,
-                )
-            )
+            for view_class, message_id, content in role_configs:
+                view = view_class()
+                self.bot.add_view(view, message_id=message_id)
+                await channel.get_partial_message(message_id).edit(content=content, view=view)
 
             queue = await maps.get_map_info(self.bot)
             for x in queue:
@@ -138,14 +115,16 @@ class BotEvents(commands.Cog):
                         self.bot.playtest_views[x.message_id] = view
                 except Exception:
                     ...
-            queue = [x async for x in self.bot.database.get("SELECT * FROM polls_info;")]
-            for x in queue:
+
+            poll_query = "SELECT * FROM polls_info;"
+            rows = await self.bot.database.fetch(poll_query)
+            for row in rows:
                 self.bot.add_view(
                     views.PollView(
-                        x.options,
-                        x.title,
+                        row["options"],
+                        row["title"],
                     ),
-                    message_id=x.message_id,
+                    message_id=row["message_id"],
                 )
 
             view = CompletionInfoView()
