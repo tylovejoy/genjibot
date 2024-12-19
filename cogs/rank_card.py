@@ -27,7 +27,7 @@ class RankCard(commands.Cog):
         if user is None:
             _user = itx.user
         assert _user
-        await itx.response.send_message(f"https://api.genji.pk/v1/rank_card/{_user.id}")
+        await itx.response.send_message(f"https://api.genji.pk/v1/rank_card/{_user.id}", ephemeral=True)
 
 
 async def setup(bot: core.Genji) -> None:
