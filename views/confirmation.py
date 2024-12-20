@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+
 class ConfirmButton(discord.ui.Button):
     def __init__(self, disabled: bool = False) -> None:
         super().__init__(
