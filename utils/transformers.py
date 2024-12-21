@@ -117,7 +117,7 @@ class MapCodeSubmitTransformer(_MapCodeBaseTransformer):
 
 class _MapCodeAutocompleteBaseTransformer(_MapCodeBaseTransformer):
     async def autocomplete(self, itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
-        query = "SELECT map_code FROM maps WHERE archived = FALSE ORDER BY similarity(map_code, $1) DESC LIMIT 10;"
+        query = "SELECT map_code FROM maps WHERE archived = FALSE ORDER BY similarity(map_code, $1) DESC LIMIT 5;"
         results = await itx.client.database.fetch(query, current)
         return [app_commands.Choice(name=a, value=a) for (a,) in results]
 

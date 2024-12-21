@@ -29,6 +29,14 @@ class RankCard(commands.Cog):
         assert _user
         await itx.response.send_message(f"https://api.genji.pk/v1/rank_card/{_user.id}", ephemeral=True)
 
+    @commands.command()
+    async def rank(self, ctx: commands.Context) -> None:
+        session = ctx.bot.firefox
+        await session.get("https://test.genji.pk/")
+        x = await session.get_screenshot()
+        x.seek(0)
+        await ctx.send(file=discord.File(x, filename="rank_card.png"))
+
 
 async def setup(bot: core.Genji) -> None:
     """Add Cog to Discord bot."""

@@ -368,7 +368,7 @@ class Maps(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        if not self.bot.database.is_existing_map_code(map_code):
+        if not await self.bot.database.is_existing_map_code(map_code):
             raise errors.InvalidMapCodeError
 
         guides = [
