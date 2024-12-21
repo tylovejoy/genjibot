@@ -108,6 +108,7 @@ class ChangeRequestCloseView(discord.ui.View):
         emoji="\N{HEAVY MULTIPLICATION X}",
     )
     async def callback(self, itx: GenjiItx, button: discord.ui.Button) -> None:
+        await itx.response.defer(ephemeral=True)
         thread = itx.channel
         assert isinstance(thread, discord.Thread)
         await thread.edit(archived=True, locked=True)
