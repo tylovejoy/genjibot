@@ -199,8 +199,8 @@ class Record(msgspec.Struct, kw_only=True):
                     icon = constants.SILVER_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_SILVER
                 elif self.record < self.bronze:
                     icon = constants.BRONZE_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_BRONZE
-                elif self.rank_num == 1:
-                    icon = constants.NON_MEDAL_WR
+            elif self.rank_num == 1:
+                icon = constants.NON_MEDAL_WR
             else:
                 icon = constants.FULLY_VERIFIED
         elif not self.completion:

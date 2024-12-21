@@ -7,7 +7,9 @@ if TYPE_CHECKING:
     import core
 
 
-class XPCog(commands.Cog): ...
+class XPCog(commands.Cog):
+    def __init__(self, bot: core.Genji) -> None:
+        self.bot = bot
 
 
 async def setup(bot: core.Genji) -> None:
