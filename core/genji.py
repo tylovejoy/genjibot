@@ -15,6 +15,7 @@ if typing.TYPE_CHECKING:
     import datetime
 
     import aiohttp
+    import arsenic
 
     import database
     from views import PlaytestVoting
@@ -27,6 +28,7 @@ class Genji(commands.Bot):
 
     database: database.Database
     rabbit: Rabbit
+    firefox: arsenic.Session
 
     def __init__(
         self,

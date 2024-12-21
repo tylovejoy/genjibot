@@ -58,33 +58,20 @@ rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
 
 async def main() -> None:
     """Start the bot instance."""
+    psql_dsn = f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
+
     service = services.Geckodriver(binary="/usr/src/app/geckodriver", log_file=os.devnull)
     browser = browsers.Firefox(**{"moz:firefoxOptions": {"args": ["-headless", "-log", "{'level': 'warning'}"]}})
     async with (
-        aiohttp.ClientSession() as session,
-        database.DatabaseConnection(
-            f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
-        ) as connection,
+        aiohttp.ClientSession() as http_session,
+        database.DatabaseConnection(psql_dsn) as psql_connection,
         arsenic.get_session(service, browser) as firefox_session,
     ):
-        bot = core.Genji(session=session, db=database.Database(connection))
+        bot = core.Genji(session=http_session)
+
+        assert psql_connection
         bot.firefox = firefox_session
-
-        async def get_mq_connection() -> AbstractRobustConnection:
-            return await aio_pika.connect_robust(f"amqp://{rabbitmq_user}:{rabbitmq_pass}@genji-rabbit")
-
-        connection_pool: Pool = Pool(get_mq_connection)
-
-        async def get_mq_channel() -> aio_pika.Channel:
-            async with connection_pool.acquire() as _conn:
-                return await _conn.channel()
-
-        mq_channel_pool: Pool = Pool(get_mq_channel)
-
-        bot = core.Genji(session=session)
-        assert connection
-        bot.database = database.Database(connection)
-        bot.mq_channel_pool = mq_channel_pool
+        bot.database = database.Database(psql_connection)
 
         async with bot:
             with contextlib.suppress(discord.errors.ConnectionClosed):
