@@ -9,3 +9,5 @@ matplotlib
 imagetext-py
 msgspec
 sentry_sdk
+arsenic
+setuptools

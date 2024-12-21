@@ -4,7 +4,9 @@ import logging
 import os
 
 import aiohttp
+import arsenic
 import discord
+from arsenic import services, browsers
 
 import core
 import database
@@ -48,13 +50,17 @@ def setup_logging() -> None:
 
 async def main() -> None:
     """Start the bot instance."""
+    service = services.Geckodriver(binary="/usr/src/app/geckodriver", log_file=os.devnull)
+    browser = browsers.Firefox(**{"moz:firefoxOptions": {"args": ["-headless", "-log", "{'level': 'warning'}"]}})
     async with (
         aiohttp.ClientSession() as session,
         database.DatabaseConnection(
             f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
         ) as connection,
+        arsenic.get_session(service, browser) as firefox_session,
     ):
         bot = core.Genji(session=session, db=database.Database(connection))
+        bot.firefox = firefox_session
         async with bot:
             with contextlib.suppress(discord.errors.ConnectionClosed):
                 await bot.start(os.environ["TOKEN"])
