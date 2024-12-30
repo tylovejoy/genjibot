@@ -9,6 +9,4 @@ matplotlib
 imagetext-py
 msgspec
 sentry_sdk
-arsenic
-setuptools
 aio-pika==9.4.3

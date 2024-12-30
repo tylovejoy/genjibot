@@ -41,7 +41,6 @@ class Genji(commands.Bot):
             help_command=None,
         )
         self.session = session
-        self.cache: cache.GenjiCache = cache.GenjiCache()
         self.playtest_views: dict[int, PlaytestVoting] = {}
         self.persistent_views_added = False
         self.analytics_buffer: list[tuple[str, int, datetime.datetime, dict]] = []

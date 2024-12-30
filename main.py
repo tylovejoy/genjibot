@@ -1,16 +1,10 @@
 import asyncio
 import contextlib
-import json
 import logging
 import os
 
-import aio_pika
 import aiohttp
-import arsenic
 import discord
-from aio_pika.abc import AbstractIncomingMessage, AbstractRobustConnection
-from aio_pika.pool import Pool
-from arsenic import browsers, services
 
 import core
 import database
@@ -60,17 +54,13 @@ async def main() -> None:
     """Start the bot instance."""
     psql_dsn = f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
 
-    service = services.Geckodriver(binary="/usr/src/app/geckodriver", log_file=os.devnull)
-    browser = browsers.Firefox(**{"moz:firefoxOptions": {"args": ["-headless", "-log", "{'level': 'warning'}"]}})
     async with (
         aiohttp.ClientSession() as http_session,
         database.DatabaseConnection(psql_dsn) as psql_connection,
-        arsenic.get_session(service, browser) as firefox_session,
     ):
         bot = core.Genji(session=http_session)
 
         assert psql_connection
-        bot.firefox = firefox_session
         bot.database = database.Database(psql_connection)
 
         async with bot:
