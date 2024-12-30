@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 from typing import TYPE_CHECKING
 
 import discord
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
     from core import Genji
 
+log = logging.getLogger(__name__)
 
 class AnalyticsTasks(commands.Cog):
     def __init__(self, bot: Genji) -> None:
@@ -46,9 +48,9 @@ class AnalyticsTasks(commands.Cog):
 
         rows: list[tuple[str, int, datetime.datetime, str]] = []
         for raw_event, user_id, timestamp, args in self.bot.analytics_buffer:
-            with contextlib.suppress(KeyError, TypeError):
+            with contextlib.suppress(KeyError):
                 args.pop("screenshot")
-                rows.append((raw_event, user_id, timestamp, json.dumps(args)))
+            rows.append((raw_event, user_id, timestamp, json.dumps(args)))
         if rows:
             await self.bot.database.set_many(query, rows)
             self.bot.analytics_buffer = []
