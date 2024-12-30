@@ -63,7 +63,7 @@ class ChangeRequestModal(discord.ui.Modal):
         user_ids = await _get_map_creators(itx.client.database, self.map_code)
         mentions = _convert_ids_to_mentions(user_ids, itx.guild)
         if not mentions:
-            mentions = "<@1120076555293569081>\n-# The creator of this map is not in this server."
+            mentions = "<@&1120076555293569081>\n-# The creator of this map is not in this server."
         content = (
             f"# {mentions}\n\n"
             f"## {itx.user.mention} is requesting changes for map **{self.map_code}**\n\n"
