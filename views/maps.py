@@ -373,7 +373,6 @@ class PlaytestVoting(discord.ui.View):
         )
         plt.axis("off")
         b = io.BytesIO()
-        plt.show()
         plt.savefig(b, format="png")
         plt.close()
         b.seek(0)
@@ -844,10 +843,6 @@ class PlaytestVoting(discord.ui.View):
     async def remove_records(self) -> None:
         await self.client.database.set(
             "DELETE FROM records WHERE map_code = $1",
-            self.data.map_code,
-        )
-        await self.client.database.set(
-            "DELETE FROM records_queue WHERE map_code = $1",
             self.data.map_code,
         )
 
