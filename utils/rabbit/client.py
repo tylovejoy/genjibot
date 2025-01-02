@@ -10,7 +10,7 @@ from aio_pika import Channel, DeliveryMode, Message, connect_robust
 from aio_pika.pool import Pool
 
 from ..newsfeed import NewsfeedEvent
-from .models import MapSubmissionBody
+from .models import BulkArchiveMapBody, MapSubmissionBody
 
 if TYPE_CHECKING:
     from aio_pika.abc import AbstractIncomingMessage, AbstractQueue, AbstractRobustConnection
@@ -71,23 +71,21 @@ class Rabbit:
     async def _process_message(self, message: AbstractIncomingMessage) -> None:
         async with message.process():
             x_type = message.headers["x-type"]
+            if message.headers.get("x-test-mode"):
+                return
             assert isinstance(x_type, str)
             match x_type:
                 case "new_map":
                     decoded_json = msgspec.json.decode(message.body, type=MapSubmissionBody)
-                    nickname = await self._bot.database.fetch_nickname(decoded_json.creator_id)
-                    _data = {
-                        "user": {
-                            "user_id": decoded_json.creator_id,
-                            "nickname": nickname,
-                        },
-                        "map": {
-                            "map_code": decoded_json.map_code,
-                            "difficulty": decoded_json.difficulty,
-                            "map_name": decoded_json.map_name,
-                        },
-                    }
+                    _data = decoded_json.rabbit_data
+                case "bulk_archive" | "bulk_unarchive":
+                    decoded_json = msgspec.json.decode(message.body, type=list[BulkArchiveMapBody])
+                    _data = [_d.rabbit_data for _d in decoded_json]
+                case "legacy":
+                    ...
+                    # decoded_json = msgspec.json.decode(message.body, type=BulkLegacyBody)
                 case _:
                     return
+
             event = NewsfeedEvent(x_type, _data)
             await self._bot.genji_dispatch.handle_event(event, self._bot)

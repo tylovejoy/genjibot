@@ -14,9 +14,9 @@ if TYPE_CHECKING:
 
 
 class NewsfeedEvent:
-    def __init__(self, event_type: str, data: dict) -> None:
+    def __init__(self, event_type: str, data: dict[str, dict[str, str | int] | dict[str, str]] | list[dict]) -> None:
         self.event_type: str = event_type
-        self.data: dict = data
+        self.data: dict | list[dict] = data
 
 
 class EmbedBuilder(ABC):
@@ -142,6 +142,23 @@ class _ArchivalExtra:
         return embed
 
 
+class _BulkArchivalExtra:
+    event_type: str
+
+    def prepare_embed(self, data: list[dict], description: str) -> discord.Embed:
+        map_codes = [d["map"]["map_code"] for d in data]
+        _event_type = self.event_type.replace("bulk_", "")
+
+        embed = embeds.GenjiEmbed(
+            title=f"Multiple maps have been {_event_type}d.",
+            description=description,
+            color=discord.Color.red(),
+        )
+
+        embed.description = "\n".join(map_codes)
+        return embed
+
+
 class ArchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
     event_type = "archive"
 
@@ -155,6 +172,25 @@ class ArchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
 
 class UnarchivedMapEmbedBuilder(EmbedBuilder, _ArchivalExtra):
     event_type = "unarchive"
+
+    def build(self, data: dict) -> discord.Embed:
+        description = "This map will now appear in the map search command and be eligible for record submissions."
+        return self.prepare_embed(data, description)
+
+
+class BulkArchivedMapEmbedBuilder(EmbedBuilder, _BulkArchivalExtra):
+    event_type = "bulk_archive"
+
+    def build(self, data: dict) -> discord.Embed:
+        description = (
+            "This map will not appear in the map search command unless searched by map code.\n"
+            "You cannot submit records for archived maps."
+        )
+        return self.prepare_embed(data, description)
+
+
+class BulkUnarchivedMapEmbedBuilder(EmbedBuilder, _BulkArchivalExtra):
+    event_type = "bulk_unarchive"
 
     def build(self, data: dict) -> discord.Embed:
         description = "This map will now appear in the map search command and be eligible for record submissions."
@@ -180,3 +216,20 @@ class GuideEmbedBuilder(EmbedBuilder):
     def additional_messages(data: dict) -> list[str]:
         """Return any additional messages to be sent alongside the embed."""
         return [data["map"]["guide"][0]]
+
+
+class LegacyRecordEmbedBuilder(EmbedBuilder):
+    event_type = "legacy_record"
+
+    def build(self, data: dict) -> discord.Embed:
+        map_code = data["map"]["map_code"]
+
+        embed = embeds.GenjiEmbed(
+            title=f"{map_code} has been changed:",
+            description=(
+                "# Records have been converted to completions due to breaking changes.\n"
+                "- View records that have been converted using the `/legacy_completions` command"
+            ),
+            color=discord.Color.red(),
+        )
+        return embed
