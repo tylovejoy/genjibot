@@ -185,7 +185,6 @@ class Tags(commands.Cog):
         If this is a private message then only the generic tags are possible.
         Server specific tags will override the generic tags.
         """
-
         con = connection or self.bot.database.pool
         query = """SELECT name, content FROM tags WHERE location_id=$1;"""
         return await con.fetch(query, guild.id)
@@ -197,9 +196,8 @@ class Tags(commands.Cog):
         connection: Optional[asyncpg.Connection | asyncpg.Pool] = None,
     ) -> Optional[TagEntry]:
         """Returns a random tag."""
-
         con = connection or self.bot.database.pool
-        query = f"""SELECT name, content
+        query = """SELECT name, content
                     FROM tags
                     WHERE location_id=$1
                     OFFSET FLOOR(RANDOM() * (
@@ -341,6 +339,8 @@ class Tags(commands.Cog):
         )
         return [app_commands.Choice(name=a, value=a) for (a,) in results]
 
+
+
     @commands.hybrid_group(fallback="get")
     @commands.guild_only()
     @app_commands.guild_only()
@@ -352,7 +352,9 @@ class Tags(commands.Cog):
         If a subcommand is not called, then this will search the tag database
         for the tag requested.
         """
+        await self._tag_get(ctx, name=name)
 
+    async def _tag_get(self, ctx: GenjiCtx, *, name: Annotated[str, TagName(lower=True)]):
         try:
             tag = await self.get_tag(ctx.guild.id, name, pool=ctx.bot.database.pool)
         except RuntimeError as e:
@@ -363,6 +365,14 @@ class Tags(commands.Cog):
         # update the usage
         query = "UPDATE tags SET uses = uses + 1 WHERE name = $1 AND location_id=$2;"
         await self.bot.database.pool.execute(query, tag["name"], ctx.guild.id)
+
+    @tag.command()
+    @commands.guild_only()
+    @app_commands.guild_only()
+    @app_commands.describe(name="The tag to retrieve")
+    @app_commands.autocomplete(name=aliased_tag_autocomplete)
+    async def view(self, ctx: GenjiCtx, *, name: Annotated[str, TagName(lower=True)]) -> None:
+        await self._tag_get(ctx, name=name)
 
     @tag.command(aliases=["add"])
     @commands.guild_only()
@@ -380,7 +390,6 @@ class Tags(commands.Cog):
 
         Note that server moderators can delete your tag.
         """
-
         if self.is_tag_being_made(ctx.guild.id, name):
             return await ctx.send("This tag is currently being made by someone.")
 
@@ -410,7 +419,6 @@ class Tags(commands.Cog):
         the alias and remake it to point it to another
         location.
         """
-
         query = """INSERT INTO tag_lookup (name, owner_id, location_id, tag_id)
                    SELECT $1, $4, tag_lookup.location_id, tag_lookup.tag_id
                    FROM tag_lookup
@@ -439,7 +447,6 @@ class Tags(commands.Cog):
         its name and its content. This works similar to the tag
         create command.
         """
-
         if ctx.interaction is not None:
             modal = TagMakeModal(self, ctx)
             await ctx.interaction.response.send_modal(modal)
@@ -541,7 +548,6 @@ class Tags(commands.Cog):
         you want to get the old text back, consider using the
         tag raw command.
         """
-
         if content is None:
             if ctx.interaction is None:
                 raise commands.BadArgument("Missing content to edit tag with")
@@ -590,7 +596,6 @@ class Tags(commands.Cog):
 
         Deleting a tag will delete all of its aliases as well.
         """
-
         bypass_owner_check = ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.manage_messages
         clause = "LOWER(name)=$1 AND location_id=$2"
 
@@ -631,7 +636,6 @@ class Tags(commands.Cog):
 
         Deleting a tag will delete all of its aliases as well.
         """
-
         bypass_owner_check = ctx.author.id == self.bot.owner_id or ctx.author.guild_permissions.manage_messages
         clause = "id=$1 AND location_id=$2"
 
@@ -720,7 +724,6 @@ class Tags(commands.Cog):
 
         The info includes things like the owner and how many times it was used.
         """
-
         query = """SELECT
                        tag_lookup.name <> tags.name AS "Alias",
                        tag_lookup.name AS lookup_name,
@@ -750,7 +753,6 @@ class Tags(commands.Cog):
 
         This is with markdown escaped. Useful for editing.
         """
-
         try:
             tag = await self.get_tag(ctx.guild.id, name, pool=ctx.bot.database.pool)
         except RuntimeError as e:
@@ -764,7 +766,6 @@ class Tags(commands.Cog):
     @app_commands.describe(member="The member to list tags of, if not given then it shows yours")
     async def _list(self, ctx: GenjiCtx, *, member: discord.User = commands.Author):
         """Lists all the tags that belong to you or someone else."""
-
         query = """SELECT name, id
                    FROM tag_lookup
                    WHERE location_id=$1 AND owner_id=$2
@@ -821,7 +822,6 @@ class Tags(commands.Cog):
 
         `text:`: Dumps into a text file. Example: `text: yes`
         """
-
         if flags.text:
             return await self._tag_all_text_mode(ctx)
 
@@ -849,7 +849,6 @@ class Tags(commands.Cog):
 
         You must have server-wide Manage Messages permissions to use this.
         """
-
         # Though inefficient, for UX purposes we should do two queries
 
         query = "SELECT COUNT(*) FROM tags WHERE location_id=$1 AND owner_id=$2;"
@@ -876,7 +875,6 @@ class Tags(commands.Cog):
 
         The query must be at least 3 characters.
         """
-
         if len(query) < 3:
             return await ctx.send("The query length must be at least three characters.")
 
@@ -905,7 +903,6 @@ class Tags(commands.Cog):
         An unclaimed tag is a tag that effectively
         has no owner because they have left the server.
         """
-
         alias = False
         # requires 2 queries for UX
         query = "SELECT id, owner_id FROM tags WHERE location_id=$1 AND LOWER(name)=$2;"
@@ -940,7 +937,6 @@ class Tags(commands.Cog):
 
         You must own the tag before doing this.
         """
-
         if member.bot:
             return await ctx.send("You cannot transfer a tag to a bot.")
 
@@ -961,12 +957,10 @@ class Tags(commands.Cog):
     @tag.command(hidden=True, with_app_command=False)
     async def config(self, ctx: GenjiCtx):
         """This is a reserved tag command. Check back later."""
-        pass
 
     @tag.command()
     async def random(self, ctx: GenjiCtx):
         """Displays a random tag."""
-
         tag = await self.get_random_tag(ctx.guild)
         if tag is None:
             return await ctx.send("This server has no tags.")
@@ -989,8 +983,7 @@ class TabularData:
         self._rows.append(rows)
         for index, element in enumerate(rows):
             width = len(element) + 2
-            if width > self._widths[index]:
-                self._widths[index] = width
+            self._widths[index] = max(width, self._widths[index])
 
     def add_rows(self, rows: Iterable[Iterable[Any]]) -> None:
         for row in rows:
@@ -1000,15 +993,14 @@ class TabularData:
         """Renders a table in rST format.
 
         Example:
-
         +-------+-----+
         | Name  | Age |
         +-------+-----+
         | Alice | 24  |
         |  Bob  | 19  |
         +-------+-----+
-        """
 
+        """
         sep = "+".join("-" * w for w in self._widths)
         sep = f"+{sep}+"
 
