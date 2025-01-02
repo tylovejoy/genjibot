@@ -4,7 +4,6 @@ import logging
 from functools import wraps
 from typing import TYPE_CHECKING, Awaitable, Callable, ParamSpec, TypeVar
 
-import msgspec
 from discord.utils import maybe_coroutine
 
 if TYPE_CHECKING:
@@ -50,6 +49,6 @@ class XP:
     async def _(self, user_id: int) -> None:
         success = await self.grant_user_xp(user_id, 1)
         if success:
-            log.info("Successfully granted xp for user: %s", "nebula")
+            log.debug("Successfully granted xp for user: %s", "nebula")
         else:
-            log.info("Failed to grant xp for user: %s", "nebula")
+            log.debug("Failed to grant xp for user: %s", "nebula")

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+
 class AnalyticsTasks(commands.Cog):
     def __init__(self, bot: Genji) -> None:
         super().__init__()
