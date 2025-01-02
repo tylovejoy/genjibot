@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import os
 import typing
+from io import BytesIO
 
 import discord
-from discord import app_commands
+from discord import Interaction, app_commands
 from discord.ext import commands
+from playwright.async_api import async_playwright
 
 from utils import constants, transformers, utils
 
 if typing.TYPE_CHECKING:
     import core
+
+GENJI_API_KEY = os.getenv("GENJI_API_KEY")
 
 
 class RankCard(commands.Cog):
@@ -29,13 +34,23 @@ class RankCard(commands.Cog):
         assert _user
         await itx.response.send_message(f"https://api.genji.pk/v1/rank_card/{_user.id}", ephemeral=True)
 
-    @commands.command()
-    async def rank(self, ctx: commands.Context) -> None:
-        session = ctx.bot.firefox
-        await session.get("https://test.genji.pk/")
-        x = await session.get_screenshot()
-        x.seek(0)
-        await ctx.send(file=discord.File(x, filename="rank_card.png"))
+    @app_commands.command(name="rank_test")
+    @app_commands.guilds(constants.GUILD_ID, 968951072599187476)
+    async def rank_test(self, itx: Interaction, user: discord.Member | None = None) -> None:
+        await itx.response.defer(ephemeral=True)
+        _user = user or itx.user
+
+        create_url = f"https://test.genji.pk/api/rankcard/getRenderedRankcard.php?user_id={_user.id}"
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page(extra_http_headers={"X-API-KEY": GENJI_API_KEY})
+            await page.goto(create_url)
+            screenshot = await page.locator(".rank-card").screenshot(type="png", omit_background=True)
+            image_buf = BytesIO(screenshot)
+            image_buf.seek(0)
+            await itx.edit_original_response(attachments=[discord.File(image_buf, filename="rank_card.png")])
+            await browser.close()
 
 
 async def setup(bot: core.Genji) -> None:

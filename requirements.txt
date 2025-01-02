@@ -10,3 +10,4 @@ imagetext-py
 msgspec
 sentry_sdk
 aio-pika==9.4.3
+playwright
