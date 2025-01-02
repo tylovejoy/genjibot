@@ -125,7 +125,7 @@ class VerificationView(discord.ui.View):
                 FROM records r
                 LEFT JOIN users u on r.user_id = u.user_id
                 LEFT JOIN map on map.map_code = r.map_code
-                WHERE map.map_code = $1
+                WHERE map.map_code = $1 AND legacy IS FALSE
             )
             SELECT
                 user_id,
@@ -204,6 +204,7 @@ class VerificationView(discord.ui.View):
 
         else:
             data = self.rejected(itx.user.mention, search, rejection)
+            await self._remove_record_by_hidden_id(itx.client.database, itx.message.id)
 
         await original_message.edit(content=data["edit"])
         flags = await itx.client.database.fetch_user_flags(record_submitter.id)
@@ -266,6 +267,11 @@ class VerificationView(discord.ui.View):
                 f"**Reason:** {rejection}\n\n" + ALERT
             ),
         }
+
+    @staticmethod
+    async def _remove_record_by_hidden_id(db: asyncpg.Connection, hidden_id: int) -> None:
+        query = "DELETE FROM records WHERE hidden_id = $1 AND verified IS FALSE;"
+        await db.execute(query, hidden_id)
 
 
 ALERT = (

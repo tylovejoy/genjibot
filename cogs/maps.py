@@ -222,7 +222,7 @@ class Maps(commands.Cog):
                         verified,
                         inserted_at
                     FROM records
-                    WHERE user_id = $10
+                    WHERE user_id = $10 AND legacy IS FALSE
                     ORDER BY map_code, inserted_at DESC
                 )
             SELECT
@@ -334,7 +334,7 @@ class Maps(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=False)
-        if not self.bot.database.is_existing_map_code(map_code):
+        if not await self.bot.database.is_existing_map_code(map_code):
             raise errors.InvalidMapCodeError
 
         guides = [

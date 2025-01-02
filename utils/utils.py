@@ -75,37 +75,19 @@ async def fetch_user_rank_data(
     """Fetch user rank data."""
     query = """
         WITH unioned_records AS (
-            (
-                SELECT DISTINCT ON (map_code, user_id)
-                    map_code,
-                    user_id,
-                    record,
-                    screenshot,
-                    video,
-                    verified,
-                    message_id,
-                    channel_id,
-                    completion,
-                    NULL AS medal
-                FROM records
-                ORDER BY map_code, user_id, inserted_at DESC
-            )
-            UNION ALL
-            (
-                SELECT DISTINCT ON (map_code, user_id)
-                    map_code,
-                    user_id,
-                    record,
-                    screenshot,
-                    video,
-                    TRUE AS verified,
-                    message_id,
-                    channel_id,
-                    FALSE AS completion,
-                    medal
-                FROM legacy_records
-                ORDER BY map_code, user_id, inserted_at DESC
-            )
+            SELECT DISTINCT ON (map_code, user_id)
+                map_code,
+                user_id,
+                record,
+                screenshot,
+                video,
+                verified,
+                message_id,
+                channel_id,
+                completion,
+                legacy_medal AS medal
+            FROM records
+            ORDER BY map_code, user_id, inserted_at DESC
         ),
         ranges AS (
             SELECT range, name FROM
@@ -120,7 +102,7 @@ async def fetch_user_rank_data(
                     ('[7.65,9.41)'::numrange, 'Extreme', NULL),
                     ('[9.41,10.0]'::numrange, 'Hell', NULL)
             ) AS ranges("range", "name", "includes_beginner")
-            WHERE includes_beginner = $3 OR includes_beginner IS NULL
+            WHERE includes_beginner = $3 OR (includes_beginner IS NOT TRUE)
             --($3 IS TRUE OR (includes_beginner = TRUE AND includes_beginner IS NULL))
             -- includes_beginner = $3 OR includes_beginner IS NULL
         ),
@@ -288,7 +270,7 @@ async def auto_skill_role(bot: core.Genji, guild: discord.Guild, user: discord.M
 
 async def update_affected_users(client: core.Genji, guild: discord.Guild, map_code: str) -> None:
     """Update roles for users affected by map edits or changes."""
-    query = "SELECT DISTINCT user_id FROM records WHERE map_code=$1;"
+    query = "SELECT DISTINCT user_id FROM records WHERE map_code=$1 AND legacy IS FALSE;"
     rows = await client.database.fetch(query, map_code)
     ids = [row["user_id"] for row in rows]
 

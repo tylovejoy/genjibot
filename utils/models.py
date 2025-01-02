@@ -156,6 +156,15 @@ class Record(msgspec.Struct, kw_only=True):
     official: bool | None = None
     inserted_at: datetime.datetime | None = None
     verified_by: int | None = None
+    medal: str | None = None
+    legacy: bool | None = None
+    legacy_medal: str | None = None
+
+    def __post_init__(self):
+        if self.medal and not self.legacy_medal:
+            self.legacy_medal = self.medal
+        elif self.legacy_medal and not self.medal:
+            self.medal = self.legacy_medal
 
     @property
     def video_link(self) -> str:
@@ -191,13 +200,13 @@ class Record(msgspec.Struct, kw_only=True):
     def icon_generator(self) -> str:
         icon = ""
         if not self.completion and self.video:
-            if self.gold and self.silver and self.bronze:
+            if (self.gold and self.silver and self.bronze) or self.medal:
                 assert self.record
-                if self.record < self.gold:
+                if self.medal == "Gold" or (self.gold and self.record < float(self.gold)):
                     icon = constants.GOLD_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_GOLD
-                elif self.record < self.silver:
+                elif self.medal == "Silver" or (self.silver and self.record < self.silver):
                     icon = constants.SILVER_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_SILVER
-                elif self.record < self.bronze:
+                elif self.medal == "Bronze" or (self.bronze and self.record < self.bronze):
                     icon = constants.BRONZE_WR if self.rank_num == 1 else constants.FULLY_VERIFIED_BRONZE
             elif self.rank_num == 1:
                 icon = constants.NON_MEDAL_WR

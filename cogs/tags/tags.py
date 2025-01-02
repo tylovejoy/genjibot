@@ -339,8 +339,6 @@ class Tags(commands.Cog):
         )
         return [app_commands.Choice(name=a, value=a) for (a,) in results]
 
-
-
     @commands.hybrid_group(fallback="get")
     @commands.guild_only()
     @app_commands.guild_only()
