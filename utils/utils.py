@@ -93,18 +93,13 @@ async def fetch_user_rank_data(
             SELECT range, name FROM
             (
                 VALUES
-                    ('[0.0,0.59)'::numrange, 'Beginner', TRUE),
-                    ('[0.59,2.35)'::numrange, 'Easy', TRUE),
-                    ('[0.0,2.35)'::numrange, 'Easy', FALSE),
-                    ('[2.35,4.12)'::numrange, 'Medium', NULL),
-                    ('[4.12,5.88)'::numrange, 'Hard', NULL),
-                    ('[5.88,7.65)'::numrange, 'Very Hard', NULL),
-                    ('[7.65,9.41)'::numrange, 'Extreme', NULL),
-                    ('[9.41,10.0]'::numrange, 'Hell', NULL)
-            ) AS ranges("range", "name", "includes_beginner")
-            WHERE includes_beginner = $3 OR (includes_beginner IS NOT TRUE)
-            --($3 IS TRUE OR (includes_beginner = TRUE AND includes_beginner IS NULL))
-            -- includes_beginner = $3 OR includes_beginner IS NULL
+                    ('[0.0,2.35)'::numrange, 'Easy'),
+                    ('[2.35,4.12)'::numrange, 'Medium'),
+                    ('[4.12,5.88)'::numrange, 'Hard'),
+                    ('[5.88,7.65)'::numrange, 'Very Hard'),
+                    ('[7.65,9.41)'::numrange, 'Extreme'),
+                    ('[9.41,10.0]'::numrange, 'Hell')
+            ) AS ranges("range", "name")
         ),
         thresholds AS (
             -- Mapping difficulty names to thresholds using VALUES
@@ -177,7 +172,7 @@ async def fetch_user_rank_data(
             WHEN 'Hell' THEN 6
         END;
     """
-    rows = await db.fetch(query, user_id, include_archived, include_beginner)
+    rows = await db.fetch(query, user_id, include_archived)
     return [RankDetail(**row) for row in rows]
 
 
@@ -227,14 +222,16 @@ async def grant_skill_rank_roles(
 ) -> None:
     """Grant skill rank roles to a Discord server Member."""
     new_roles = user.roles
-    _new_roles_announce = []
+    _actual_added_roles = []
+    _actual_removed_roles = []
     for a in roles_to_grant:
         if a not in new_roles:
             new_roles.append(a)
-            _new_roles_announce.append(a)
+            _actual_added_roles.append(a)
     for r in roles_to_remove:
         if r in new_roles:
             new_roles.remove(r)
+            _actual_removed_roles.append(r)
 
     if set(new_roles) == set(user.roles):
         return
@@ -246,15 +243,14 @@ async def grant_skill_rank_roles(
         "it's because a map that you have completed has changed difficulty.\n"
         "Complete more maps to get your roles back!\n"
     )
-    if roles_to_grant:
-        response += ", ".join([f"**{x.name}**" for x in roles_to_grant]) + " has been added.\n"
-        if _new_roles_announce:
-            bot.dispatch("newsfeed_role", bot, user, _new_roles_announce)
+    if _actual_added_roles:
+        response += ", ".join([f"**{x.name}**" for x in _actual_added_roles]) + " has been added.\n"
+        bot.dispatch("newsfeed_role", bot, user, _actual_added_roles)
 
-    if roles_to_remove:
-        response += ", ".join([f"**{x.name}**" for x in roles_to_remove]) + " has been removed.\n"
+    if _actual_removed_roles:
+        response += ", ".join([f"**{x.name}**" for x in _actual_removed_roles]) + " has been removed.\n"
 
-    if roles_to_grant or roles_to_remove:
+    if _actual_added_roles or _actual_removed_roles:
         with contextlib.suppress(discord.errors.HTTPException):
             flags = SettingFlags(await bot.database.fetch_user_flags(user.id))
             if SettingFlags.PROMOTION in flags:
