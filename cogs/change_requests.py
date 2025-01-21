@@ -6,6 +6,7 @@ import re
 import traceback
 import typing
 
+import asyncpg
 import discord.ui
 from discord import Guild, Interaction
 from discord.app_commands import Transform, command, guilds
@@ -13,6 +14,8 @@ from discord.ext import commands
 from typing_extensions import TypeAlias
 
 from utils import constants, transformers
+from utils.embeds import GenjiEmbed
+from utils.maps import MapEmbedData
 
 if typing.TYPE_CHECKING:
     from core import Genji
@@ -72,10 +75,46 @@ class ChangeRequestModal(discord.ui.Modal):
         view = ChangeRequestConfirmationView(user_ids, self.map_code)
         message = await channel.send(content)
         thread = await message.create_thread(name=f"CR-{self.map_code} Discussion")
+        map_data = await self._fetch_map_data(itx.client.database, self.map_code)
+        embed = self._build_embed(map_data)
+        await thread.send(embed=embed)
         await thread.send(
             content=f"# {mentions}\n# If you have made the necessary changes, please click the button to confirm.",
             view=view,
         )
+
+    @staticmethod
+    async def _fetch_map_data(db: Database, map_code: str) -> asyncpg.Record:
+        query = """
+            SELECT
+              am.map_name, map_type, am.map_code, am."desc", am.official,
+              am.archived, guide, mechanics, restrictions, am.checkpoints,
+              creators, difficulty, quality, creator_ids, am.gold, am.silver,
+              am.bronze, p.thread_id, pa.count, pa.required_votes
+              FROM
+                all_maps am
+                  LEFT JOIN playtest p ON am.map_code = p.map_code AND p.is_author IS TRUE
+                  LEFT JOIN playtest_avgs pa ON pa.map_code = am.map_code
+             WHERE
+                 ($1::text IS NULL OR am.map_code = $1)
+             GROUP BY
+               am.map_name, map_type, am.map_code, am."desc", am.official, am.archived, guide, mechanics,
+               restrictions, am.checkpoints, creators, difficulty, quality, creator_ids, am.gold, am.silver,
+               am.bronze, p.thread_id, pa.count, pa.required_votes
+            ORDER BY
+                difficulty, quality DESC;
+        """
+        return await db.fetchrow(query, map_code)
+
+    @staticmethod
+    def _build_embed(map_data: asyncpg.Record) -> discord.Embed:
+        embed = GenjiEmbed()
+        m = MapEmbedData(map_data)
+        embed.add_description_field(
+            name=m.name,
+            value=m.value,
+        )
+        return embed
 
     async def on_error(self, itx: GenjiItx, error: Exception) -> None:
         await itx.response.send_message("Oops! Something went wrong.", ephemeral=True)
