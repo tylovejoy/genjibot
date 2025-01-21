@@ -130,7 +130,7 @@ class Map(msgspec.Struct, kw_only=True):
     submitted_by: int | None = None
     message_id: int | None = None
 
-    def build_embed(self): ...
+    def build_embed(self) -> None: ...
 
 
 class Record(msgspec.Struct, kw_only=True):
@@ -159,8 +159,10 @@ class Record(msgspec.Struct, kw_only=True):
     medal: str | None = None
     legacy: bool | None = None
     legacy_medal: str | None = None
+    wr_xp_check: bool | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Post init."""
         if self.medal and not self.legacy_medal:
             self.legacy_medal = self.medal
         elif self.legacy_medal and not self.medal:

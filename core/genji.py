@@ -10,6 +10,7 @@ from discord.ext import commands
 import cogs
 from utils.newsfeed import EventHandler
 from utils.rabbit.client import Rabbit
+from utils.xp import XPManager
 
 if typing.TYPE_CHECKING:
     import datetime
@@ -29,12 +30,10 @@ class Genji(commands.Bot):
     database: database.Database
     rabbit: Rabbit
     firefox: arsenic.Session
+    xp_enabled: bool
+    xp_manager: XPManager
 
-    def __init__(
-        self,
-        *,
-        session: aiohttp.ClientSession,
-    ) -> None:
+    def __init__(self, *, session: aiohttp.ClientSession) -> None:
         super().__init__(
             "?",
             intents=self._generate_intents(),
@@ -45,6 +44,7 @@ class Genji(commands.Bot):
         self.persistent_views_added = False
         self.analytics_buffer: list[tuple[str, int, datetime.datetime, dict]] = []
         self.genji_dispatch = EventHandler()
+        self.xp_enabled = True
 
     def log_analytics(self, event: str, user_id: int, timestamp: datetime.datetime, data: dict) -> None:
         self.analytics_buffer.append((event, user_id, timestamp, data))

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 from typing import TYPE_CHECKING
 
 import discord
@@ -17,6 +18,9 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger(__name__)
+
+
+GENJI_API_KEY: str = os.getenv("GENJI_API_KEY", "")
 
 
 class RejectReasonModal(discord.ui.Modal, title="Rejection Reason"):
@@ -69,7 +73,34 @@ class VerificationView(discord.ui.View):
         row = await db.fetchrow(query, hidden_id)
         if not row:
             return None
-        return models.Record(**row)
+        model = models.Record(**row)
+        query = """
+            WITH latest_records AS (
+                SELECT
+                    rq.map_code,
+                    rq.record,
+                    rq.user_id,
+                    rq.completion,
+                    rq.hidden_id,
+                    rank() OVER (
+                        PARTITION BY rq.map_code, rq.user_id
+                        ORDER BY rq.inserted_at DESC
+                    ) AS latest
+                FROM records rq
+                LEFT JOIN maps m on rq.map_code = m.map_code
+                WHERE rq.map_code = $2
+            ), ranked_records AS (
+                SELECT
+                    *,
+                    RANK() OVER (PARTITION BY map_code ORDER BY completion, record) as rank_num
+                FROM latest_records
+                WHERE latest = 1
+            )
+            SELECT CASE WHEN completion THEN NULL ELSE rank_num END FROM ranked_records
+            WHERE hidden_id = $1
+        """
+        model.rank_num = await db.fetchval(query, hidden_id, model.map_code)
+        return model
 
     @staticmethod
     async def _fetch_medals(db: database.Database, map_code: str) -> asyncpg.Record:
@@ -175,19 +206,18 @@ class VerificationView(discord.ui.View):
             newsfeed_data = await self._get_record_for_newsfeed(
                 itx.client.database, record_submitter.id, search.map_code
             )
-            if (
-                newsfeed_data
-                and search.video
-                and search.icon_generator not in [constants.PARTIAL_VERIFIED, constants.FULLY_VERIFIED]
-            ):
+
+            icon = search.icon_generator
+
+            if newsfeed_data and search.video and icon not in [constants.PARTIAL_VERIFIED, constants.FULLY_VERIFIED]:
                 _data = {
                     "map": {
                         "map_code": newsfeed_data["map_code"],
                         "map_name": newsfeed_data["map_name"],
                         "creators": newsfeed_data["creators"],
-                        "gold": medals["gold"],
-                        "silver": medals["silver"],
-                        "bronze": medals["bronze"],
+                        "gold": medals.get("gold"),
+                        "silver": medals.get("silver"),
+                        "bronze": medals.get("bronze"),
                     },
                     "record": {
                         "record": float(newsfeed_data["record"]),
@@ -202,6 +232,69 @@ class VerificationView(discord.ui.View):
                 event = NewsfeedEvent("record", _data)
                 await itx.client.genji_dispatch.handle_event(event, itx.client)
 
+            if itx.client.xp_enabled or search.user_id in [141372217677053952, 681391478605479948]:
+                try:
+                    await self._process_map_mastery(itx, search)
+                except Exception as e:
+                    log.info("Process Map Mastery Failed")
+                    log.info(f"Error: {e}", exc_info=True)
+                    log.info("-----------------------------")
+
+                if icon in ["", constants.PARTIAL_VERIFIED]:  # Completion
+                    log.debug("<- Completion %s %s", search.user_id, search.map_code)
+                    query = "SELECT count(*) FROM records WHERE user_id = $1 AND map_code = $2 AND verified;"
+                    count = await itx.client.database.fetchval(query, search.user_id, search.map_code)
+                    log.debug(f"Completion: {count} %s %s", search.user_id, search.map_code)
+                    if count == 1:
+                        await itx.client.xp_manager.grant_user_xp_type(search.user_id, "Completion")
+                        log.debug("Completion: granted XP. %s %s", search.user_id, search.map_code)
+                elif icon in [constants.NON_MEDAL_WR, constants.GOLD_WR, constants.SILVER_WR, constants.BRONZE_WR]:
+                    log.info("<- WR %s %s", search.user_id, search.map_code)
+                    query = """
+                        SELECT EXISTS(
+                            SELECT 1
+                            FROM records
+                            WHERE user_id = $1
+                                AND map_code = $2
+                                AND verified
+                                AND NOT legacy
+                                AND wr_xp_check
+                        )
+                    """
+                    exists = await itx.client.database.fetchval(query, search.user_id, search.map_code)
+                    log.debug(f"WR Exists: {exists} %s %s", search.user_id, search.map_code)
+                    if not exists:
+                        query = """
+                            UPDATE records
+                            SET wr_xp_check = TRUE
+                            WHERE user_id = $1
+                            AND map_code = $2
+                            AND hidden_id = $3
+                            AND verified
+                            AND NOT legacy
+                        """
+                        log.debug("Updating WR in db %s %s", search.user_id, search.map_code)
+                        await itx.client.database.execute(query, search.user_id, search.map_code, itx.message.id)
+                        await itx.client.xp_manager.grant_user_xp_type(search.user_id, "World Record")
+
+                else:  # Non WR Record
+                    log.debug("<- Record (Non WR) %s %s", search.user_id, search.map_code)
+                    query = """
+                        SELECT count(*)
+                        FROM records
+                        WHERE user_id = $1
+                            AND map_code = $2
+                            AND verified
+                            AND video IS NOT NULL
+                            AND NOT wr_xp_check
+                            AND NOT legacy
+                            AND NOT completion
+                    """
+                    count = await itx.client.database.fetchval(query, search.user_id, search.map_code)
+                    log.debug(f"Record NON-WR count: {count} %s %s", search.user_id, search.map_code)
+                    if count == 1:
+                        await itx.client.xp_manager.grant_user_xp_type(search.user_id, "Record")
+
         else:
             data = self.rejected(itx.user.mention, search, rejection)
             await self._remove_record_by_hidden_id(itx.client.database, itx.message.id)
@@ -213,6 +306,39 @@ class VerificationView(discord.ui.View):
             if utils.SettingFlags.VERIFICATION in flags:
                 await record_submitter.send(f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`")
         await itx.message.delete()
+
+    async def _process_map_mastery(self, itx: discord.Interaction[core.Genji], search: models.Record):
+        async with itx.client.session.get(
+            f"http://genji-api/v1/mastery/{search.user_id}", headers={"X-API-KEY": GENJI_API_KEY}
+        ) as resp:
+            map_mastery = await resp.json()
+        for map_ in map_mastery:
+            query = """
+                        INSERT INTO map_mastery (user_id, map_name, medal)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (user_id, map_name)
+                        DO UPDATE
+                        SET medal = excluded.medal
+                        WHERE map_mastery.medal IS DISTINCT FROM excluded.medal
+                        RETURNING
+                            *,
+                            CASE
+                                WHEN xmax::text::int = 0 THEN 'inserted'
+                                ELSE 'updated'
+                            END AS operation_status;
+                    """
+            res = await itx.client.database.fetchrow(query, search.user_id, map_["map_name"], map_["level"])
+            if res:
+                if res["medal"] == "Placeholder":
+                    continue
+                nickname = await itx.client.database.fetch_nickname(search.user_id)
+                embed = discord.Embed(
+                    description=f"{nickname} received the **{res['map_name']} {res['medal']}** Map Mastery badge!",
+                )
+                embed.set_thumbnail(url=f"https://genji.pk/{map_['icon_url']}")
+                await itx.guild.get_channel(1324496532447166505).send(
+                    embed=embed,
+                )
 
     @staticmethod
     async def find_original_message(
@@ -232,7 +358,7 @@ class VerificationView(discord.ui.View):
     ) -> dict[str, str]:
         """Get data for verified records."""
         if search.completion:
-            search.record = "Completion"
+            search.record = f"{search.record} - Completion"
 
         icon = search.icon_generator
         record = f"**Record:** {search.record} " f"{icon}"

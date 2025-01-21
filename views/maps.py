@@ -6,6 +6,7 @@ import io
 import logging
 from typing import TYPE_CHECKING
 
+import asyncpg
 import discord
 import matplotlib.pyplot as plt
 from discord import ButtonStyle
@@ -402,6 +403,7 @@ class PlaytestVoting(discord.ui.View):
 
     async def approve_map(self) -> None:
         self.stop()
+        await self._process_xp()
         record = await self.get_author_db_row()
         await self.delete_playtest_thread(record.thread_id)
         author = self.data.creator
@@ -424,23 +426,29 @@ class PlaytestVoting(discord.ui.View):
 
         await self.delete_playtest_db_entry()
 
-    async def increment_playtest_count(self, votes_db_rows: list[database.DotRecord]) -> None:
+    async def _process_xp(self) -> None:
+        if self.client.xp_enabled and self.data.creator:
+            await self.client.xp_manager.grant_user_xp_type(self.data.creator.id, "Map Submission")
+            votes = await self.get_votes_for_map()
+            for vote in votes:
+                if not vote["is_author"]:
+                    await self.client.xp_manager.grant_user_xp_type(vote["user_id"], "Playtest")
+                if vote["is_author"] and self.data.guides:
+                    await self.client.xp_manager.grant_user_xp_type(vote["user_id"], "Guide")
+
+    async def increment_playtest_count(self, votes_db_rows: list[asyncpg.Record]) -> None:
         query = """
             INSERT INTO playtest_count (user_id, amount)
             VALUES ($1, 1)
             ON CONFLICT (user_id) DO UPDATE SET amount = playtest_count.amount + 1;
         """
-
-        await self.client.database.set_many(
-            query,
-            [(x.user_id,) for x in votes_db_rows if x.user_id != self.data.creator.id],
-        )
+        args = [(x["user_id"],) for x in votes_db_rows if not x["is_author"]]
+        await self.client.database.executemany(query, args)
 
     async def get_author_db_row(self) -> database.DotRecord:
         return await self.client.database.get_row(
             "SELECT * FROM playtest WHERE map_code=$1 AND is_author = TRUE",
             self.data.map_code,
-            # self.data.creator.id,
         )
 
     async def lock_and_archive_thread(self, thread_id: int) -> None:
@@ -449,18 +457,13 @@ class PlaytestVoting(discord.ui.View):
     async def delete_playtest_thread(self, thread_id: int) -> None:
         await self.client.get_channel(constants.PLAYTEST).get_thread(thread_id).delete()
 
-    async def get_votes_for_map(self) -> list[database.DotRecord | None]:
-        return [
-            x
-            async for x in self.client.database.get(
-                """SELECT * FROM playtest WHERE map_code=$1""",
-                self.data.map_code,
-            )
-        ]
+    async def get_votes_for_map(self) -> list[asyncpg.Record]:
+        query = "SELECT * FROM playtest WHERE map_code=$1;"
+        return await self.client.database.fetch(query, self.data.map_code)
 
     @staticmethod
-    async def get_difficulty(votes_db_rows: list[database.DotRecord | None]) -> str:
-        vote_values = [x.value for x in votes_db_rows]
+    async def get_difficulty(votes_db_rows: list[asyncpg.Record]) -> str:
+        vote_values = [x["value"] for x in votes_db_rows]
         return ranks.convert_num_to_difficulty(sum(vote_values) / len(vote_values))
 
     async def get_creator_rank(self) -> int:
@@ -472,7 +475,7 @@ class PlaytestVoting(discord.ui.View):
         self,
         author: discord.Member | utils.FakeUser,
         original_msg: int,
-        votes: list[database.DotRecord | None],
+        votes: list[asyncpg.Record],
     ) -> None:
         await self.set_map_to_official()
         await self.set_map_ratings(votes)
@@ -506,8 +509,10 @@ class PlaytestVoting(discord.ui.View):
             self.data.map_code,
         )
 
-    async def set_map_ratings(self, votes: list[database.DotRecord]) -> None:
-        votes_args = [(self.data.map_code, x.user_id, x.value) for x in votes if x.user_id != self.data.creator.id]
+    async def set_map_ratings(self, votes: list[asyncpg.Record]) -> None:
+        votes_args = [
+            (self.data.map_code, x["user_id"], x["value"]) for x in votes if x["user_id"] != self.data.creator.id
+        ]
         await self.client.database.set_many(
             """
             INSERT INTO map_ratings (map_code, user_id, difficulty)
@@ -658,7 +663,7 @@ class PlaytestVoting(discord.ui.View):
             return
 
         self.stop()
-
+        await self._process_xp()
         await self.remove_votes()
         await self._set_select_vote_value_creator(itx, view.difficulty)
         votes_db_rows = await self.get_votes_for_map()

@@ -1,54 +1,175 @@
 from __future__ import annotations
 
 import logging
-from functools import wraps
-from typing import TYPE_CHECKING, Awaitable, Callable, ParamSpec, TypeVar
+import os
+from typing import TYPE_CHECKING, Literal
 
-from discord.utils import maybe_coroutine
+import discord
+from discord import Member
+
+from utils.constants import GUILD_ID
 
 if TYPE_CHECKING:
+    import asyncpg
+
     from core import Genji
     from database import Database
-
-    P = ParamSpec("P")
-    R = TypeVar("R")
 
 
 log = logging.getLogger(__name__)
 
 
-def safe_execution(func: Callable[P, R]) -> Callable[P, Awaitable[bool]]:
-    """Wrap a function to return a bool on its success."""
+XP_TYPES = Literal["Map Submission", "Playtest", "Guide", "Completion", "Record", "World Record"]
 
-    @wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> bool:
-        try:
-            await maybe_coroutine(func, *args, **kwargs)
-            return True
-        except Exception as _:
-            log.error("An error occurred during the execution of %s:", func.__name__, exc_info=True)
-            return False
+XP_AMOUNTS: dict[XP_TYPES, int] = {
+    "Map Submission": 30,
+    "Playtest": 35,
+    "Guide": 35,
+    "Completion": 5,
+    "Record": 15,
+    "World Record": 50,
+}
 
-    return wrapper
+GENJI_API_KEY: str = os.getenv("GENJI_API_KEY", "")
 
 
-class XP:
+class XPManager:
     def __init__(self, bot: Genji) -> None:
         self._bot: Genji = bot
         self._db: Database = bot.database
 
-    @safe_execution
-    async def grant_user_xp(self, user_id: int, amount: int) -> None:
-        query = """
-            INSERT INTO xptable (user_id, amount) VALUES ($1, $2)
-            ON CONFLICT (user_id) DO UPDATE
-            SET amount = xptable.amount + excluded.amount
-        """
-        await self._db.execute(query, user_id, amount)
+    async def grant_active_key(self, user_id: int) -> None:
+        key_type = await self._db.fetchval("SELECT key FROM lootbox_active_key;")
+        await self._bot.session.post(
+            f"https://api.genji.pk/v1/lootbox/user/{user_id}/keys/{key_type}", headers={"X-API-KEY": GENJI_API_KEY}
+        )
 
-    async def _(self, user_id: int) -> None:
-        success = await self.grant_user_xp(user_id, 1)
-        if success:
-            log.debug("Successfully granted xp for user: %s", "nebula")
-        else:
-            log.debug("Failed to grant xp for user: %s", "nebula")
+    async def grant_key(self, user_id: int, key_type: str) -> None:
+        await self._bot.session.post(
+            f"https://api.genji.pk/v1/lootbox/user/{user_id}/keys/{key_type}", headers={"X-API-KEY": GENJI_API_KEY}
+        )
+
+    async def _xp_notification(self, result: asyncpg.Record, user_id: int, amount: int, type_: str) -> None:
+        if result is None:
+            raise ValueError
+
+        guild = self._bot.get_guild(GUILD_ID)
+        assert guild
+        xp_channel = guild.get_channel(1324496532447166505)
+        assert isinstance(xp_channel, discord.TextChannel)
+        user = guild.get_member(user_id)
+        assert user
+
+        await xp_channel.send(f"<:_:976917981009440798> {user.display_name} has gained **{amount} XP** ({type_})!")
+
+        _xp_data = await self._check_xp_tier_change(result["previous_amount"], result["new_amount"])
+
+        if _xp_data is None:
+            raise ValueError
+
+        if not _xp_data["rank_change_type"]:
+            return
+
+        old_rank = " ".join((_xp_data["old_main_tier_name"], _xp_data["old_sub_tier_name"]))
+        new_rank = " ".join((_xp_data["new_main_tier_name"], _xp_data["new_sub_tier_name"]))
+
+        await self.grant_active_key(user_id)
+        await self._update_xp_roles_for_user(
+            guild,
+            user_id,
+            _xp_data["old_main_tier_name"],
+            _xp_data["new_main_tier_name"],
+        )
+
+        await xp_channel.send(
+            f"<:_:976468395505614858> {user.display_name} has ranked up! **{old_rank}** -> **{new_rank}**\n"
+            f"[Log into the website to open your lootbox!](https://genji.pk/lootbox.php)"
+        )
+
+    @staticmethod
+    async def _update_xp_roles_for_user(
+        guild: discord.Guild, user_id: int, old_tier_name: str, new_tier_name: str
+    ) -> None:
+        old_rank = discord.utils.get(guild.roles, name=old_tier_name)
+        new_rank = discord.utils.get(guild.roles, name=new_tier_name)
+        if not (old_rank or new_rank):
+            log.info(f"Old tier name: {old_tier_name}\nNew tier name: {new_tier_name}\nUser ID: {user_id}")
+            raise ValueError("Can't update xp roles for user.")
+        assert old_rank and new_rank
+        member = guild.get_member(user_id)
+        assert member
+        roles = set(member.roles)
+        roles.discard(old_rank)
+        roles.add(new_rank)
+        await member.edit(roles=roles)
+
+    async def grant_user_xp_type(self, user_id: int, type_: XP_TYPES) -> None:
+        result = await self._grant_xp(user_id, XP_AMOUNTS[type_])
+        await self._xp_notification(result, user_id, XP_AMOUNTS[type_], type_)
+
+    async def _grant_xp(self, user_id: int, amount: int) -> asyncpg.Record:
+        query = """
+            WITH old_values AS (
+                SELECT amount
+                FROM xptable
+                WHERE user_id = $1
+            ),
+            upsert_result AS (
+                INSERT INTO xptable (user_id, amount)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id) DO UPDATE
+                SET amount = xptable.amount + EXCLUDED.amount
+                RETURNING xptable.amount
+            )
+            SELECT
+                COALESCE((SELECT amount FROM old_values), 0) AS previous_amount,
+                (SELECT amount FROM upsert_result) AS new_amount;
+        """
+        return await self._db.fetchrow(query, user_id, amount)
+
+    async def grant_user_xp_amount(self, user_id: int, amount: int, granted_by: Member, hidden: bool = True) -> None:
+        result = await self._grant_xp(user_id, amount)
+        if not hidden:
+            await self._xp_notification(result, user_id, amount, f"Granted by {granted_by}")
+
+    async def _xp_newsfeed(self, user_id: int) -> None: ...
+
+    async def _check_xp_tier_change(self, old_xp: int, new_xp: int) -> asyncpg.Record:
+        query = """
+            WITH old_tier AS (
+                SELECT
+                    $1::int AS old_xp,
+                    (($1 / 100) % 100) AS old_normalized_tier,
+                    (($1 / 100) / 100) AS old_prestige_level,
+                    x.name AS old_main_tier_name,
+                    s.name AS old_sub_tier_name
+                FROM _metadata_xp_tiers x
+                LEFT JOIN _metadata_xp_sub_tiers s ON (($1 / 100) % 5) = s.threshold
+                WHERE (($1 / 100) % 100) / 5 = x.threshold
+            ),
+            new_tier AS (
+                SELECT
+                    $2::int AS new_xp,
+                    (($2 / 100) % 100) AS new_normalized_tier,
+                    (($2 / 100) / 100) AS new_prestige_level,
+                    x.name AS new_main_tier_name,
+                    s.name AS new_sub_tier_name
+                FROM _metadata_xp_tiers x
+                LEFT JOIN _metadata_xp_sub_tiers s ON (($2 / 100) % 5) = s.threshold
+                WHERE (($2 / 100) % 100) / 5 = x.threshold
+            )
+            SELECT
+                o.old_xp,
+                n.new_xp,
+                o.old_main_tier_name,
+                n.new_main_tier_name,
+                o.old_sub_tier_name,
+                n.new_sub_tier_name,
+                CASE
+                    WHEN o.old_main_tier_name != n.new_main_tier_name THEN 'Main Tier Rank Up'
+                    WHEN o.old_sub_tier_name != n.new_sub_tier_name THEN 'Sub-Tier Rank Up'
+                END AS rank_change_type
+            FROM old_tier o
+            JOIN new_tier n ON TRUE;
+        """
+        return await self._db.fetchrow(query, old_xp, new_xp)

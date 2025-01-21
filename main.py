@@ -9,6 +9,7 @@ import sentry_sdk
 
 import core
 import database
+from utils.xp import XPManager
 
 SENTRY_TOKEN = os.getenv("SENTRY_TOKEN")
 sentry_sdk.init(f"https://{SENTRY_TOKEN}@glitchtip.genji.pk/2")
@@ -66,6 +67,7 @@ async def main() -> None:
 
         assert psql_connection
         bot.database = database.Database(psql_connection)
+        bot.xp_manager = XPManager(bot)
 
         async with bot:
             with contextlib.suppress(discord.errors.ConnectionClosed):

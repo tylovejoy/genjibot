@@ -371,14 +371,9 @@ class Maps(commands.Cog):
         if not await self.bot.database.is_existing_map_code(map_code):
             raise errors.InvalidMapCodeError
 
-        guides = [
-            x
-            async for x in itx.client.database.get(
-                "SELECT url FROM guides WHERE map_code=$1",
-                map_code,
-            )
-        ]
-        guides = [x.url for x in guides]
+        query = "SELECT url FROM guides WHERE map_code=$1"
+        rows = await self.bot.database.fetch(query, map_code)
+        guides = [row["url"] for row in rows]
 
         if url in guides:
             raise errors.GuideExistsError
@@ -411,6 +406,9 @@ class Maps(commands.Cog):
         }
         event = NewsfeedEvent("guide", _data)
         await itx.client.genji_dispatch.handle_event(event, itx.client)
+
+        if self.bot.xp_enabled and not guides:
+            await self.bot.xp_manager.grant_user_xp_type(itx.user.id, "Guide")
 
     @app_commands.command()
     @app_commands.choices(
