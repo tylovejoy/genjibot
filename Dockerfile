@@ -17,9 +17,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y wget\
     libgbm1\
     libxkbcommon0\
     libasound2\
-    libatspi2.0-0\
-    dbus\
-    xvfb
+    libatspi2.0-0
 
 
 # Set display variable for headless Chromium
