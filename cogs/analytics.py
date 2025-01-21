@@ -38,17 +38,22 @@ class AnalyticsTasks(commands.Cog):
     @commands.Cog.listener()
     async def on_interaction(self, itx: discord.Interaction[Genji]) -> None:
         if itx.command and itx.type == InteractionType.application_command:
-            self.bot.log_analytics(itx.command.name, itx.user.id, itx.created_at, itx.namespace.__dict__)
+            _user_id = itx.user.id
+            if isinstance(_user_id, discord.Member):
+                log.info(f"User ID: {_user_id} caused json serialization error in send_info_to_db")
+                _user_id = _user_id.id
+            self.bot.log_analytics(itx.command.name, _user_id, itx.created_at, itx.namespace.__dict__)
 
     @tasks.loop(seconds=60)
     async def send_info_to_db(self) -> None:
         query = """
             INSERT INTO analytics (event, user_id,  date_collected, args)
-            VALUES($1, $2, $3, $4)
-        ;"""
+            VALUES($1, $2, $3, $4);
+        """
 
         rows: list[tuple[str, int, datetime.datetime, str]] = []
         for raw_event, user_id, timestamp, args in self.bot.analytics_buffer:
+            log.debug(raw_event, user_id, timestamp, args)
             with contextlib.suppress(KeyError):
                 args.pop("screenshot")
             rows.append((raw_event, user_id, timestamp, json.dumps(args)))
