@@ -8,6 +8,6 @@ python-Levenshtein
 matplotlib
 imagetext-py
 msgspec
-sentry_sdk
+sentry-sdk
 aio-pika==9.4.3
 playwright

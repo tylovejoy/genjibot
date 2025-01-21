@@ -5,9 +5,13 @@ import os
 
 import aiohttp
 import discord
+import sentry_sdk
 
 import core
 import database
+
+SENTRY_TOKEN = os.getenv("SENTRY_TOKEN")
+sentry_sdk.init(f"https://{SENTRY_TOKEN}@glitchtip.genji.pk/2")
 
 
 class RemoveNoise(logging.Filter):

@@ -8,6 +8,7 @@ import typing
 
 import discord
 from discord import app_commands
+from sentry_sdk import capture_exception
 
 from utils import embeds, utils
 
@@ -223,6 +224,7 @@ async def on_app_command_error(
             )
         await utils.delete_interaction(itx, minutes=seconds / 60)
     else:
+        capture_exception(exception)
         content = (
             "This message will delete in "
             f"{discord.utils.format_dt(discord.utils.utcnow() + datetime.timedelta(minutes=1), 'R')}"
