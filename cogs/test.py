@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
 import typing
+from collections import defaultdict
 
 import discord
 from discord.ext import commands
@@ -67,13 +69,8 @@ class Test(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def xx(self, ctx: commands.Context[core.Genji]) -> None:
-        members = [(member.id, member.name[:25]) for member in ctx.guild.members]
-        await ctx.bot.database.set_many(
-            "INSERT INTO users (user_id, nickname, alertable) VALUES ($1, $2, true)",
-            members,
-        )
-        await ctx.send("done")
+    async def clear(self, ctx: commands.Context[core.Genji], limit: int) -> None:
+        await ctx.channel.purge(limit=limit)
 
     @commands.command()
     @commands.is_owner()
@@ -87,8 +84,133 @@ class Test(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
+    async def tt(self, ctx: commands.Context) -> None:
+        x = 1 / 0
+        return
+
+    @commands.command()
+    @commands.is_owner()
     async def placeholder(self, ctx: commands.Context[core.Genji]) -> None:
-        await ctx.send("placeholder")
+        # xp_amounts = defaultdict(lambda: 0)
+        # # Completions
+        # query = """
+        #     SELECT DISTINCT
+        #         count(*) AS count, user_id
+        #     FROM records
+        #     WHERE inserted_at < '2025-01-08 17:18:55.797821 +00:00' AND completion AND verified
+        #     GROUP BY user_id;
+        # """
+        # rows = await ctx.bot.database.fetch(query)
+        # for row in rows:
+        #     xp_amounts[row["user_id"]] += row["count"] * 5
+        #
+        # # Records
+        # query = """
+        #     WITH map_records AS (
+        #         SELECT
+        #             r.user_id,
+        #             record,
+        #             video,
+        #             r.map_code,
+        #             rank() OVER (
+        #                 PARTITION BY r.map_code, r.user_id
+        #                 ORDER BY r.inserted_at DESC
+        #             ) AS latest,
+        #             r.verified,
+        #             completion,
+        #             inserted_at
+        #             FROM records r
+        #                 LEFT JOIN maps m ON m.map_code = r.map_code
+        #             WHERE r.verified AND NOT legacy
+        #             GROUP BY record, video, r.map_code,
+        #                 r.channel_id, r.message_id,
+        #                 inserted_at, r.user_id, r.verified, completion, r.user_id
+        #     ), ranked_records AS (
+        #         SELECT
+        #             *,
+        #             RANK() OVER (PARTITION BY map_code ORDER BY completion, record) as rank_num
+        #         FROM map_records
+        #         WHERE map_records.latest = 1 AND (NOT completion AND NOT video IS NOT NULL)
+        #     )
+        #     SELECT user_id, count(*) AS count FROM ranked_records
+        #     WHERE inserted_at < '2025-01-08 17:18:55.797821 +00:00'
+        #     GROUP BY user_id;
+        # """
+        # rows = await ctx.bot.database.fetch(query)
+        # for row in rows:
+        #     xp_amounts[row["user_id"]] += row["count"] * 15
+        #
+        # # WRs
+        # query = """
+        #     WITH map_records AS (
+        #         SELECT
+        #             r.user_id,
+        #             record,
+        #             video,
+        #             r.map_code,
+        #             rank() OVER (
+        #                 PARTITION BY r.map_code, r.user_id
+        #                 ORDER BY r.inserted_at DESC
+        #             ) AS latest,
+        #             r.verified,
+        #             completion,
+        #             inserted_at
+        #             FROM records r
+        #                 LEFT JOIN maps m ON m.map_code = r.map_code
+        #             WHERE r.verified AND NOT legacy
+        #             GROUP BY record, video, r.map_code,
+        #                 r.channel_id, r.message_id,
+        #                 inserted_at, r.user_id, r.verified, completion, r.user_id
+        #     ), ranked_records AS (
+        #         SELECT
+        #             *,
+        #             RANK() OVER (PARTITION BY map_code ORDER BY completion, record) as rank_num
+        #         FROM map_records
+        #         WHERE map_records.latest = 1 AND (
+        #             NOT completion AND video IS NOT NULL
+        #         )
+        #     )
+        #     SELECT user_id, count(*) AS count FROM ranked_records
+        #     WHERE rank_num = 1 AND NOT completion AND video IS NOT NULL AND inserted_at < '2025-01-08 17:18:55.797821 +00:00'
+        #     GROUP BY user_id;
+        # """
+        # rows = await ctx.bot.database.fetch(query)
+        # for row in rows:
+        #     xp_amounts[row["user_id"]] += row["count"] * 50
+        #
+        # # Playtests
+        # query = """
+        #     SELECT user_id, amount AS count FROM playtest_count;
+        # """
+        # rows = await ctx.bot.database.fetch(query)
+        # for row in rows:
+        #     xp_amounts[row["user_id"]] += row["count"] * 35
+        #
+        # # Playtests
+        # query = """
+        #     WITH map_codes AS (
+        #         SELECT map_code
+        #         FROM maps
+        #         WHERE official
+        #     )
+        #     SELECT count(mc.map_code) AS count, user_id
+        #     FROM map_creators mc
+        #     LEFT JOIN map_codes mcs ON mc.map_code = mcs.map_code
+        #     GROUP BY user_id;
+        #     """
+        # rows = await ctx.bot.database.fetch(query)
+        # for row in rows:
+        #     xp_amounts[row["user_id"]] += row["count"] * 30
+        # xp_a = {k: v // 5 for k, v in xp_amounts.items()}
+        # list_of_tuple = []
+        # for k, v in xp_a.items():
+        #     list_of_tuple.append((k, v))
+        # print(list_of_tuple)
+        #
+        # query = "INSERT INTO xptable VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET amount = xptable.amount + EXCLUDED.amount"
+        # await ctx.bot.database.executemany(query, list_of_tuple)
+        # print('done')
+        ...
 
     @commands.command()
     @commands.is_owner()
