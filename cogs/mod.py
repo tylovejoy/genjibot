@@ -8,13 +8,13 @@ from discord import app_commands
 from discord.ext import commands
 
 import views
+from database import Database
 from utils import constants, embeds, errors, map_submission, maps, ranks, transformers, utils
 from utils.newsfeed import NewsfeedEvent
 from views import GuidesSelect
 
 if typing.TYPE_CHECKING:
     import core
-    from database import DotRecord
     from views.maps import PlaytestVoting
 
 
@@ -295,27 +295,25 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        record = [
-            x
-            async for x in self.bot.database.get(
-                "SELECT * FROM records r "
-                "LEFT JOIN users u on r.user_id = u.user_id "
-                "WHERE r.user_id=$1 AND map_code=$2",
-                member.id,
-                map_code,
-            )
-        ]
+        # TODO: Add multi record inserted_at dropdown to choose which to delete
+        remove_query = """
+            SELECT * FROM records r
+            LEFT JOIN users u ON r.user_id = u.user_id
+            WHERE r.user_id = $1 AND map_code = $2
+            ORDER BY inserted_at
+            LIMIT 1;
+        """
+
+        record = await self.bot.database.fetchrow(remove_query, member.id, map_code)
         if not record:
             raise errors.NoRecordsFoundError
 
-        record = record[0]
         embed = embeds.GenjiEmbed(
             title="Delete Record",
             description=(
-                f"`Name` {discord.utils.escape_markdown(record.nickname)}\n"
-                f"`Code` {record.map_code}\n"
-                f"`Record` {record.record}\n"
-                # f"`Level` {record.level_name}\n"
+                f"`Name` {discord.utils.escape_markdown(record['nickname'])}\n"
+                f"`Code` {record['map_code']}\n"
+                f"`Record` {record['record']}\n"
             ),
         )
         view = views.Confirm(itx)
@@ -326,9 +324,10 @@ class ModCommands(commands.Cog):
             return
 
         await self.bot.database.set(
-            "DELETE FROM records WHERE user_id=$1 AND map_code=$2",
+            "DELETE FROM records WHERE user_id = $1 AND map_code = $2 AND inserted_at = $3",
             member.id,
             map_code,
+            record["inserted_at"],
         )
 
         await member.send(f"Your record for {map_code} has been deleted by staff.")
@@ -866,7 +865,7 @@ class ModCommands(commands.Cog):
 
         """
         await itx.response.defer(ephemeral=True)
-        if self.bot.database.is_existing_map_code(new_map_code):
+        if await self.bot.database.is_existing_map_code(new_map_code):
             raise errors.MapExistsError
 
         view = views.Confirm(itx, f"Updated {map_code} map code to {new_map_code}.", ephemeral=True)
@@ -1018,106 +1017,67 @@ class ModCommands(commands.Cog):
         await itx.edit_original_response(
             content=f"# Are you sure you want to convert current records on {map_code} to legacy?\n"
             f"This will:\n"
-            f"- Move records with medals to `/legacy_completions`\n"
+            f"- Move records to `/legacy_completions`\n"
             f"- Convert all time records into _completions_\n"
-            f"- Remove medals\n\n",
+            f"- Remove medal times set for the map\n\n",
             view=view,
         )
         await view.wait()
         if not view.value:
             return
 
-        _records = await self._get_legacy_medal_records(itx, map_code)
-        record_tuples = self._format_legacy_records_for_insertion(_records)
-        await self._insert_legacy_records(record_tuples)
-        await self._update_records_to_completions(map_code)
-        await self._remove_medal_entries(map_code)
+        await self._convert_records_to_legacy_completions(itx.client.database, map_code)
+        await self._remove_map_medal_entries(map_code)
 
-        embed = embeds.GenjiEmbed(
-            title=f"{map_code} has been changed:",
-            description=(
-                "# Records have been converted to completions due to breaking changes.\n"
-                "- View records that received medals using the `/legacy_completions` command"
-            ),
-            color=discord.Color.red(),
-        )
-        await itx.guild.get_channel(constants.NEWSFEED).send(embed=embed)
+        _data = {
+            "map": {
+                "map_code": map_code,
+            }
+        }
+        event = NewsfeedEvent("legacy_record", _data)
+        await itx.client.genji_dispatch.handle_event(event, itx.client)
 
     async def _check_if_queued(self, map_code: str) -> bool:
-        query = """SELECT EXISTS (SELECT * FROM records WHERE map_code = $1 AND verified IS FALSE)"""
+        query = "SELECT EXISTS (SELECT * FROM records WHERE map_code = $1 AND verified IS FALSE);"
         return await self.bot.database.fetchval(query, map_code)
 
-    async def _remove_medal_entries(self, map_code: str) -> None:
-        query = """
-            DELETE FROM map_medals WHERE map_code = $1
-        """
-        await self.bot.database.set(query, map_code)
-
-    async def _update_records_to_completions(self, map_code: str) -> None:
-        query = """
-            UPDATE records
-            SET video = NULL, verified = FALSE, record = 99999999.99
-            WHERE map_code = $1
-        """
-        await self.bot.database.set(query, map_code)
-
-    async def _insert_legacy_records(self, _records: list[tuple]) -> None:
-        query = """
-            INSERT INTO legacy_records (map_code, user_id, record, screenshot, video, message_id, channel_id, medal)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        """
-        await self.bot.database.set_many(query, _records)
+    async def _remove_map_medal_entries(self, map_code: str) -> None:
+        query = "DELETE FROM map_medals WHERE map_code = $1;"
+        await self.bot.database.execute(query, map_code)
 
     @staticmethod
-    def _format_legacy_records_for_insertion(
-        _records: list[DotRecord],
-    ) -> list[tuple[str | int, ...]]:
-        res = []
-        for record in _records:
-            if record.gold:
-                medal = "Gold"
-            elif record.silver:
-                medal = "Silver"
-            else:
-                medal = "Bronze"
-
-            res.append(
-                (
-                    record.map_code,
-                    record.user_id,
-                    record.record,
-                    record.screenshot,
-                    record.video,
-                    record.message_id,
-                    record.channel_id,
-                    medal,
-                )
-            )
-        return res
-
-    @staticmethod
-    async def _get_legacy_medal_records(itx: discord.Interaction[core.Genji], map_code: str) -> list[DotRecord]:
+    async def _convert_records_to_legacy_completions(db: Database, map_code: str) -> None:
         query = """
             WITH all_records AS (
                 SELECT
-                    verified = TRUE AND record <= gold                       AS gold,
-                    verified = TRUE AND record <= silver AND record > gold   AS silver,
-                    verified = TRUE AND record <= bronze AND record > silver AS bronze,
+                    CASE
+                        WHEN verified = TRUE AND record <= gold THEN 'Gold'
+                        WHEN verified = TRUE AND record <= silver AND record > gold THEN 'Silver'
+                        WHEN verified = TRUE AND record <= bronze AND record > silver THEN 'Bronze'
+                        END AS legacy_medal,
                     r.map_code,
-                    user_id,
-                    screenshot,
-                    record,
-                    video,
-                    message_id,
-                    channel_id
+                    r.user_id,
+                    r.inserted_at
                 FROM records r
-                    LEFT JOIN map_medals mm ON r.map_code = mm.map_code
-                WHERE r.map_code = $1
+                LEFT JOIN map_medals mm ON r.map_code = mm.map_code
+                WHERE r.map_code = $1 AND legacy IS FALSE
                 ORDER BY record
             )
-            SELECT * FROM all_records WHERE gold OR silver OR bronze
+            UPDATE records
+            SET
+                completion = CASE
+                    WHEN all_records.legacy_medal IS NULL THEN TRUE
+                    ELSE FALSE
+                END,
+                legacy = TRUE,
+                legacy_medal = all_records.legacy_medal
+            FROM all_records
+            WHERE
+                records.map_code = all_records.map_code AND
+                records.user_id = all_records.user_id AND
+                records.inserted_at = all_records.inserted_at;
         """
-        return [record async for record in itx.client.database.get(query, map_code)]
+        await db.execute(query, map_code)
 
 
 async def setup(bot: core.Genji) -> None:

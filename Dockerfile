@@ -2,10 +2,27 @@ FROM python:3.12.7
 
 WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y wget && apt-get install -y firefox-esr
+RUN apt-get update && apt-get upgrade -y && apt-get install -y wget\
+    libnss3\
+    libnspr4\
+    libdbus-1-3\
+    libatk1.0-0\
+    libatk-bridge2.0-0\
+    libcups2\
+    libdrm2\
+    libxcomposite1\
+    libxdamage1\
+    libxfixes3\
+    libxrandr2\
+    libgbm1\
+    libxkbcommon0\
+    libasound2\
+    libatspi2.0-0
 
+
+# Set display variable for headless Chromium
 ENV DISPLAY=:0
-# For safety reason, create an user with lower privileges than root and run from there
+
 RUN useradd -m -d /home/genji -s /bin/bash genji && \
     mkdir /usr/src/genji && \
     chown -R genji /usr/src/genji
@@ -15,20 +32,9 @@ USER genji
 COPY requirements.txt ./
 RUN pip3 install --no-warn-script-location --no-cache-dir -r requirements.txt
 
-USER root
-ADD https://github.com/mozilla/geckodriver/releases/download/v0.35.0/geckodriver-v0.35.0-linux64.tar.gz ./
-# Adjust permissions of the tar file
-RUN chmod 644 ./geckodriver-v0.35.0-linux64.tar.gz
+RUN ~/.local/bin/playwright install
 
-# Extract Geckodriver
-RUN tar -xvzf ./geckodriver-v0.35.0-linux64.tar.gz -C /usr/src/app/ && \
-    chmod +x /usr/src/app/geckodriver && \
-    rm ./geckodriver-v0.35.0-linux64.tar.gz
-
-# Ensure extracted Geckodriver is usable by the non-root user
-RUN chown genji:genji /usr/src/app/geckodriver
-
-USER genji
 COPY . .
+
 
 CMD [ "python3", "-uO", "main.py" ]

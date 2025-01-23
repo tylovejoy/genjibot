@@ -383,7 +383,7 @@ class MapEmbedData:
     @property
     def _guides(self) -> str:
         res = ""
-        if None not in self._data["guide"]:
+        if None not in self._data.get("guide", [None]):
             guides = [f"[{i}]({guide})" for i, guide in enumerate(self._data["guide"], 1)]
             res = f"`Guide(s)` {', '.join(guides)}"
         return res
@@ -391,7 +391,7 @@ class MapEmbedData:
     @property
     def _medals(self) -> str:
         res = ""
-        if self._data["gold"]:
+        if self._data.get("gold"):
             res = (
                 f"`Medals` "
                 f"{constants.FULLY_VERIFIED_GOLD} {self._data['gold']} | "
@@ -403,7 +403,7 @@ class MapEmbedData:
     @property
     def _completed(self) -> str:
         res = ""
-        if self._data["completed"]:
+        if self._data.get("completed"):
             res = "🗸 Completed"
             if self._data["medal_type"]:
                 res += " | 🗸 " + self._data["medal_type"]

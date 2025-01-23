@@ -4,12 +4,15 @@ import logging
 import os
 
 import aiohttp
-import arsenic
 import discord
-from arsenic import services, browsers
+import sentry_sdk
 
 import core
 import database
+from utils.xp import XPManager
+
+SENTRY_TOKEN = os.getenv("SENTRY_TOKEN")
+sentry_sdk.init(f"https://{SENTRY_TOKEN}@glitchtip.genji.pk/2")
 
 
 class RemoveNoise(logging.Filter):
@@ -48,19 +51,24 @@ def setup_logging() -> None:
             log.removeHandler(hdlr)
 
 
+rabbitmq_user = os.getenv("RABBITMQ_DEFAULT_USER")
+rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
+
+
 async def main() -> None:
     """Start the bot instance."""
-    service = services.Geckodriver(binary="/usr/src/app/geckodriver", log_file=os.devnull)
-    browser = browsers.Firefox(**{"moz:firefoxOptions": {"args": ["-headless", "-log", "{'level': 'warning'}"]}})
+    psql_dsn = f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
+
     async with (
-        aiohttp.ClientSession() as session,
-        database.DatabaseConnection(
-            f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
-        ) as connection,
-        arsenic.get_session(service, browser) as firefox_session,
+        aiohttp.ClientSession() as http_session,
+        database.DatabaseConnection(psql_dsn) as psql_connection,
     ):
-        bot = core.Genji(session=session, db=database.Database(connection))
-        bot.firefox = firefox_session
+        bot = core.Genji(session=http_session)
+
+        assert psql_connection
+        bot.database = database.Database(psql_connection)
+        bot.xp_manager = XPManager(bot)
+
         async with bot:
             with contextlib.suppress(discord.errors.ConnectionClosed):
                 await bot.start(os.environ["TOKEN"])

@@ -100,7 +100,7 @@ class Records(commands.Cog):
                     m.map_name,
                 RANK() OVER (ORDER BY record) AS latest
                 FROM records r LEFT JOIN maps m on r.map_code = m.map_code
-                WHERE r.map_code=$1 AND user_id=$2 AND verified
+                WHERE r.map_code=$1 AND user_id=$2 AND verified AND NOT legacy
             )
             SELECT * FROM user_records_for_map WHERE latest=1
         """
@@ -381,6 +381,7 @@ class Records(commands.Cog):
             raise errors.InvalidMapCodeError
 
         query = """
+            WITH base AS (
                 SELECT u.nickname,
                        record,
                        screenshot,
@@ -389,17 +390,32 @@ class Records(commands.Cog):
                        lr.channel_id,
                        lr.message_id,
                        m.map_name,
-                       medal,
-                       AVG(difficulty) AS difficulty
-                FROM legacy_records lr
+                       legacy_medal as medal,
+                       completion,
+                       avg(difficulty) AS difficulty,
+                       rank() OVER (
+                         PARTITION BY lr.map_code, lr.user_id
+                         ORDER BY lr.inserted_at DESC
+                       ) AS latest
+                FROM records lr
                     LEFT JOIN users u ON lr.user_id = u.user_id
                     LEFT JOIN maps m ON m.map_code = lr.map_code
                     LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
-                WHERE lr.map_code = $1 AND mr.verified
+                WHERE lr.map_code = $1 AND mr.verified AND legacy IS TRUE
                 GROUP BY u.nickname, record, screenshot, video, lr.map_code,
-                         lr.channel_id, lr.message_id, m.map_name, medal
-                ORDER BY record;
-                """
+                         lr.channel_id, lr.message_id, m.map_name, legacy_medal, completion, inserted_at, lr.user_id
+                ORDER BY record
+            ),
+            ranked AS (
+                SELECT
+                    *,
+                    rank() OVER (PARTITION BY map_code ORDER BY completion, record) as rank_num
+                FROM base
+                WHERE base.latest = 1
+                ORDER BY difficulty, map_code
+            )
+            SELECT * FROM ranked
+        """
         rows = await self.bot.database.fetch(query, map_code)
         _records = [models.Record(**r) for r in rows]
 
@@ -463,7 +479,7 @@ class Records(commands.Cog):
                         LEFT JOIN map_ratings mr ON m.map_code = mr.map_code
                         LEFT JOIN map_medals mm ON m.map_code = mm.map_code
                         LEFT JOIN map_creators_agg mca ON mca.map_code = m.map_code
-                    WHERE mr.verified AND r.verified AND ($1::text IS NULL OR $1::text = r.map_code)
+                    WHERE mr.verified AND r.verified AND ($1::text IS NULL OR $1::text = r.map_code) AND NOT legacy
                     GROUP BY u.nickname, record, screenshot, video, r.map_code,
                         r.channel_id, r.message_id, m.map_name, gold, silver,
                         bronze, inserted_at, r.user_id, r.verified, completion, r.user_id, creators

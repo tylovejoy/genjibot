@@ -34,7 +34,7 @@ class Tasks(commands.Cog):
             SET global_name = excluded.global_name
             WHERE user_global_names.global_name != excluded.global_name
         """
-        log.info("Updating global names...")
+        log.debug("Updating global names...")
         await self.bot.database.executemany(query, global_names)
 
     @tasks.loop(time=[datetime.time(0, 0, 0), datetime.time(12, 0, 0)])
