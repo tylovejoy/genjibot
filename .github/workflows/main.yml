@@ -1,0 +1,11 @@
+name: Main Deployment
+
+on:
+  # push:
+  #   branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: bkan0n/bkan0n-deploy-workflow/.github/workflows/main.yml@main
+    secrets: inherit
