@@ -1,11 +1,11 @@
 name: Main Deployment
 
 on:
-  # push:
-  #   branches: [ main ]
+  push:
+    branches: [ main ]
   workflow_dispatch:
   repository_dispatch:
-    types: [init]
+    types: [ init ]
 
 jobs:
   deploy:
