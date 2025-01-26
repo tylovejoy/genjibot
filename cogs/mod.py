@@ -460,8 +460,10 @@ class ModCommands(commands.Cog):
             raise errors.BaseParkourError("No audit log entries found")
         content = []
         for row in rows:
-            timestamp = discord.utils.format_dt(row["date_collected"], style='F')
             command = row["event"]
+            if command in ["sync", "audit-log"] or command.startswith("jsk"):
+                continue
+            timestamp = discord.utils.format_dt(row["date_collected"], style='F')
             assert itx.guild
             user = itx.guild.get_member(row["user_id"])
             mention = user.mention if user else row["user_id"]
