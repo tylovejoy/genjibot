@@ -37,7 +37,6 @@ class AnalyticsTasks(commands.Cog):
 
     @commands.Cog.listener()
     async def on_interaction(self, itx: discord.Interaction[Genji]) -> None:
-        log.info(f"Interaction: {itx=} {itx.type=} {getattr(itx.command, 'name')=} {itx.namespace.__dict__=}")
         if itx.command and itx.type == InteractionType.application_command:
             _namespace = {}
             for k, v in itx.namespace.__dict__.items():
@@ -45,6 +44,7 @@ class AnalyticsTasks(commands.Cog):
                     _namespace[k] = v
                 elif isinstance(v, (discord.Member, discord.User, discord.Role, discord.Guild)):
                     _namespace[k] = f"{v.name} {v.id}"
+            log.info(f"\n\n{itx=}\n{_namespace=}\n\n")
             self.bot.log_analytics(itx.command.name, itx.user.id, itx.created_at, _namespace)
 
     @tasks.loop(seconds=60)
@@ -53,8 +53,8 @@ class AnalyticsTasks(commands.Cog):
             INSERT INTO analytics (event, user_id,  date_collected, args)
             VALUES($1, $2, $3, $4);
         """
-
         rows: list[tuple[str, int, datetime.datetime, str]] = []
+        log.info(f"Sending analytics info to database...\n\n{rows=}")
         for raw_event, user_id, timestamp, args in self.bot.analytics_buffer:
             log.debug(raw_event, user_id, timestamp, args)
             with contextlib.suppress(KeyError):
