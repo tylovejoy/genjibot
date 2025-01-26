@@ -44,7 +44,6 @@ class AnalyticsTasks(commands.Cog):
                     _namespace[k] = v
                 elif isinstance(v, (discord.Member, discord.User, discord.Role, discord.Guild)):
                     _namespace[k] = f"{v.name} {v.id}"
-            log.info(f"\n\n{itx=}\n{_namespace=}\n\n")
             self.bot.log_analytics(itx.command.name, itx.user.id, itx.created_at, _namespace)
 
     @tasks.loop(seconds=60)
@@ -54,16 +53,13 @@ class AnalyticsTasks(commands.Cog):
             VALUES($1, $2, $3, $4);
         """
         rows: list[tuple[str, int, datetime.datetime, str]] = []
-        log.info(f"Sending analytics info to database...\n\n{self.bot.analytics_buffer=}")
         for raw_event, user_id, timestamp, args in self.bot.analytics_buffer:
             log.debug(raw_event, user_id, timestamp, args)
             with contextlib.suppress(KeyError):
                 args.pop("screenshot")
             rows.append((raw_event, user_id, timestamp, json.dumps(args)))
         if rows:
-            log.info(f"{rows=}")
             await self.bot.database.set_many(query, rows)
-            log.info("done")
             self.bot.analytics_buffer = []
 
 

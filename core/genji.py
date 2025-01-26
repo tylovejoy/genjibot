@@ -47,9 +47,7 @@ class Genji(commands.Bot):
         self.xp_enabled = True
 
     def log_analytics(self, event: str, user_id: int, timestamp: datetime.datetime, data: dict) -> None:
-        log.info(f"Before log_analytics \n{event} | {user_id} | {timestamp} | {data}")
         self.analytics_buffer.append((event, user_id, timestamp, data))
-        log.info("After log_analytics")
 
     async def _prepare_rabbitmq(self) -> None:
         await self.wait_until_ready()
