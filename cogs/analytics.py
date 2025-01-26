@@ -39,11 +39,13 @@ class AnalyticsTasks(commands.Cog):
     async def on_interaction(self, itx: discord.Interaction[Genji]) -> None:
         log.info(f"Interaction: {itx=} {itx.type=} {getattr(itx.command, 'name')=} {itx.namespace.__dict__=}")
         if itx.command and itx.type == InteractionType.application_command:
-            _user_id = itx.user.id
-            if isinstance(_user_id, discord.Member):
-                log.info(f"User ID: {_user_id} caused json serialization error in send_info_to_db")
-                _user_id = _user_id.id
-            self.bot.log_analytics(itx.command.name, _user_id, itx.created_at, itx.namespace.__dict__)
+            _namespace = {}
+            for k, v in itx.namespace.__dict__.items():
+                if isinstance(v, (str, int, float)):
+                    _namespace[k] = v
+                elif isinstance(v, (discord.Member, discord.User, discord.Role, discord.Guild)):
+                    _namespace[k] = f"{v.name} {v.id}"
+            self.bot.log_analytics(itx.command.name, itx.user.id, itx.created_at, _namespace)
 
     @tasks.loop(seconds=60)
     async def send_info_to_db(self) -> None:
