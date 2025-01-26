@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import typing
 
@@ -457,7 +458,8 @@ class ModCommands(commands.Cog):
             user = itx.guild.get_member(row["user_id"])
             mention = user.mention if user else row["user_id"]
             args = ""
-            for k, v in row["args"].items():
+            args_json = json.loads(row["args"])
+            for k, v in args_json.items():
                 args += f"> {k}={v}\n"
             content += f"{mention} used {command} at {timestamp}\n{args}\n"
         embed = embeds.GenjiEmbed(description=content)
