@@ -12,7 +12,7 @@ import views
 from database import Database
 from utils import constants, embeds, errors, map_submission, maps, ranks, transformers, utils
 from utils.newsfeed import NewsfeedEvent
-from views import GuidesSelect
+from views import GuidesSelect, Paginator
 
 if typing.TYPE_CHECKING:
     import core
@@ -436,21 +436,29 @@ class ModCommands(commands.Cog):
     async def audit_log(
         self,
         itx: discord.Interaction[core.Genji],
-        limit: app_commands.Range[int, 1, 50],
+        limit: app_commands.Range[int, 1, 500] = 10,
+        command_name: str | None = None,
     ) -> None:
         """View genjibot audit logs.
 
         Args:
             itx: Discord itx
             limit: Limit amount of audit log entries
+            command_name: Limit to a specific command name
 
         """
         await itx.response.defer(ephemeral=True)
-        query = "SELECT * FROM analytics ORDER BY date_collected DESC LIMIT $1;"
-        rows = await itx.client.database.fetch(query, limit)
+        query = """
+            SELECT *
+            FROM analytics
+            WHERE $2:text IS NULL OR "event" = $2
+            ORDER BY date_collected DESC
+            LIMIT $1;
+        """
+        rows = await itx.client.database.fetch(query, limit, command_name)
         if not rows:
             raise errors.BaseParkourError("No audit log entries found")
-        content = ""
+        content = []
         for row in rows:
             timestamp = discord.utils.format_dt(row["date_collected"], style='F')
             command = row["event"]
@@ -460,10 +468,12 @@ class ModCommands(commands.Cog):
             args = ""
             args_json = json.loads(row["args"])
             for k, v in args_json.items():
-                args += f"> {k}={v}\n"
-            content += f"{mention} used {command} at {timestamp}\n{args}\n"
-        embed = embeds.GenjiEmbed(description=content)
-        await itx.edit_original_response(embed=embed)
+                args += f"> `{k}` {v}\n"
+            content.append(f"{mention} used **{command}**\n{timestamp}\n{args}\n")
+        chunks = discord.utils.as_chunks(content, 10)
+        _embeds = [embeds.GenjiEmbed(title="Audit Log Entries", description="\n".join(chunk)) for chunk in chunks]
+        view = Paginator(_embeds, itx.user)
+        await itx.edit_original_response(view=view)
 
 
     @map.command()
