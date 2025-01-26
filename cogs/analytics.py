@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import discord
-from discord import InteractionType
+from discord import Interaction, InteractionType
 from discord.ext import commands, tasks
 
 if TYPE_CHECKING:
@@ -37,6 +37,7 @@ class AnalyticsTasks(commands.Cog):
 
     @commands.Cog.listener()
     async def on_interaction(self, itx: discord.Interaction[Genji]) -> None:
+        log.info(f"Interaction: {itx=} {itx.type=} {getattr(itx.command, 'name')=} {itx.namespace.__dict__=}")
         if itx.command and itx.type == InteractionType.application_command:
             _user_id = itx.user.id
             if isinstance(_user_id, discord.Member):
