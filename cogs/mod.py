@@ -451,7 +451,7 @@ class ModCommands(commands.Cog):
         query = """
             SELECT *
             FROM analytics
-            WHERE $2:text IS NULL OR "event" = $2
+            WHERE $2::text IS NULL OR "event" = $2
             ORDER BY date_collected DESC
             LIMIT $1;
         """
