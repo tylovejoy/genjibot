@@ -57,7 +57,7 @@ rabbitmq_pass = os.getenv("RABBITMQ_DEFAULT_PASS")
 
 async def main() -> None:
     """Start the bot instance."""
-    psql_dsn = f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@{os.environ['PSQL_HOST']}/genji"
+    psql_dsn = f"postgres://postgres:{os.environ['PSQL_PASSWORD']}@genji-postgres/genji"
 
     async with (
         aiohttp.ClientSession() as http_session,
