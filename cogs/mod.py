@@ -473,7 +473,7 @@ class ModCommands(commands.Cog):
         chunks = discord.utils.as_chunks(content, 10)
         _embeds = [embeds.GenjiEmbed(title="Audit Log Entries", description="\n".join(chunk)) for chunk in chunks]
         view = Paginator(_embeds, itx.user)
-        await itx.edit_original_response(view=view)
+        await view.start(itx)
 
 
     @map.command()
