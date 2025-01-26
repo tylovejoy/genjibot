@@ -54,14 +54,16 @@ class AnalyticsTasks(commands.Cog):
             VALUES($1, $2, $3, $4);
         """
         rows: list[tuple[str, int, datetime.datetime, str]] = []
-        log.info(f"Sending analytics info to database...\n\n{rows=}")
+        log.info(f"Sending analytics info to database...\n\n{self.bot.analytics_buffer=}")
         for raw_event, user_id, timestamp, args in self.bot.analytics_buffer:
             log.debug(raw_event, user_id, timestamp, args)
             with contextlib.suppress(KeyError):
                 args.pop("screenshot")
             rows.append((raw_event, user_id, timestamp, json.dumps(args)))
         if rows:
+            log.info(f"{rows=}")
             await self.bot.database.set_many(query, rows)
+            log.info("done")
             self.bot.analytics_buffer = []
 
 
