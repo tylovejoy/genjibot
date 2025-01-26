@@ -431,6 +431,39 @@ class ModCommands(commands.Cog):
         await itx.client.database.execute("UPDATE map_ratings SET user_id=$2 WHERE user_id=$1", fake_id, member.id)
         await itx.client.database.execute("DELETE FROM users WHERE user_id=$1", fake_id)
 
+    @mod.command(name="audit-log")
+    async def audit_log(
+        self,
+        itx: discord.Interaction[core.Genji],
+        limit: app_commands.Range[int, 1, 50],
+    ) -> None:
+        """View genjibot audit logs.
+
+        Args:
+            itx: Discord itx
+            limit: Limit amount of audit log entries
+
+        """
+        await itx.response.defer(ephemeral=True)
+        query = "SELECT * FROM analytics ORDER BY date_collected DESC LIMIT $1;"
+        rows = await itx.client.database.fetch(query, limit)
+        if not rows:
+            raise errors.BaseParkourError("No audit log entries found")
+        content = ""
+        for row in rows:
+            timestamp = discord.utils.format_dt(row["date_collected"], style='F')
+            command = row["event"]
+            assert itx.guild
+            user = itx.guild.get_member(row["user_id"])
+            mention = user.mention if user else row["user_id"]
+            args = ""
+            for k, v in row["args"].items():
+                args += f"> {k}={v}\n"
+            content += f"{mention} used {command} at {timestamp}\n{args}\n"
+        embed = embeds.GenjiEmbed(description=content)
+        await itx.edit_original_response(embed=embed)
+
+
     @map.command()
     @app_commands.choices(
         action=[
