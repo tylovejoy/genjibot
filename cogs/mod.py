@@ -474,6 +474,8 @@ class ModCommands(commands.Cog):
             content.append(f"{mention} used **{command}**\n{timestamp}\n{args}\n")
         chunks = discord.utils.as_chunks(content, 10)
         _embeds = [embeds.GenjiEmbed(title="Audit Log Entries", description="\n".join(chunk)) for chunk in chunks]
+        if not _embeds:
+            raise errors.BaseParkourError("No audit log entries found")
         view = Paginator(_embeds, itx.user)
         await view.start(itx)
 
