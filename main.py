@@ -12,7 +12,7 @@ import database
 from utils.xp import XPManager
 
 SENTRY_TOKEN = os.getenv("SENTRY_TOKEN")
-sentry_sdk.init(f"https://{SENTRY_TOKEN}@glitchtip.genji.pk/2")
+sentry_sdk.init(SENTRY_TOKEN)
 
 
 class RemoveNoise(logging.Filter):
