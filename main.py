@@ -12,7 +12,10 @@ import database
 from utils.xp import XPManager
 
 SENTRY_TOKEN = os.getenv("SENTRY_TOKEN")
-sentry_sdk.init(SENTRY_TOKEN)
+sentry_sdk.init(
+    SENTRY_TOKEN,
+    enable_tracing=True,
+)
 
 
 class RemoveNoise(logging.Filter):
