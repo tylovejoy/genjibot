@@ -17,7 +17,9 @@ services:
       - SENTRY_TOKEN=${SENTRY_TOKEN}
     networks:
       - genji-network
-
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
 networks:
   genji-network:
     external: true
