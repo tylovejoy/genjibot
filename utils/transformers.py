@@ -7,21 +7,11 @@ from discord import app_commands
 
 from . import constants, errors, utils
 from .records import CODE_VERIFICATION
-from .utils import case_ignore_compare
 
 if TYPE_CHECKING:
     import discord
 
     import core
-
-
-async def _autocomplete(
-    current: str,
-    choices: list[app_commands.Choice[str]],
-) -> list[app_commands.Choice[str]]:
-    if not choices:  # Quietly ignore empty choices
-        return []
-    return choices[:25] if current == "" else [x for x in choices if case_ignore_compare(x.name, current)][:25]
 
 
 async def transform_user(client: core.Genji, value: str) -> utils.FakeUser | discord.Member:
@@ -243,3 +233,19 @@ def time_convert(string: str) -> float:
         case _:
             raise ValueError("Failed to match any cases.")
     return round(res, 2)
+
+
+class KeyTypeTransformer(app_commands.Transformer):
+    """Transform key type."""
+
+    async def autocomplete(self, itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+        query = "SELECT name FROM lootbox_key_types ORDER BY similarity(name, $1) DESC LIMIT 5;"
+        results = await itx.client.database.fetch(query, current)
+        return [app_commands.Choice(name=a, value=a) for (a,) in results]
+
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
+        query = "SELECT name FROM lootbox_key_types ORDER BY similarity(name, $1) DESC LIMIT 1;"
+        res = await itx.client.database.fetch(query, value)
+        if not res or res[0]["name"] != value:
+            raise errors.NoMapsFoundError
+        return value

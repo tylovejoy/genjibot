@@ -38,6 +38,13 @@ class XPManager:
         self._bot: Genji = bot
         self._db: Database = bot.database
 
+    async def set_active_key(self, key_type: str) -> None:
+        resp = await self._bot.session.post(
+            f"https://api.genji.pk/v1/lootbox/keys/{key_type}", headers={"X-API-KEY": GENJI_API_KEY}
+        )
+        if resp.status != 200:
+            raise ValueError
+
     async def grant_active_key(self, user_id: int) -> None:
         key_type = await self._db.fetchval("SELECT key FROM lootbox_active_key;")
         await self._bot.session.post(
@@ -67,24 +74,32 @@ class XPManager:
         if _xp_data is None:
             raise ValueError
 
-        if not _xp_data["rank_change_type"]:
-            return
+        if _xp_data["rank_change_type"]:
+            old_rank = " ".join((_xp_data["old_main_tier_name"], _xp_data["old_sub_tier_name"]))
+            new_rank = " ".join((_xp_data["new_main_tier_name"], _xp_data["new_sub_tier_name"]))
 
-        old_rank = " ".join((_xp_data["old_main_tier_name"], _xp_data["old_sub_tier_name"]))
-        new_rank = " ".join((_xp_data["new_main_tier_name"], _xp_data["new_sub_tier_name"]))
+            await self.grant_active_key(user_id)
+            await self._update_xp_roles_for_user(
+                guild,
+                user_id,
+                _xp_data["old_main_tier_name"],
+                _xp_data["new_main_tier_name"],
+            )
 
-        await self.grant_active_key(user_id)
-        await self._update_xp_roles_for_user(
-            guild,
-            user_id,
-            _xp_data["old_main_tier_name"],
-            _xp_data["new_main_tier_name"],
-        )
+            await xp_channel.send(
+                f"<:_:976468395505614858> {user.display_name} has ranked up! **{old_rank}** -> **{new_rank}**\n"
+                f"[Log into the website to open your lootbox!](https://genji.pk/lootbox.php)"
+            )
+        if _xp_data["prestige_change"]:
+            for _ in range(15):
+                await self.grant_active_key(user_id)
 
-        await xp_channel.send(
-            f"<:_:976468395505614858> {user.display_name} has ranked up! **{old_rank}** -> **{new_rank}**\n"
-            f"[Log into the website to open your lootbox!](https://genji.pk/lootbox.php)"
-        )
+            await xp_channel.send(
+                f"<:_:976468395505614858> {user.display_name} has prestiged! "
+                f"**Prestige {_xp_data['old_prestige_level']}** -> **Prestige {_xp_data['new_prestige_level']}**\n"
+                f"[Log into the website to open your lootboxes!](https://genji.pk/lootbox.php)"
+            )
+
 
     @staticmethod
     async def _update_xp_roles_for_user(
@@ -165,10 +180,13 @@ class XPManager:
                 n.new_main_tier_name,
                 o.old_sub_tier_name,
                 n.new_sub_tier_name,
+                old_prestige_level,
+                new_prestige_level,
                 CASE
                     WHEN o.old_main_tier_name != n.new_main_tier_name THEN 'Main Tier Rank Up'
                     WHEN o.old_sub_tier_name != n.new_sub_tier_name THEN 'Sub-Tier Rank Up'
                 END AS rank_change_type
+                o.old_prestige_level != n.new_prestige_level AS prestige_change
             FROM old_tier o
             JOIN new_tier n ON TRUE;
         """

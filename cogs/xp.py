@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from discord import Interaction, Member, app_commands
 from discord.ext import commands
 
-from utils import constants
+from utils import constants, transformers
 
 if TYPE_CHECKING:
     import core
@@ -29,6 +29,18 @@ class XPCog(commands.GroupCog, group_name="xp"):
         """Grant user XP. Amount is capped at 100 XP. Hidden is true by default."""
         await itx.response.send_message(f"Granting user {user} {amount} XP.", ephemeral=True)
         await self.bot.xp_manager.grant_user_xp_amount(user.id, amount, itx.user, hidden)
+
+    @app_commands.command(name="set-active-key")
+    async def _command_set_active_key(
+        self,
+        itx: Itx,
+        key_type: app_commands.Transform[str, transformers.KeyTypeTransformer],
+    ) -> None:
+        """Set active key type."""
+        if itx.user.id != 141372217677053952:
+            return await itx.response.send_message("You are not authorized to use this command.", ephemeral=True)
+        await itx.response.send_message(f"Setting active key to {key_type}.", ephemeral=True)
+        await self.bot.xp_manager.set_active_key(key_type)
 
 
 async def setup(bot: core.Genji) -> None:
