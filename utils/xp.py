@@ -222,7 +222,7 @@ class XPManager:
                 CASE
                     WHEN o.old_main_tier_name != n.new_main_tier_name THEN 'Main Tier Rank Up'
                     WHEN o.old_sub_tier_name != n.new_sub_tier_name THEN 'Sub-Tier Rank Up'
-                END AS rank_change_type
+                END AS rank_change_type,
                 o.old_prestige_level != n.new_prestige_level AS prestige_change
             FROM old_tier o
             JOIN new_tier n ON TRUE;
