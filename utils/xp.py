@@ -94,12 +94,49 @@ class XPManager:
             for _ in range(15):
                 await self.grant_active_key(user_id)
 
+            old_rank = " ".join((_xp_data["old_main_tier_name"], _xp_data["old_sub_tier_name"]))
+            new_rank = " ".join((_xp_data["new_main_tier_name"], _xp_data["new_sub_tier_name"]))
+
+            await self._update_xp_roles_for_user(
+                guild,
+                user_id,
+                _xp_data["old_main_tier_name"],
+                _xp_data["new_main_tier_name"],
+            )
+
+            await self._update_xp_prestige_roles_for_user(
+                guild,
+                user_id,
+                _xp_data["old_prestige_level"],
+                _xp_data["new_prestige_level"],
+            )
+
             await xp_channel.send(
-                f"<:_:976468395505614858> {user.display_name} has prestiged! "
+                f"<:_:976468395505614858><:_:976468395505614858><:_:976468395505614858>"
+                f" {user.display_name} has prestiged! "
                 f"**Prestige {_xp_data['old_prestige_level']}** -> **Prestige {_xp_data['new_prestige_level']}**\n"
                 f"[Log into the website to open your lootboxes!](https://genji.pk/lootbox.php)"
             )
 
+    @staticmethod
+    async def _update_xp_prestige_roles_for_user(
+        guild: discord.Guild, user_id: int, old_prestige_level: int, new_prestige_level: int,
+    ) -> None:
+        old_prestige_role = discord.utils.get(guild.roles, name=f"Prestige {old_prestige_level}")
+        new_prestige_role = discord.utils.get(guild.roles, name=f"Prestige {new_prestige_level}")
+        if not (old_prestige_role or new_prestige_role):
+            log.info(
+                f"Old prestige level: {old_prestige_level}\n"
+                "New prestige level: {new_prestige_level}\nUser ID: {user_id}"
+            )
+            raise ValueError("Can't update xp prestige roles for user.")
+        assert old_prestige_role and new_prestige_role
+        member = guild.get_member(user_id)
+        assert member
+        roles = set(member.roles)
+        roles.discard(old_prestige_role)
+        roles.add(new_prestige_role)
+        await member.edit(roles=roles)
 
     @staticmethod
     async def _update_xp_roles_for_user(
