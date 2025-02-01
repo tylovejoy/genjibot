@@ -39,10 +39,10 @@ class XPManager:
         self._db: Database = bot.database
 
     async def set_active_key(self, key_type: str) -> None:
-        resp = await self._bot.session.post(
+        resp = await self._bot.session.put(
             f"https://api.genji.pk/v1/lootbox/keys/{key_type}", headers={"X-API-KEY": GENJI_API_KEY}
         )
-        if resp.status != 200:
+        if not resp.ok:
             raise ValueError
 
     async def grant_active_key(self, user_id: int) -> None:
