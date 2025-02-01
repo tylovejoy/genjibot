@@ -7,3 +7,7 @@ venv
 .vscode
 .vscode/settings.json
 __pycache__
+venv-linux
+venv1
+.ruff_cache
+.venv
