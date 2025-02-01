@@ -147,9 +147,9 @@ class Database:
         query: str,
         *args,
         connection: asyncpg.Connection | asyncpg.Pool | None = None,
-    ) -> asyncpg.Record | None:
+    ) -> asyncpg.Record:
         _connection = connection or self.pool
-        return await _connection.fetchrow(query, *args)
+        return await _connection.fetchrow(query, *args) # type: ignore
 
     async def execute(
         self,
