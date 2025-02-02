@@ -107,6 +107,10 @@ class MapExistsError(BaseParkourError, app_commands.errors.AppCommandError):
     """This map code already exists!"""  # noqa: D400, D404
 
 
+class NoAuditLogEntriesFoundError(BaseParkourError, app_commands.errors.AppCommandError):
+    """No audit log entries found."""
+
+
 class NoGuidesExistError(BaseParkourError, app_commands.errors.AppCommandError):
     """No guides exist for this map code."""
 

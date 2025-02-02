@@ -457,7 +457,7 @@ class ModCommands(commands.Cog):
         """
         rows = await itx.client.database.fetch(query, limit, command_name)
         if not rows:
-            raise errors.BaseParkourError("No audit log entries found")
+            raise errors.NoAuditLogEntriesFoundError
         content = []
         for row in rows:
             command = row["event"]
@@ -475,7 +475,7 @@ class ModCommands(commands.Cog):
         chunks = discord.utils.as_chunks(content, 10)
         _embeds = [embeds.GenjiEmbed(title="Audit Log Entries", description="\n".join(chunk)) for chunk in chunks]
         if not _embeds:
-            raise errors.BaseParkourError("No audit log entries found")
+            raise errors.NoAuditLogEntriesFoundError
         view = Paginator(_embeds, itx.user)
         await view.start(itx)
 
