@@ -260,7 +260,7 @@ class CommandNameTransformer(app_commands.Transformer):
             FROM analytics ORDER BY similarity_score DESC LIMIT 5;
         """
         results = await itx.client.database.fetch(query, current)
-        return [app_commands.Choice(name=a, value=a) for (a,) in results]
+        return [app_commands.Choice(name=row["event"], value=row["event"]) for row in results]
 
     async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
         query = """
@@ -268,6 +268,6 @@ class CommandNameTransformer(app_commands.Transformer):
             FROM analytics ORDER BY similarity_score DESC LIMIT 1;
         """
         res = await itx.client.database.fetch(query, value)
-        if not res or res[0]["name"] != value:
+        if not res or res[0]["event"] != value:
             raise errors.NoMapsFoundError
         return value
