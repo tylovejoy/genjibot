@@ -437,7 +437,7 @@ class ModCommands(commands.Cog):
         self,
         itx: discord.Interaction[core.Genji],
         limit: app_commands.Range[int, 1, 500] = 10,
-        command_name: str | None = None,
+        command_name: app_commands.Transform[str, transformers.CommandNameTransformer] = "",
     ) -> None:
         """View genjibot audit logs.
 

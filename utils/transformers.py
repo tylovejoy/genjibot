@@ -249,3 +249,25 @@ class KeyTypeTransformer(app_commands.Transformer):
         if not res or res[0]["name"] != value:
             raise errors.NoMapsFoundError
         return value
+
+
+class CommandNameTransformer(app_commands.Transformer):
+    """Transform command names."""
+
+    async def autocomplete(self, itx: discord.Interaction[core.Genji], current: str) -> list[app_commands.Choice[str]]:
+        query = """
+            SELECT DISTINCT event, similarity(event, $1) as similarity_score
+            FROM analytics ORDER BY similarity_score DESC LIMIT 5;
+        """
+        results = await itx.client.database.fetch(query, current)
+        return [app_commands.Choice(name=a, value=a) for (a,) in results]
+
+    async def transform(self, itx: discord.Interaction[core.Genji], value: str) -> str:
+        query = """
+            SELECT DISTINCT event, similarity(event, $1) as similarity_score
+            FROM analytics ORDER BY similarity_score DESC LIMIT 1;
+        """
+        res = await itx.client.database.fetch(query, value)
+        if not res or res[0]["name"] != value:
+            raise errors.NoMapsFoundError
+        return value
