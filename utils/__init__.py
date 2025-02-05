@@ -20,10 +20,10 @@ __all__ = [
     "formatter",
     "map_submission",
     "maps",
+    "rabbit",
     "ranks",
     "records",
     "transformers",
     "utils",
-    "rabbit",
     "xp",
 ]

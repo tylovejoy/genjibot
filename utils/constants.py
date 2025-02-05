@@ -1,3 +1,4 @@
+import enum
 import math
 
 import discord
@@ -197,3 +198,15 @@ class Roles:
             if role in ids:
                 res += 1
         return res
+
+
+class Notification(enum.IntFlag):
+    NONE = 0
+    DM_ON_VERIFICATION = enum.auto()
+    DM_ON_SKILL_ROLE_UPDATE = enum.auto()
+    DM_ON_LOOTBOX_GAIN = enum.auto()
+    DM_ON_RECORDS_REMOVAL = enum.auto()
+    DM_ON_PLAYTEST_ALERTS = enum.auto()
+    PING_ON_XP_GAIN = enum.auto()
+    PING_ON_MASTERY = enum.auto()
+    PING_ON_COMMUNITY_RANK_UPDATE = enum.auto()

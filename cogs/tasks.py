@@ -157,7 +157,12 @@ class Tasks(commands.Cog):
             )
             thread = guild.get_thread(row["thread_id"])
             if thread:
-                await thread.send(message)
+                await self.bot.notification_manager.notify_channel(
+                    thread,
+                    creator.id,
+                    constants.Notification.DM_ON_VERIFICATION,
+                    message,
+                )
             map_codes.append((row["map_code"],))
         await self.bot.database.executemany(
             "UPDATE map_submission_dates SET alerted = TRUE WHERE map_code = $1",
