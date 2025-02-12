@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import logging
 import os
+from typing import Iterator
 
 import aiohttp
 import discord
@@ -35,7 +36,7 @@ class RemoveShardCloseNoise(logging.Filter):
 
 
 @contextlib.contextmanager
-def setup_logging() -> None:
+def setup_logging() -> Iterator[None]:
     """Set up logging."""
     log = logging.getLogger()
 
@@ -46,7 +47,7 @@ def setup_logging() -> None:
         logging.getLogger("discord.state").addFilter(RemoveNoise())
         logging.getLogger("discord.client").addFilter(RemoveShardCloseNoise())
         log.setLevel(logging.INFO)
-        yield
+        yield None
     finally:
         handlers = log.handlers[:]
         for hdlr in handlers:
