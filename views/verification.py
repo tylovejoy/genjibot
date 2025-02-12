@@ -300,14 +300,15 @@ class VerificationView(discord.ui.View):
             await self._remove_record_by_hidden_id(itx.client.database, itx.message.id)
 
         await original_message.edit(content=data["edit"])
-        flags = await itx.client.database.fetch_user_flags(record_submitter.id)
-        flags = utils.SettingFlags(flags)
-        with contextlib.suppress(discord.NotFound, discord.Forbidden):
-            if utils.SettingFlags.VERIFICATION in flags:
-                await record_submitter.send(f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`")
+
+        await itx.client.notification_manager.notify_dm(
+            record_submitter.id,
+            constants.Notification.DM_ON_VERIFICATION,
+            f"`{'- ' * 14}`\n{data['direct_message']}\n`{'- ' * 14}`",
+        )
         await itx.message.delete()
 
-    async def _process_map_mastery(self, itx: discord.Interaction[core.Genji], search: models.Record):
+    async def _process_map_mastery(self, itx: discord.Interaction[core.Genji], search: models.Record) -> None:
         async with itx.client.session.get(
             f"http://genji-api/v1/mastery/{search.user_id}", headers={"X-API-KEY": GENJI_API_KEY}
         ) as resp:
@@ -331,12 +332,20 @@ class VerificationView(discord.ui.View):
             if res:
                 if res["medal"] == "Placeholder":
                     continue
+                assert search.user_id
                 nickname = await itx.client.database.fetch_nickname(search.user_id)
                 embed = discord.Embed(
                     description=f"{nickname} received the **{res['map_name']} {res['medal']}** Map Mastery badge!",
                 )
                 embed.set_thumbnail(url=f"https://genji.pk/{map_['icon_url']}")
-                await itx.guild.get_channel(1324496532447166505).send(
+                assert itx.guild
+                xp_channel = itx.guild.get_channel(1324496532447166505)
+                assert isinstance(xp_channel, discord.TextChannel)
+                await itx.client.notification_manager.notify_channel_default_to_no_ping(
+                    xp_channel,
+                    search.user_id,
+                    constants.Notification.PING_ON_MASTERY,
+                    "",
                     embed=embed,
                 )
 

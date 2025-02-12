@@ -251,10 +251,11 @@ async def grant_skill_rank_roles(
         response += ", ".join([f"**{x.name}**" for x in _actual_removed_roles]) + " has been removed.\n"
 
     if _actual_added_roles or _actual_removed_roles:
-        with contextlib.suppress(discord.errors.HTTPException):
-            flags = SettingFlags(await bot.database.fetch_user_flags(user.id))
-            if SettingFlags.PROMOTION in flags:
-                await user.send(response)
+        await bot.notification_manager.notify_dm(
+            user.id,
+            constants.Notification.DM_ON_SKILL_ROLE_UPDATE,
+            response,
+        )
 
 
 async def auto_skill_role(bot: core.Genji, guild: discord.Guild, user: discord.Member) -> None:

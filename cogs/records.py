@@ -272,11 +272,15 @@ class Records(commands.Cog):
             embed=embed,
         )
 
-        v_view = views.VerificationView()
-        verification_msg = await itx.client.get_channel(constants.VERIFICATION_QUEUE).send(
-            content="**ALERT:** VIDEO SUBMISSION" if video else None,
-            embed=embed,
+        also_known_as = await itx.client.database.fetch_all_user_names(itx.user.id)
+        content = (
+            f"**ALERT:** VIDEO SUBMISSION\nAlso known as: {','.join(also_known_as)}"
+            if video else ','.join(also_known_as)
         )
+        v_view = views.VerificationView()
+        verification_channel = itx.client.get_channel(constants.VERIFICATION_QUEUE)
+        assert isinstance(verification_channel, discord.TextChannel)
+        verification_msg = await verification_channel.send(content=content, embed=embed)
 
         await verification_msg.edit(view=v_view)
         async with self.bot.database.pool.acquire() as conn, conn.transaction():

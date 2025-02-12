@@ -563,9 +563,13 @@ class PlaytestVoting(discord.ui.View):
         )
 
     async def send_denial_to_author(self, author: discord.Member, reason: str | None = None) -> None:
-        await author.send(
-            f"The **{self.data.map_code}** map submission has been denied by a Sensei and has been deleted."
-            f"\n\n{reason if reason else ''}"
+        await self.client.notification_manager.notify_dm(
+            author.id,
+            constants.Notification.DM_ON_PLAYTEST_ALERTS,
+            (
+                f"The **{self.data.map_code}** map submission has been denied by a Sensei and has been deleted."
+                f"\n\n{reason if reason else ''}"
+            ),
         )
 
     async def delete_playtest_db_entry(self) -> None:

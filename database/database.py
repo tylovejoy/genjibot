@@ -174,8 +174,22 @@ class Database:
         return await self.fetchval(query, user_id)
 
     async def fetch_nickname(self, user_id: int) -> str:
-        query = "SELECT nickname FROM users WHERE user_id = $1"
+        query = """
+            WITH default_name AS (
+                SELECT nickname, user_id
+                FROM users
+            )
+            SELECT coalesce(own.username, dn.nickname) as nickname
+            FROM default_name dn
+            LEFT JOIN user_overwatch_usernames own 
+                ON own.user_id = dn.user_id AND own.is_primary = true
+            WHERE dn.user_id = $1;
+        """
         return await self.fetchval(query, user_id)
+
+    async def fetch_all_user_names(self, user_id: int) -> list[str]:
+        query = "SELECT username FROM user_overwatch_usernames WHERE user_id = $1 ORDER BY is_primary DESC"
+        return [x["username"] for x in await self.fetch(query, user_id)]
 
     async def is_existing_map_code(self, map_code: str) -> bool:
         query = "SELECT EXISTS(SELECT map_code FROM maps WHERE map_code = $1)"

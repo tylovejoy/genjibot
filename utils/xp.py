@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal
 import discord
 from discord import Member
 
-from utils.constants import GUILD_ID
+from utils.constants import GUILD_ID, Notification
 
 if TYPE_CHECKING:
     import asyncpg
@@ -67,7 +67,12 @@ class XPManager:
         user = guild.get_member(user_id)
         assert user
 
-        await xp_channel.send(f"<:_:976917981009440798> {user.display_name} has gained **{amount} XP** ({type_})!")
+        await self._bot.notification_manager.notify_channel_default_to_no_ping(
+            xp_channel,
+            user_id,
+            Notification.PING_ON_XP_GAIN,
+            f"<:_:976917981009440798> {user.display_name} has gained **{amount} XP** ({type_})!"
+        )
 
         _xp_data = await self._check_xp_tier_change(result["previous_amount"], result["new_amount"])
 
@@ -86,10 +91,23 @@ class XPManager:
                 _xp_data["new_main_tier_name"],
             )
 
-            await xp_channel.send(
-                f"<:_:976468395505614858> {user.display_name} has ranked up! **{old_rank}** -> **{new_rank}**\n"
-                f"[Log into the website to open your lootbox!](https://genji.pk/lootbox.php)"
+            await self._bot.notification_manager.notify_dm(
+                user_id,
+                Notification.DM_ON_LOOTBOX_GAIN,
+                (
+                    f"Congratulations! You have ranked up to **{new_rank}**!\n"
+                    "[Log into the website to open your lootbox!](https://genji.pk/lootbox.php)"
+                )
             )
+
+            await self._bot.notification_manager.notify_channel_default_to_no_ping(
+                xp_channel,
+                user_id,
+                Notification.PING_ON_COMMUNITY_RANK_UPDATE,
+                f"<:_:976468395505614858> {user.display_name} has ranked up! **{old_rank}** -> **{new_rank}**\n"
+            )
+
+
         if _xp_data["prestige_change"]:
             for _ in range(15):
                 await self.grant_active_key(user_id)
@@ -111,11 +129,24 @@ class XPManager:
                 _xp_data["new_prestige_level"],
             )
 
-            await xp_channel.send(
-                f"<:_:976468395505614858><:_:976468395505614858><:_:976468395505614858>"
-                f" {user.display_name} has prestiged! "
-                f"**Prestige {_xp_data['old_prestige_level']}** -> **Prestige {_xp_data['new_prestige_level']}**\n"
-                f"[Log into the website to open your lootboxes!](https://genji.pk/lootbox.php)"
+            await self._bot.notification_manager.notify_dm(
+                user_id,
+                Notification.DM_ON_LOOTBOX_GAIN,
+                (
+                    f"Congratulations! You have prestiged up to **{_xp_data['new_prestige_level']}**!\n"
+                    "[Log into the website to open your 15 lootboxes!](https://genji.pk/lootbox.php)"
+                )
+            )
+
+            await self._bot.notification_manager.notify_channel_default_to_no_ping(
+                xp_channel,
+                user_id,
+                Notification.PING_ON_COMMUNITY_RANK_UPDATE,
+                (
+                    f"<:_:976468395505614858><:_:976468395505614858><:_:976468395505614858>"
+                    f" {user.display_name} has prestiged! "
+                    f"**Prestige {_xp_data['old_prestige_level']}** -> **Prestige {_xp_data['new_prestige_level']}**"
+                )
             )
 
     @staticmethod
