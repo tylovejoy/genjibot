@@ -331,7 +331,11 @@ class ModCommands(commands.Cog):
             record["inserted_at"],
         )
 
-        await member.send(f"Your record for {map_code} has been deleted by staff.")
+        await self.bot.notification_manager.notify_dm(
+            member.id,
+            constants.Notification.DM_ON_RECORDS_REMOVAL,
+            f"Your record for {map_code} has been deleted by staff."
+        )
         await utils.auto_skill_role(itx.client, itx.guild, member)
 
     @mod.command(name="change-name")
